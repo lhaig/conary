@@ -11,7 +11,7 @@ container (Docker, source bind-mounted), work lands on the `py3` branch.
 | # | Task | PRD | Status | Notes |
 |---|------|-----|--------|-------|
 | 1.1 | Fedora dev container: Dockerfile and helper script with Fedora python3, python3.11 (for 2to3), gcc, make, openssl/zlib/sqlite/elfutils-libelf devel headers, Cython. Source bind-mounted. Fill in the real build/test commands in config.md | - | DONE (2026-11-22) | devenv/ on fedora:45 (python3 3.15.2, python3.11 3.11.18, Cython 3.2.8). Review MINOR, Cython gate fixed |
-| 1.2 | Mechanical 2to3 commit: `python3.11 -W ignore -m lib2to3 -w -n -j4 conary conary_test commands scripts` as one commit, plus the `conary/lib/magic.py` tab/space fix. Accept: `python3 -m compileall -q conary conary_test commands scripts` passes (excluding `conary/pysqlite3`) | - | TODO | needs: 1.1 |
+| 1.2 | Mechanical 2to3 commit: `python3.11 -W ignore -m lib2to3 -w -n -j4 conary conary_test commands scripts` as one commit, plus the `conary/lib/magic.py` tab/space fix. Accept: `python3 -m compileall -q conary conary_test commands scripts` passes (excluding `conary/pysqlite3`) | - | DONE (2026-11-22) | 2to3 over 473 files (210 compile failures -> 0), shebangs to python3, 7 tab fixes. Review PASS. testsuite.py and embedded test recipes still Py2 |
 | 1.3 | C build under Python 3: generate `conary/constants.py` from `constants.py.in` in the build, `#include <Python.h>` before `pycompat.h` in dep_freeze/digest_uncompress/pack/streams.c, regenerate Cython output with language_level 3, `PyString_*` to `PyBytes_*` in common.pxi, sha256_nonstandard.pyx, file_utils.pyx, point Make.rules at python3. Accept: `make` builds all 7 extensions in the container | - | TODO | needs: 1.1, 1.2 |
 | 1.4 | file_utils without `PyFile_FromFile` (file_utils.pyx:101): rewrite around file descriptors / the `io` module, keeping callers' behaviour. Accept: unit test of the rewritten function | - | TODO | needs: 1.3 |
 | 1.5 | Replace `conary/pysqlite3` with stdlib `sqlite3` in `conary/dbstore/sqlite_drv.py` (its only importer); drop pysqlite3 from the build. Check schema/migration code relying on pysqlite3 behaviour. Accept: sqlite dbstore tests pass | - | TODO | needs: 1.2 |
@@ -19,6 +19,8 @@ container (Docker, source bind-mounted), work lands on the `py3` branch.
 | 1.7 | `conary --version` works via `commands/conary`. Accept: CLI test | - | TODO | needs: 1.6 |
 
 ## Later (not yet planned)
+
+- Follow-ups from 1.2: convert testsuite.py (repo root, still Py2); recipes embedded as strings in conary_test are Py2; rename the 8 `xxx_todo_changeme` tuple-param placeholders (e.g. conary/repository/changeset.py:979, conary/lib/ext/digest_uncompress.py:32).
 
 - Phase 2: run `conary_test`, triage failures, bytes/str issues first.
 - Then: install/query/rollback against a local repository, RPM encapsulation proof, build side (rMake replacement), distro decision.
