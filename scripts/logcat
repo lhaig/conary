@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -16,7 +16,7 @@
 #
 
 
-import cPickle
+import pickle
 import os
 import socket
 import struct
@@ -38,14 +38,14 @@ class ClientDumper:
         else:
             latency = ''
 
-        print "%s %s %s %s%s%s" % (
+        print("%s %s %s %s%s%s" % (
             entry.url,
             entry.methodName,
             entry.args,
             entry.result,
             latency,
             entitlement
-        )
+        ))
 
 class ReposDumper:
 
@@ -110,7 +110,7 @@ class ReposDumper:
         else:
             excpt =""
 
-        print "%s %s %s %s%s%s%s%s" % (
+        print("%s %s %s %s%s%s%s%s" % (
             hostname,
             time.strftime("%B %d %H:%M", time.localtime(entry.timeStamp)),
             entry.serverName,
@@ -119,7 +119,7 @@ class ReposDumper:
             params,
             latency,
             excpt
-        )
+        ))
 
 if os.path.dirname(sys.argv[0]) != ".":
     if sys.argv[0][0] == "/":
@@ -153,7 +153,7 @@ parser.add_option("--times", "-t", dest = "showLatency", default = False,
 (options, args) = parser.parse_args()
 
 if len(args) != 1:
-    print >> sys.stderr, "logcat: a single file name was expected"
+    print("logcat: a single file name was expected", file=sys.stderr)
     sys.exit(1)
 
 hostnameCache = {}
@@ -168,7 +168,7 @@ if not length:
 
 length = struct.unpack("!I", length)[0]
 entry = f.read(length)
-entryRevision = cPickle.loads(entry)[0]
+entryRevision = pickle.loads(entry)[0]
 clientLog = entryRevision >= calllog.CLIENT_LOG
 
 if clientLog:

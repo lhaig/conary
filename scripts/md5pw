@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -29,7 +29,7 @@ salt.replace('$', '%')
 pw = getpass.getpass('Password:')
 pw2 = getpass.getpass('Password (again):')
 if pw != pw2:
-    print "Passwords didn't match."
+    print("Passwords didn't match.")
     sys.exit(1)
 
-print crypt.crypt(pw, '$1$%s' % salt)
+print(crypt.crypt(pw, '$1$%s' % salt))

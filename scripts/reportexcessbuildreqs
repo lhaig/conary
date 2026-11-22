@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -20,7 +20,7 @@ import sys
 import bz2
 
 from lxml import etree
-from StringIO import StringIO
+from io import StringIO
 
 from conary import conarycfg
 from conary import conaryclient
@@ -38,7 +38,7 @@ def main(argv):
     client = conaryclient.ConaryClient(cfg)
     repos = client.getRepos()
 
-    print >> sys.stderr, "Fetching trove list"
+    print("Fetching trove list", file=sys.stderr)
     troveList = [(x,installLabel,None)
                   for x in repos.troveNames(Label(installLabel))
                   if x.endswith(':debuginfo')]
@@ -57,7 +57,7 @@ def main(argv):
     trvList = repos.getTroves(requestList)
     logfileReqList = []
     logfileInfoList = []
-    print >> sys.stderr, "Building debuginfo trove list"
+    print("Building debuginfo trove list", file=sys.stderr)
     #for trv in trvList:
     for trv in trvList:
         for logfile in [ x for x in trv.iterFileList()
@@ -65,10 +65,10 @@ def main(argv):
             logfileReqList.append(logfile[2:])
             logfileInfoList.append((trv.getName().split(':')[0],trv.flavor()))
 
-    print >> sys.stderr, "Fetching %i Files" % len(logfileReqList)
+    print("Fetching %i Files" % len(logfileReqList), file=sys.stderr)
     fcs = repos.getFileContents(logfileReqList)
 
-    print >> sys.stderr, "Parsing XML files"
+    print("Parsing XML files", file=sys.stderr)
     logfileMap = {}
     for l in zip(logfileInfoList,fcs):
         # we strip all 0x08 chars because they are wrong and make the parser
@@ -88,8 +88,8 @@ def main(argv):
         try:
             tree = etree.parse(logfileMap[k])
         except etree.XMLSyntaxError:
-            print >> sys.stderr, "XML Syntax Error: skipping package[flavor]: "\
-                "%s[%s]" % (pkgName, flavor)
+            print("XML Syntax Error: skipping package[flavor]: "\
+                "%s[%s]" % (pkgName, flavor), file=sys.stderr)
 
         def getMessage(name):
             parent = tree.xpath(
@@ -113,7 +113,7 @@ def main(argv):
             #print >> sys.stderr, "%s[%s] had no excessBuildRequires entry" \
             #    % (pkgName,flavor)
     try:
-        print >> sys.stderr, "Merging duplicate entries"
+        print("Merging duplicate entries", file=sys.stderr)
         x = {}
         for e in outputMap:
             xkey = frozenset(outputMap[e])
@@ -124,9 +124,9 @@ def main(argv):
             else:
                 x[xkey] = [e,]
         retMap = {}
-        retMap.update([ (frozenset(e[1]),e[0]) for e in x.items()])
+        retMap.update([ (frozenset(e[1]),e[0]) for e in list(x.items())])
     except:
-        print >> sys.stderr, "!We had an exception while merging!"
+        print("!We had an exception while merging!", file=sys.stderr)
         retMap = outputMap
     return retMap
 
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     outputMap = main(sys.argv)
 
     if outputMap:
-        print >> sys.stderr, "Outputting Results to Stdout"
-        print repr(outputMap)
+        print("Outputting Results to Stdout", file=sys.stderr)
+        print(repr(outputMap))
         sys.exit()
 
     sys.exit("The outputMap was empty!")

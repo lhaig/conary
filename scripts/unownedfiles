@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -36,9 +36,9 @@ from conary.local import database
 from conary.lib import util
 
 def usage():
-    print """\
+    print("""\
 Usage: unowned [-r] <file>+
-         """
+         """)
     return 1
 
 sys.excepthook = util.genExcepthook()
@@ -86,7 +86,7 @@ def main(argv):
     return 0
 
 def unownedFile(path):
-    print path
+    print(path)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

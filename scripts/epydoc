@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -37,7 +37,7 @@ def _is_public(var):
 
 def _mark_public(doc, recurse=True):
     any_public = False
-    for name, var in doc.variables.iteritems():
+    for name, var in doc.variables.items():
         has_public_child = False
         if isinstance(var.value, apidoc.ClassDoc):
             if isinstance(doc, apidoc.ModuleDoc):
@@ -74,7 +74,7 @@ def force_public(doc):
     an underscore.
     """
     doc.is_public = True
-    for name, var in doc.variables.iteritems():
+    for name, var in doc.variables.items():
         if name[:2] == '__' and name[-2:] == '__':
             pass
         elif name.startswith('_'):

@@ -161,7 +161,7 @@ class deb(Magic):
             # don't know how to extract metadata
             return
 
-        for dtag, cstr in self._tagMap.items():
+        for dtag, cstr in list(self._tagMap.items()):
             self.contents[cstr] = h[dtag]
 
 class jar(Magic):
@@ -199,7 +199,7 @@ class WAR(Magic):
         ddcontent = zipFileObj.read(self._xmlMetadataFile)
         try:
             dom = xml.dom.minidom.parseString(ddcontent)
-        except Exception, e:
+        except Exception as e:
             # Error parsing the XML, move on
             return
         # Grab data from the DOM
@@ -297,7 +297,7 @@ class MSI(Magic):
         ("version", rpmhelper.VERSION, str),
     ]
     def __init__(self, path, basedir=''):
-	Magic.__init__(self, path, basedir)
+        Magic.__init__(self, path, basedir)
         self.version = '(unknown)'
         try:
             open(path)
@@ -310,7 +310,7 @@ class MSI(Magic):
 
 class WIM(Magic):
     def __init__(self, path, basedir=''):
-	Magic.__init__(self, path, basedir)
+        Magic.__init__(self, path, basedir)
         try:
             open(path)
         except:
@@ -337,9 +337,9 @@ def magic(path, basedir=''):
 
     oldmode = None
     mode = os.lstat(n)[stat.ST_MODE]
-    if (mode & 0400) != 0400:
+    if (mode & 0o400) != 0o400:
         oldmode = mode
-        os.chmod(n, mode | 0400)
+        os.chmod(n, mode | 0o400)
 
     f = file(n)
     if oldmode is not None:

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -107,7 +107,7 @@ if __name__ == '__main__':
         # redirects and regular troves will show up together; we care only
         # about the latest version in the repository
         newResults = {}
-        for troveName in results.iterkeys():
+        for troveName in results.keys():
             # results = {name: {version: [flavor list]}, ...}
             newVer = sorted(results[troveName].keys())[-1]
             newResults[troveName] = {}
@@ -119,10 +119,10 @@ if __name__ == '__main__':
         troveTups = []
         redirects = []
         processed = 0
-        for name, versionDict in results.iteritems():
+        for name, versionDict in results.items():
             processed += 1
             if trove.troveIsPackage(name) or trove.troveIsFileSet(name):
-                for version, flavorList in versionDict.iteritems():
+                for version, flavorList in versionDict.items():
                     if (not options.srcver or
                         version.trailingRevision().asString().startswith(
                             options.srcver + '-')):
@@ -146,16 +146,16 @@ if __name__ == '__main__':
 
             components = repos.getTroves(
                 [y for y in itertools.chain(
-                    *[x.strongTroves.keys() for x in allRedirects])],
+                    *[list(x.strongTroves.keys()) for x in allRedirects])],
                 withFiles=False)
             for comp in components:
                 redirs = [x for x in comp.redirects.iter()]
                 if redirs:
                     for redir in redirs:
-                        print "%s -> %s=%s" % (comp.name(), redir.name(),
-                            redir.branch().label().asString())
+                        print("%s -> %s=%s" % (comp.name(), redir.name(),
+                            redir.branch().label().asString()))
                 else:
-                    print "%s -> Nothing" % comp.name()
+                    print("%s -> Nothing" % comp.name())
             sys.stderr.write(' done.\n')
 
     if not labelMap:
@@ -170,8 +170,8 @@ if __name__ == '__main__':
     results = repos.getTroveLatestByLabel(queryDict,
         bestFlavor=False, troveTypes = netclient.TROVE_QUERY_PRESENT)
     troveTups = []
-    for name, versionDict in results.iteritems():
-        for version, flavorList in versionDict.iteritems():
+    for name, versionDict in results.items():
+        for version, flavorList in versionDict.items():
             for flav in flavorList:
                 troveTups.append((name, version, flav))
     destTrvs = repos.getTroves(troveTups, withFiles=False)
@@ -197,12 +197,12 @@ if __name__ == '__main__':
             needRedirects.setdefault(srcName, set())
             needRedirects[srcName].add(redirectTrv.getName())
 
-        print 'source: binary troves needing redirects:'
+        print('source: binary troves needing redirects:')
         for srcName in sorted(needRedirects.keys()):
-            print '%s: %s' %(srcName, ' '.join(sorted(needRedirects[srcName])))
+            print('%s: %s' %(srcName, ' '.join(sorted(needRedirects[srcName]))))
 
-        print 'binary troves needing redirects: %s' %' '.join(
-            needRedirectsBinaries)
+        print('binary troves needing redirects: %s' %' '.join(
+            needRedirectsBinaries))
 
     if needRedirectTrvs:
         sys.stderr.write('cvc promote %s %s\n' %(
@@ -210,8 +210,8 @@ if __name__ == '__main__':
                             ' '.join(mapList)))
         if not cfg.buildLabel:
             # just choose one, does not matter which
-            cfg.buildLabel = sourceLabels.values()[0]
-        clone.promoteTroves(cfg, needRedirectsBinaries, labelMap.items(),
+            cfg.buildLabel = list(sourceLabels.values())[0]
+        clone.promoteTroves(cfg, needRedirectsBinaries, list(labelMap.items()),
                             message=options.message,
                             cloneSources=True, allFlavors=True,
                             targetFile=options.changeset)

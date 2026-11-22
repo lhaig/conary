@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -43,5 +43,5 @@ if getAll:
     localUpdates += client.getChildLocalUpdates(client.repos, localUpdates)
 
 for name, oldInfo, newInfo, isAbs in sorted(localUpdates):
-    print '%s %s[%s]\n      --> %s[%s]' % (name, oldInfo[0], oldInfo[1], 
-                                           newInfo[0], newInfo[1])
+    print('%s %s[%s]\n      --> %s[%s]' % (name, oldInfo[0], oldInfo[1], 
+                                           newInfo[0], newInfo[1]))

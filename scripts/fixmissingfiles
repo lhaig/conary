@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -49,7 +49,7 @@ from conary import sqlite3
 from conary.local import database
 
 def usage():
-    print 'usage: %s [--root rootpath] [--repair-missing-files] [--repair-path=path]+' %sys.argv[0]
+    print('usage: %s [--root rootpath] [--repair-missing-files] [--repair-path=path]+' %sys.argv[0])
 
 class countDict(dict):
     def add(self, key):
@@ -66,8 +66,8 @@ def restoreSymlink(f, path, cfg):
     except:
         pass
     if c != f.target():
-        print 'symlink %s contains %s changing to %s' %(
-            path, c, f.target())
+        print('symlink %s contains %s changing to %s' %(
+            path, c, f.target()))
         if c:
             os.remove(fullpath)
         os.symlink(f.target(), fullpath)
@@ -76,13 +76,13 @@ def restoreSymlink(f, path, cfg):
 def restoreRegularFiles(neededFiles, neededFileData, neededPaths, repos, cfg):
     contents = repos.getFileContents(neededFileData)
     for fileObj, f, path in zip(contents, neededFiles, neededPaths):
-        print 'fixing ', path
+        print('fixing ', path)
         f.restore(fileObj, cfg.root, path)
 
 def storeNeededData(f, path, db, versionId, neededFileData, neededFiles, neededPaths):
     fileVersion = db.db.versionTable.getBareId(versionId)
     if fileVersion.isOnLocalHost():
-        print 'cannot restore locally-cooked file %s\n' % path
+        print('cannot restore locally-cooked file %s\n' % path)
         return
     neededFileData.append((f.fileId(), fileVersion))
     neededFiles.append(f)
@@ -103,13 +103,13 @@ def main(argv):
     try:
         argSet, otherArgs = options.processArgs(argDef, cfgMap, cfg, usage,
                                                 argv=argv)
-    except options.OptionError, s:
-        print s
+    except options.OptionError as s:
+        print(s)
         sys.exit(1)
     
-    repairMissingFiles = argSet.has_key('repair-missing-files')
+    repairMissingFiles = 'repair-missing-files' in argSet
     repairPathList = []
-    if argSet.has_key('repair-path'):
+    if 'repair-path' in argSet:
         repairPathList = argSet['repair-path']
 
     dbPath = os.sep.join((cfg.root, cfg.dbPath, 'conarydb'))
@@ -157,7 +157,7 @@ def main(argv):
                 elif isinstance(f, files.SymbolicLink):
                     restoreSymlink(f, path, cfg)
                 else:
-                    print 'not attempting to restore special file %s\n' % path
+                    print('not attempting to restore special file %s\n' % path)
             
             if neededFiles:
                 restoreRegularFiles(neededFiles, neededFileData, neededPaths,
@@ -185,7 +185,7 @@ def main(argv):
             elif isinstance(f, files.SymbolicLink):
                 restoreSymlink(f, path, cfg)
             else:
-                print 'not attempting to restore special file %s\n' % path
+                print('not attempting to restore special file %s\n' % path)
 
         if neededFiles:
             restoreRegularFiles(neededFiles, neededFileData, neededPaths,

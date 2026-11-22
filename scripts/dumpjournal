@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -34,23 +34,23 @@ from conary.local import journal
 j = journal.JobJournal(sys.argv[1])
 for kind, entry in j:
     if kind == journal.JOURNAL_ENTRY_RENAME:
-        print "rename",
+        print("rename", end=' ')
     elif kind == journal.JOURNAL_ENTRY_CREATE:
-        print "create",
+        print("create", end=' ')
     elif kind == journal.JOURNAL_ENTRY_REMOVE:
-        print "remove",
+        print("remove", end=' ')
     elif kind == journal.JOURNAL_ENTRY_BACKUP:
-        print "backup",
+        print("backup", end=' ')
     elif kind == journal.JOURNAL_ENTRY_MKDIR:
-        print "mkdir",
+        print("mkdir", end=' ')
     elif kind == journal.JOURNAL_ENTRY_TRYCLEANUPDIR:
-        print "trycleanupdir",
+        print("trycleanupdir", end=' ')
     else:
         assert(0)
 
-    print entry.old(), "->", entry.new(),
+    print(entry.old(), "->", entry.new(), end=' ')
 
     if kind == journal.JOURNAL_ENTRY_BACKUP:
-        print "perms=0%o" % entry.inode.perms()
+        print("perms=0%o" % entry.inode.perms())
 
-    print
+    print()

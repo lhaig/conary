@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -101,13 +101,13 @@ while seen < total:
                                                hidden = True)):
         seen += 1
         if seen % 10 == 0:
-            print "%d/%d\r" % (seen, total),
+            print("%d/%d\r" % (seen, total), end=' ')
             sys.stdout.flush()
         if not trv:
-            print 'MISSING', instanceId
+            print('MISSING', instanceId)
             continue
         if not trv.verifyDigests():
-            print "%s=%s[%s]" % trv.getNameVersionFlavor()
+            print("%s=%s[%s]" % trv.getNameVersionFlavor())
             if fixSigs:
                 fixed = True
                 trv.computeDigests()
@@ -117,9 +117,9 @@ while seen < total:
                     instanceId)
 
     if fixSigs and fixed:
-	db.commit()
+        db.commit()
     else:
-	db.rollback()
+        db.rollback()
 
 
-print "%d/%d" % (total, total)
+print("%d/%d" % (total, total))

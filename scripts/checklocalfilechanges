@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -43,7 +43,7 @@ from conary import conaryclient
 from conary.local import database
 
 def usage():
-    print 'usage: %s [--root rootpath] [--transient-contents]' %sys.argv[0]
+    print('usage: %s [--root rootpath] [--transient-contents]' %sys.argv[0])
 
 def main(argv):
     sys.excepthook = util.genExcepthook()
@@ -58,11 +58,11 @@ def main(argv):
     try:
         argSet, otherArgs = options.processArgs(argDef, cfgMap, cfg, usage,
                                                 argv=argv)
-    except options.OptionError, s:
-        print s
+    except options.OptionError as s:
+        print(s)
         sys.exit(1)
 
-    transientContents = argSet.has_key('transient-contents')
+    transientContents = 'transient-contents' in argSet
     
     dbPath = os.sep.join((cfg.root, cfg.dbPath, 'conarydb'))
     db = database.Database(cfg.root, cfg.dbPath)
@@ -77,10 +77,10 @@ def main(argv):
         existsOnFilesystem = False
         if util.exists(fullpath):
             s = os.lstat(fullpath)
-            perms = s.st_mode & 07777
+            perms = s.st_mode & 0o7777
             if f.inode.perms() != perms:
-                print 'perms mismatch for %s: %o should be %o' %(
-                    path, perms, f.inode.perms())
+                print('perms mismatch for %s: %o should be %o' %(
+                    path, perms, f.inode.perms()))
             existsOnFilesystem = True
         if (isinstance(f, files.RegularFile)):
             if existsOnFilesystem == True:
@@ -96,30 +96,30 @@ def main(argv):
                         if s.st_size == f.contents.size():
                             systemSha1 = sha1helper.sha1FileBin(fullpath)
                             if troveSha1 != systemSha1:
-                                print 'sha1 mismatch for %s file %s' %(
-                                    filetype, path)
+                                print('sha1 mismatch for %s file %s' %(
+                                    filetype, path))
                         else:
-                            print 'size mismatch for %s: %d should be %d' %(
-                                path, s.st_size, f.contents.size())
-                    except OSError, s:
-                        print s
+                            print('size mismatch for %s: %d should be %d' %(
+                                path, s.st_size, f.contents.size()))
+                    except OSError as s:
+                        print(s)
             else:
-                print '%s missing from filesystem' %path
+                print('%s missing from filesystem' %path)
         elif isinstance(f, files.SymbolicLink):
             if existsOnFilesystem == True:
                 fullpath = os.path.join(cfg.root, path)
                 c = os.readlink(fullpath)
                 if c != f.target():
-                    print 'symlink %s contains %s instead of %s' %(
-                        path, c, f.target())
+                    print('symlink %s contains %s instead of %s' %(
+                        path, c, f.target()))
             else:
-                print 'symlink %s missing from filesystem' %path
+                print('symlink %s missing from filesystem' %path)
         elif isinstance(f, (files.Directory, files.Socket, files.NamedPipe,
                             files.DeviceFile)):
             # no further checking than permissions for these types
             pass
         else:
-            print 'not checking special file %s' % path
+            print('not checking special file %s' % path)
 
 
 if __name__ == '__main__':

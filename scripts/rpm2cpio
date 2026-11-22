@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(fullPath))
 from conary import rpmhelper
 
 def usage():
-    print "Usage: rpm2cpio <rpmpackage> | cpio -ivumd"
+    print("Usage: rpm2cpio <rpmpackage> | cpio -ivumd")
     return 1
 
 def main(argv):
@@ -45,10 +45,10 @@ def main(argv):
 
     try:
         rpmhelper.extractRpmPayload(r, sys.stdout)
-    except rpmhelper.UnknownPayloadFormat, e:
+    except rpmhelper.UnknownPayloadFormat as e:
         sys.stderr.write('payload is not in cpio format: %s\n' % e.args[0])
         return 1
-    except rpmhelper.UnknownCompressionType, e:
+    except rpmhelper.UnknownCompressionType as e:
         sys.stderr.write('compression type %s unknown\n' % e.args[0])
         return 1
 

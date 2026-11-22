@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -41,7 +41,7 @@ def main():
     db = dbstore.connect(options.database, 'postgresql')
     db.transaction()
 
-    print 'Rebuilding UGI and friends'
+    print('Rebuilding UGI and friends')
     accessmap.RoleInstances(db).rebuild()
 
     if options.dry_run:

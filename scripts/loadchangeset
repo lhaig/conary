@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -42,7 +42,7 @@ from conary.repository.netrepos import fsrepos, trovestore
 def loadChangeSet(db, contentsPath, changeSet):
     serverSet = set()
     keyIds = set()
-    print >> sys.stderr, "Inspecting changeset"
+    print("Inspecting changeset", file=sys.stderr)
     for trvCs in changeSet.iterNewTroveList():
         serverSet.add(trvCs.getNewVersion().getHost())
         continue # XXX
@@ -63,9 +63,9 @@ def loadChangeSet(db, contentsPath, changeSet):
 
     callback = UpdateCallback()
     callback.out = sys.stderr
-    print >> sys.stderr, "Committing"
+    print("Committing", file=sys.stderr)
     repos.commitChangeSet(changeSet, mirror=True, excludeCapsuleContents=True, callback=callback)
-    print >> sys.stderr
+    print(file=sys.stderr)
 
 
 class Postgres(object):
@@ -82,7 +82,7 @@ class Postgres(object):
             try:
                 return dbstore.connect('rbuilder@localhost:%s/%s'
                         % (self.port, dbName), 'postgresql')
-            except pgsql.DatabaseError, err:
+            except pgsql.DatabaseError as err:
                 msg = err.args[0]
                 if ('the database system is starting up' in msg
                         or 'Connection refused' in msg):
@@ -148,12 +148,12 @@ def main(args):
 
     masterCs = changeset.ReadOnlyChangeSet()
     for csName in args:
-        print >> sys.stderr, "Reading file", csName
+        print("Reading file", csName, file=sys.stderr)
         changeSet = changeset.ChangeSetFromFile(csName)
-        print >> sys.stderr, " Merging"
+        print(" Merging", file=sys.stderr)
         masterCs.merge(changeSet)
 
-    print >> sys.stderr, "Starting database"
+    print("Starting database", file=sys.stderr)
     server = db = None
     workDir = tempfile.mkdtemp(prefix='preload-')
     try:
@@ -170,7 +170,7 @@ def main(args):
         cu = db.cursor()
         cu.execute("CREATE LANGUAGE plpgsql")
 
-        print >> sys.stderr, "Creating schema"
+        print("Creating schema", file=sys.stderr)
         schema.loadSchema(db)
         schema.setupTempTables(db)
         depSchema.setupTempDepTables(db)
@@ -178,15 +178,15 @@ def main(args):
         os.mkdir(workDir + '/contents')
         loadChangeSet(db, workDir + '/contents', masterCs)
 
-        print >> sys.stderr, "Checkpointing"
+        print("Checkpointing", file=sys.stderr)
         cu.execute("CHECKPOINT")
 
-        print >> sys.stderr, "Dumping database"
+        print("Dumping database", file=sys.stderr)
         dumpPath = workDir + '/database.pgtar'
         os.system("pg_dump -U rbuilder -p %s -F tar -f '%s' preload"
                 % (server.port, dumpPath,))
 
-        print >> sys.stderr, "Creating tarball"
+        print("Creating tarball", file=sys.stderr)
         os.system("tar -C '%s' -c --remove-files contents database.pgtar" % (workDir,))
 
     finally:
@@ -201,4 +201,4 @@ if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv[1:]))
     except KeyboardInterrupt:
-        print
+        print()

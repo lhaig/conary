@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -37,12 +37,12 @@ from conary.local import database
 def main(argv):
 
     if len(argv) < 3:
-        print 'usage: findmissingbuildreqs /path/to/conarydb troveSpec ...'
+        print('usage: findmissingbuildreqs /path/to/conarydb troveSpec ...')
         return 1
 
     dbPath = argv[1]
     if not os.path.isdir(dbPath):
-        print 'first argument must be a directory containing a conarydb'
+        print('first argument must be a directory containing a conarydb')
         return 1
 
     troveSpecs = argv[2:]
@@ -125,7 +125,7 @@ def main(argv):
                 depSetList.append(depSet)
             newDBProv = db.getTrovesWithProvides(depSetList)
             newBuildReqs = set(x[0] for x in
-                               itertools.chain(*newDBProv.itervalues()))
+                               itertools.chain(*iter(newDBProv.values())))
 
             # convert :lib to :devel or :devellib if possible, and
             # ignore internal dependencies
@@ -159,7 +159,7 @@ def main(argv):
 
 
     # finally, report
-    print '                               \r',
+    print('                               \r', end=' ')
     for srcName in sorted(missingReqs.keys()):
         # Remove any other troves we've found built from the same source.
         # Note that if A:source builds B and C, and you query B and C
@@ -171,7 +171,7 @@ def main(argv):
         mainName = srcName.split(':', 1)[0]+':'
         misses = [x for x in misses if not x.startswith(mainName)]
         if misses:
-            print '%s missing buildRequires %s' %(srcName, sorted(misses))
+            print('%s missing buildRequires %s' %(srcName, sorted(misses)))
 
     return 0
 

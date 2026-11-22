@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -43,7 +43,7 @@ from conary import sqlite3
 from conary.local import database
 
 def usage():
-    print 'usage: %s [--root rootpath] [--repair]' %sys.argv[0]
+    print('usage: %s [--root rootpath] [--repair]' %sys.argv[0])
 
 def getTroveInfo(db, instanceId):
     "return troveName, version, and flavor for a given db's instanceId"
@@ -52,7 +52,7 @@ def getTroveInfo(db, instanceId):
                '    INNER JOIN DBFlavors '
                '        ON DBInstances.flavorId = DBFlavors.flavorId '
                'WHERE instanceId=?', (instanceId))
-    troveName, frozenFlavor = cu.next()
+    troveName, frozenFlavor = next(cu)
     flavor = deps.deps.ThawFlavor(frozenFlavor)
     version = db.db.instances.getVersion(instanceId)
     return troveName, version, flavor
@@ -70,11 +70,11 @@ def main(argv):
     try:
         argSet, otherArgs = options.processArgs(argDef, cfgMap, cfg, usage,
                                                 argv=argv)
-    except options.OptionError, s:
-        print s
+    except options.OptionError as s:
+        print(s)
         sys.exit(1)
 
-    repair = argSet.has_key('repair')
+    repair = 'repair' in argSet
 
     dbPath = os.sep.join((cfg.root, cfg.dbPath, 'conarydb'))
     db = database.Database(cfg.root, cfg.dbPath)
@@ -99,31 +99,31 @@ def main(argv):
                 # uh-oh, we're missing contents. print an error and make note
                 troveName, troveVersion, flavor = getTroveInfo(db, instanceId)
                 fileVersion = db.db.versionTable.getBareId(versionId)
-                print troveName, troveVersion.asString(), path, \
-                      '(sha1: %s)' %h, 'missing from data store',
+                print(troveName, troveVersion.asString(), path, \
+                      '(sha1: %s)' %h, 'missing from data store', end=' ')
                 if fileVersion.isOnLocalHost():
-                    print ('but this trove was built locally so the contents '
-                           'can not be restored'),
+                    print(('but this trove was built locally so the contents '
+                           'can not be restored'), end=' ')
                 else:
                     neededFiles.append((f.fileId(), fileVersion))
                     neededSha1s.append(h)
-                print
+                print()
             else:
                 # excellent, not missing the contents.  let's count
                 # how many instances we have
                 sha1Counts[h] = sha1Counts.get(h, 0) + 1
 
-    for h, count in sha1Counts.iteritems():
+    for h, count in sha1Counts.items():
         realCount = cu.execute('SELECT count from DataStore WHERE hash=?',
                                h).next()[0]
         if realCount != count:
-            print ('count incorrect for %s. '
-                   'expected %d got %d' %(h, count, realCount)),
+            print(('count incorrect for %s. '
+                   'expected %d got %d' %(h, count, realCount)), end=' ')
             if repair:
                 cu.execute('UPDATE DataStore set count=? where hash=?',
                            (count, h))
-                print 'fixed.',
-            print
+                print('fixed.', end=' ')
+            print()
 
     if repair:
         # request the contents we're missing

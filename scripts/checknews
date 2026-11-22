@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -57,14 +57,14 @@ class CheckNewsCommand(main.JiraNemoCommand, options.AbstractCommand):
                     line = line.strip()[11:]
                     version = line.split(':')[0]
                 if version == '@NEW@':
-                    print 'change @NEW@ first'
+                    print('change @NEW@ first')
                     sys.exit(1)
                 version = 'Conary ' + version
             if not fixVer:
                 versions = client.getVersions(project)
                 v = [ x for x in versions if x.name == version ]
                 if not v:
-                    print 'no such version', version, 'in %s project' % project
+                    print('no such version', version, 'in %s project' % project)
                     break
                 fixVer = v[0]
                 versionToId = dict((x.name, x.id) for x in versions)
@@ -72,26 +72,26 @@ class CheckNewsCommand(main.JiraNemoCommand, options.AbstractCommand):
             if match:
                 key = match.group()
                 if not key.startswith(project):
-                    print 'not checking', key
+                    print('not checking', key)
                     continue
-                print 'getting', key
+                print('getting', key)
                 issue = client.getIssue(key)
                 fixVers = [ x for x in issue.fixVersions if x.name == version ]
                 if issue.status not in closedStates:
                     notClosed.append(key)
                 if not fixVers:
-                    print key, 'does not have fix version set to', version, 'setting...',
+                    print(key, 'does not have fix version set to', version, 'setting...', end=' ')
                     fixVersions = issue.fixVersions[:]
                     fixVersions.append(fixVer)
                     newVersions = [ versionToId[x.name] for x in fixVersions ]
                     d = { 'id': 'fixVersions',
                           'values': newVersions }
                     client.client.updateIssue(key, [ d ])
-                    print 'ok.'
+                    print('ok.')
         if notClosed:
-            print "Issues that are not in a closed state (%s):" % \
-                ", ".join(closedStates)
-            print " ".join(notClosed)
+            print("Issues that are not in a closed state (%s):" % \
+                ", ".join(closedStates))
+            print(" ".join(notClosed))
 
 class CheckerMain(main.JiraNemoMain, options.MainHandler):
     commandList = [ CheckNewsCommand ]

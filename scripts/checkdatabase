@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -44,7 +44,7 @@ from conary.local import database
 from conary import conaryclient
 
 def usage():
-    print 'usage: %s [--root rootpath]' %sys.argv[0]
+    print('usage: %s [--root rootpath]' %sys.argv[0])
 
 def main(argv):
     sys.excepthook = util.genExcepthook()
@@ -56,8 +56,8 @@ def main(argv):
     try:
         argSet, otherArgs = options.processArgs(argDef, cfgMap, cfg, usage,
                                                 argv=argv)
-    except options.OptionError, s:
-        print s
+    except options.OptionError as s:
+        print(s)
         sys.exit(1)
 
     db = database.Database(cfg.root, cfg.dbPath)
@@ -75,18 +75,18 @@ def main(argv):
             if troveVersion.isOnLocalHost():
                 # skip local troves
                 continue
-            print 'checking', troveName, troveVersion.asString()
+            print('checking', troveName, troveVersion.asString())
             d = {troveName: {troveVersion: [troveFlavor]}}
             try:
                 ret = repos.getTroveVersionFlavors(d)
-            except repository.OpenError, e:
-                print ('error accessing repository when finding trove %s: %s'
-                       %(troveName, e))
-            if not ret.has_key(troveName):
-                print ('error: %s trove version %s in the database has flavor '
+            except repository.OpenError as e:
+                print(('error accessing repository when finding trove %s: %s'
+                       %(troveName, e)))
+            if troveName not in ret:
+                print(('error: %s trove version %s in the database has flavor '
                        '"%s", but there are no troves in the repository with '
                        'that version and flavor.'
-                       %(troveName, troveVersion.asString(), troveFlavor))
+                       %(troveName, troveVersion.asString(), troveFlavor)))
                 continue
             for t in repos.iterFilesInTrove(troveName, troveVersion,
                                             troveFlavor, withFiles=True):
@@ -94,40 +94,40 @@ def main(argv):
                 try:
                     dbPath, dbFileId, dbVersion = dbTrove.getFile(pathId)
                 except KeyError:
-                    print ('error: the repository version of %s has a pathId '
+                    print(('error: the repository version of %s has a pathId '
                            '%s that does not exist in the trove from the '
                            'database' %(troveName,
-                                        sha1helper.md5ToString(pathId)))
+                                        sha1helper.md5ToString(pathId))))
                     continue
                 #print >> sys.stderr, '  ', path
                 if dbPath != path:
-                    print ('error: repository path for pathId %s is %s, '
+                    print(('error: repository path for pathId %s is %s, '
                            'database thinks it is %s'
-                           %(sha1helper.md5ToString(pathId), path, dbPath))
+                           %(sha1helper.md5ToString(pathId), path, dbPath)))
                 if dbFileId != fileId:
-                    print ('error: repository fileId for pathId %s (%s) is '
+                    print(('error: repository fileId for pathId %s (%s) is '
                            '%s, database thinks it is %s'
                            %(sha1helper.md5ToString(pathId),
                              path,
                              sha1helper.sha1ToString(fileId),
-                             sha1helper.sha1ToString(dbFileId)))
+                             sha1helper.sha1ToString(dbFileId))))
                 if dbVersion != version:
-                    print ('error: repository fileVersion for pathId %s (%s) '
+                    print(('error: repository fileVersion for pathId %s (%s) '
                            'is %s, database thinks it is %s'
                            %(sha1helper.md5ToString(pathId),
                              path,
                              version.asString(),
-                             dbVersion.asString()))
+                             dbVersion.asString())))
                 dbFileObj = db.getFileVersion(pathId, dbFileId,
                                               dbVersion)
                 if dbFileObj != fileObj:
-                    print ('error: file stream for fileId %s (%s) does not '
+                    print(('error: file stream for fileId %s (%s) does not '
                            'match.  Diff from db to repos is: %s.  Diff '
                            'from repos to db is: %s'
                            %(sha1helper.md5ToString(pathId),
                              path,
                              files.fieldsChanged(dbFileObj.diff(fileObj)),
-                             files.fieldsChanged(fileObj.diff(dbFileObj))))
+                             files.fieldsChanged(fileObj.diff(dbFileObj)))))
 
 if __name__ == '__main__':
     main(sys.argv)

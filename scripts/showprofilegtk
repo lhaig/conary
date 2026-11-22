@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -16,7 +16,7 @@
 #
 
 
-import cPickle
+import pickle
 import gobject
 import gtk
 import sys
@@ -316,7 +316,7 @@ class StatWindow(gtk.Window):
         for store, callinfo in ((self.callerstore, info.callers),
                                 (self.calleestore, info.callees)):
             store.clear()
-            for func, nc in callinfo.iteritems():
+            for func, nc in callinfo.items():
                 caller = Caller()
                 caller.func = func
                 if type(nc) == tuple:
@@ -369,7 +369,7 @@ class StatWindow(gtk.Window):
         filename = self.filename
         if '.pickle' in filename:
             f = open(filename)
-            stats = cPickle.load(f).stats
+            stats = pickle.load(f).stats
         else:
             import marshal
             f = open(filename)
@@ -378,13 +378,13 @@ class StatWindow(gtk.Window):
 
     def populate(self, stats):
         callees = {}
-        for func, (cc, nc, tt, ct, callers) in stats.iteritems():
+        for func, (cc, nc, tt, ct, callers) in stats.items():
             callees.setdefault(func, {})
-            for caller, num in callers.iteritems():
+            for caller, num in callers.items():
                 d = callees.setdefault(caller, {})
                 d[func] = num
 
-        for func, (cc, nc, tt, ct, callers) in stats.iteritems():
+        for func, (cc, nc, tt, ct, callers) in stats.items():
             stat = ProfileStat()
             stat.func = func
             stat.cc = cc
@@ -479,7 +479,7 @@ class SourceBuffer:
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print 'usage: %s profile-file' %sys.argv[0]
+        print('usage: %s profile-file' %sys.argv[0])
         sys.exit(1)
 
     filename = sys.argv[1]

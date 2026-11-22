@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -93,7 +93,7 @@ def hasPath(cu, fn, options):
         join Versions on CacheList.versionId = Versions.versionId
         where idx in (%s)""" % ",".join([str(x) for x in idxList]))
         for n, v in cu:
-            print fn, n, v
+            print(fn, n, v)
     # mark those entries as "seen"
     cu.execute("update CacheList set flag=1 where idx in (%s)" % ",".join([str(x) for x in idxList]))
     return True
@@ -117,7 +117,7 @@ def scanCache(options, db=None):
             cs = changeset.ChangeSetFromFile(fn)
             for trvCs in cs.iterNewTroveList():
                 if options.verbose:
-                    print fn, trvCs.getName(), trvCs.getNewVersion()
+                    print(fn, trvCs.getName(), trvCs.getNewVersion())
                 if db:
                     count += addEntry(cu, trvCs.getNewNameVersionFlavor(), fn)
         if db and count > MaxCommit:
@@ -142,7 +142,7 @@ def listCache(options, db):
         if options.check and not os.path.isfile(p):
             removedIds.append(i)
             continue
-        print p, n, v
+        print(p, n, v)
     if removedIds:
         cu.executemany("delete from CacheList where idx=?", removedIds)
     db.commit()
@@ -196,7 +196,7 @@ def getDB(options):
     # need to refresh the database
     db.loadSchema()
     cu = db.cursor()
-    for t in db.tables.keys():
+    for t in list(db.tables.keys()):
         cu.execute("drop table %s" % (t,))
     db.commit()
     createSchema(db)
@@ -222,7 +222,7 @@ if __name__ == '__main__':
             scanCache(options, db)
         except:
             if db:
-                print "Committing last transaction"
+                print("Committing last transaction")
                 db.commit()
             raise
     else:

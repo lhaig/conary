@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -37,7 +37,7 @@ sys.excepthook = util.genExcepthook(debug=True)
 from conary.dbstore import shell, sqlerrors
 
 def usage():
-    print 'usage: %s [dbstore driver] [dbstore connection path]' %sys.argv[0]
+    print('usage: %s [dbstore driver] [dbstore connection path]' %sys.argv[0])
     sys.exit(1)
 
 def main():
@@ -49,8 +49,8 @@ def main():
 
     try:
         dbshell = shell.DbShell(driver=args[0], path=args[1])
-    except sqlerrors.DatabaseError, e:
-        print 'Error:', str(e.args[0])
+    except sqlerrors.DatabaseError as e:
+        print('Error:', str(e.args[0]))
         sys.exit(1)
     dbshell.cmdloop()
 

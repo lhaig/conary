@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import os
 import sys
 
@@ -47,11 +47,11 @@ for path in source_sha1s:
     compr_sources += size
     if path not in bin_sha1s:
         compr_uniq_sources += size
-print 'Uncompressed sizes:'
-print ' Sources:                        ', uncmp_sources
-print ' Binaries:                       ', uncmp_bins
-print 'Compressed sizes:'
-print ' Sources:                        ', compr_sources
-print ' Binaries:                       ', compr_bins
-print ' Sources not also in binaries:   ', compr_uniq_sources
-print ' Total compressed:               ', compr_uniq_sources + compr_bins
+print('Uncompressed sizes:')
+print(' Sources:                        ', uncmp_sources)
+print(' Binaries:                       ', uncmp_bins)
+print('Compressed sizes:')
+print(' Sources:                        ', compr_sources)
+print(' Binaries:                       ', compr_bins)
+print(' Sources not also in binaries:   ', compr_uniq_sources)
+print(' Total compressed:               ', compr_uniq_sources + compr_bins)

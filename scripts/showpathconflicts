@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -46,19 +46,19 @@ def main():
 
 def displayConflicts(db, cfg):
     for (trove1, trove2, path) in iterPathConflicts(db.db):
-	print "%-20s  %-20s  %-30s" % (trove1[0], trove2[0], path)	
+        print("%-20s  %-20s  %-30s" % (trove1[0], trove2[0], path))	
 
 def iterPathConflicts(sqldb_obj):
     cu = sqldb_obj.db.cursor()
     cu.execute("""SELECT a.instanceId,b.instanceId,a.path 
-		  FROM DBTroveFiles AS a, DBTroveFiles AS b
-		  WHERE a.path=b.path 
-		  AND a.instanceId != b.instanceID AND
-		  a.isPresent=1 AND b.isPresent=1 AND
-		  a.instanceID <= b.instanceID""")
+                  FROM DBTroveFiles AS a, DBTroveFiles AS b
+                  WHERE a.path=b.path 
+                  AND a.instanceId != b.instanceID AND
+                  a.isPresent=1 AND b.isPresent=1 AND
+                  a.instanceID <= b.instanceID""")
     for row in cu:
-	troveId1 = sqldb_obj.instances.getId(row[0])
-	troveId2 = sqldb_obj.instances.getId(row[1])
+        troveId1 = sqldb_obj.instances.getId(row[0])
+        troveId2 = sqldb_obj.instances.getId(row[1])
         yield (troveId1, troveId2, row[2])
 
 main()

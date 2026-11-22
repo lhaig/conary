@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -47,7 +47,7 @@ quotesRe = re.compile(r'[ \t]*"?(.*)"?[ \t]*')
 # remove redirection
 redirectionRe = re.compile(r'2?>.*')
 
-(PRE, POST, PREUN, POSTUN) = range(0,4)
+(PRE, POST, PREUN, POSTUN) = list(range(0,4))
 
 
 class taghandlerBuilder:
@@ -85,7 +85,7 @@ class taghandlerBuilder:
                     # ldconfig happens automatically
                     pass
                 else:
-                    print 'unhandled POSTIN interpreter %s' % postInProg
+                    print('unhandled POSTIN interpreter %s' % postInProg)
             else:
                 postScript = self.removeUnConary(
                     rpmHeader[rpmhelper.POSTIN])
@@ -115,7 +115,7 @@ class taghandlerBuilder:
                     # ldconfig happens automatically
                     pass
                 else:
-                    print 'unhandled POSTUN interpreter %s' % postUnProg
+                    print('unhandled POSTUN interpreter %s' % postUnProg)
             else:
                 if 'RPM_INSTALL_PREFIX' in postUn:
                     self.warnRelocation('postun')
@@ -125,32 +125,32 @@ class taghandlerBuilder:
 
 
         if self.preScript:
-            print 'Conary does not implement pre scripts.'
-            print 'Most pre scripts add users/groups, which conary does'
-            print 'using UserInfoRecipe and GroupInfoRecipe; you may need'
-            print 'to create these other recipes separately; rpm2ccs will'
-            print 'not create them for you.'
+            print('Conary does not implement pre scripts.')
+            print('Most pre scripts add users/groups, which conary does')
+            print('using UserInfoRecipe and GroupInfoRecipe; you may need')
+            print('to create these other recipes separately; rpm2ccs will')
+            print('not create them for you.')
         if postUn:
-            print 'Conary handles postuninstall in a way that is not'
-            print 'compatible with RPM postun scripts.'
-            print 'Use the --recipe option and manually modify the'
-            print 'recipe, taghandler, or scripts as necessary.'
-            print 'It is most likely that the postuninstall will be'
-            print 'entirely unnecessary with Conary, since Conary'
-            print 'handles things like ld.so.conf changes itself,'
-            print 'and has tag handlers for system databases like'
-            print 'info/dir, /etc/shells, and scrollkeeper.'
-            print 'Also, be aware that many postuninstall scripts'
-            print 'can really be run as preunistall scripts.'
+            print('Conary handles postuninstall in a way that is not')
+            print('compatible with RPM postun scripts.')
+            print('Use the --recipe option and manually modify the')
+            print('recipe, taghandler, or scripts as necessary.')
+            print('It is most likely that the postuninstall will be')
+            print('entirely unnecessary with Conary, since Conary')
+            print('handles things like ld.so.conf changes itself,')
+            print('and has tag handlers for system databases like')
+            print('info/dir, /etc/shells, and scrollkeeper.')
+            print('Also, be aware that many postuninstall scripts')
+            print('can really be run as preunistall scripts.')
         if triggers:
-            print 'Conary does not implement triggers at all.'
-            print 'Most triggers are workarounds for old bugs.'
-            print 'The conary taghandler facility provides all the necessary'
-            print 'semantics, but we cannot adapt them automatically.'
-            print 'You will have to look at the triggers and implement any'
-            print 'necessary semantics differently for Conary, using'
-            print 'the --recipe option and manual modification using'
-            print 'taghandlers.'
+            print('Conary does not implement triggers at all.')
+            print('Most triggers are workarounds for old bugs.')
+            print('The conary taghandler facility provides all the necessary')
+            print('semantics, but we cannot adapt them automatically.')
+            print('You will have to look at the triggers and implement any')
+            print('necessary semantics differently for Conary, using')
+            print('the --recipe option and manual modification using')
+            print('taghandlers.')
         if postScript:
             self.script(POST, postScript)
         if preUn:
@@ -175,42 +175,42 @@ class taghandlerBuilder:
             lines = []
             for line in scriptLines:
                 if 'chkconfig' in line:
-                    print 'removing chkconfig from "%s"' %line
+                    print('removing chkconfig from "%s"' %line)
                     line = chkconfigRe.sub(r'\1:', line)
                 if 'service' in line:
-                    print 'removing service from "%s"' %line
+                    print('removing service from "%s"' %line)
                     line = serviceRe.sub(r'\1:', line)
                 if 'ldconfig' in line:
-                    print 'removing ldconfig from "%s"' %line
+                    print('removing ldconfig from "%s"' %line)
                     line = ldconfigRe.sub(r'\1:', line)
                 if 'useradd' in line:
-                    print 'removing useradd from "%s"' %line
+                    print('removing useradd from "%s"' %line)
                     self.recorduser(line)
                     line = userRe.sub(r'\1:', line)
                 if 'groupadd' in line:
-                    print 'removing groupadd from "%s"' %line
+                    print('removing groupadd from "%s"' %line)
                     self.recordgroup(line)
                     line = userRe.sub(r'\1:', line)
                 if 'userdel' in line:
-                    print 'removing userdel from "%s"' %line
+                    print('removing userdel from "%s"' %line)
                     line = userRe.sub(r'\1:', line)
                 if 'groupdel' in line:
-                    print 'removing groupdel from "%s"' %line
+                    print('removing groupdel from "%s"' %line)
                     line = userRe.sub(r'\1:', line)
                 lines.append(line)
             scriptLines = lines
         return scriptLines
 
     def warnRelocation(self, name):
-        print '%%%s requires relocation.' %name
-        print 'Conary does not implement relocatable packages.'
-        print '%%%s will not be run' %name
+        print('%%%s requires relocation.' %name)
+        print('Conary does not implement relocatable packages.')
+        print('%%%s will not be run' %name)
 
     def warnLdSoConf(self, name):
-        print '%%%s appears to modify ld.so.conf' %name
-        print 'Conary manages ld.so.conf itself'
-        print 'Please use --recipe and modify the %s script not to' %name
-        print 'modify ld.so.conf'
+        print('%%%s appears to modify ld.so.conf' %name)
+        print('Conary manages ld.so.conf itself')
+        print('Please use --recipe and modify the %s script not to' %name)
+        print('modify ld.so.conf')
 
     def recorduser(self, line):
         line = redirectionRe.sub('', line)
@@ -243,12 +243,12 @@ class taghandlerBuilder:
                     # name in from groupinfo, thanks to lots of broken RPM specs
                 else:
                     # unknown option
-                    print 'error parsing "%s"' %line
+                    print('error parsing "%s"' %line)
                     del self.userinfo[user]
                     return
-            print 'storing user information: %s' %str(self.userinfo[user])
+            print('storing user information: %s' %str(self.userinfo[user]))
         except:
-            print 'error parsing "%s"' %line
+            print('error parsing "%s"' %line)
             del self.userinfo[user]
                 
     def recordgroup(self, line):
@@ -270,13 +270,13 @@ class taghandlerBuilder:
                     self.groupinfo[group]['gid'] = self.getarg(args[index])
                 else:
                     # unknown option
-                    print 'error parsing "%s"' %line
+                    print('error parsing "%s"' %line)
                     del self.groupinfo[group]
                     return
-            print 'storing group information: %s' %str(self.groupinfo[group])
+            print('storing group information: %s' %str(self.groupinfo[group]))
         except:
             del self.groupinfo[group]
-            print 'error parsing "%s"' %line
+            print('error parsing "%s"' %line)
 
     def getarg(self, data):
         return commentRe.sub(r'\1', data[1:])
@@ -458,7 +458,7 @@ class recipeBuilder:
 
             if stat.S_ISDIR(mode):
                 directories.append(path)
-                if mode & 7777 != 0755 or username != 'root' \
+                if mode & 7777 != 0o755 or username != 'root' \
                    or groupname != 'root':
                     info_directories[path] = (mode, username, groupname)
                     self.recipe.append(
@@ -481,12 +481,12 @@ class recipeBuilder:
                 self.recipe.append(
                     "        r.MakeDevices(r'%s', '%s', '%d', '%d', '%s', '%s', '0%o')"%
                     (escaped_path, type, major, minor, username, groupname,
-                     mode&0777))
+                     mode&0o777))
                 continue
             
-            if mode & 07000:
+            if mode & 0o7000:
                 self.recipe.append(
-                    "        r.SetModes(r'%s', 0%o)"%(escaped_path, mode & 07777))
+                    "        r.SetModes(r'%s', 0%o)"%(escaped_path, mode & 0o7777))
 
             if flags & 1:
                 # config file
@@ -531,7 +531,7 @@ def writeLines(filename, lines):
     
 
 def usage():
-    print "\n".join((
+    print("\n".join((
         'Usage: rpm2ccs [options] <rpmpackage>',
         'Options: --recipe|--changeset|--update',
         '           --recipe just writes a recipe',
@@ -542,10 +542,10 @@ def usage():
         '         --no-clean keeps conary from cleaning up after the build',
         '         --commit tells conary to commit changes to the repository',
         '',
-        ))
+        )))
     return 1
 
-(RECIPE, CHANGESET, UPDATE) = range(0,3)
+(RECIPE, CHANGESET, UPDATE) = list(range(0,3))
 
 def main(argv):
     if len(argv) < 2:
@@ -570,7 +570,7 @@ def main(argv):
         create = CHANGESET
     elif '--update' in argv:
         create = UPDATE
-        print '--update is not yet implemented, sorry'
+        print('--update is not yet implemented, sorry')
         return 1
     
     packageScripts = True
@@ -583,7 +583,7 @@ def main(argv):
 
     commitWork=False
     if '--commit' in argv:
-        print 'warning: --commit is not yet finished'
+        print('warning: --commit is not yet finished')
         return 1
         commitWork=True
 
@@ -615,7 +615,7 @@ def main(argv):
 
 
     if create == RECIPE:
-        print 'Recipe and any other necessary files in %s' % packagedir
+        print('Recipe and any other necessary files in %s' % packagedir)
         return 0
 
 
@@ -623,13 +623,13 @@ def main(argv):
         checkin.commit(repos, cfg, None, True)
         cook.cookCommand(cfg, (recipe.packagename,), False, {}, resume=False)
         if not cfg.cleanAfterCook:
-            print 'Not deleting working directory %s' % dir
+            print('Not deleting working directory %s' % dir)
         else:
             util.rmtree(dir)
 
     else:
         cook.cookCommand(cfg, (recipe.name(),), False, {}, resume=False)
-        print 'Changeset and other files in %s' % packagedir
+        print('Changeset and other files in %s' % packagedir)
         
 
 if __name__ == "__main__":

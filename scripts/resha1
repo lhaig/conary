@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -40,7 +40,7 @@ parser = optparse.OptionParser(version = '%prog 0.1')
 (options, args) = parser.parse_args()
 
 if len(args) != 2:
-    print >> sys.stderr, "usage: resha1 <driver> <reposdb>"
+    print("usage: resha1 <driver> <reposdb>", file=sys.stderr)
     sys.exit(1)
 
 db = dbstore.connect(args[1], driver = args[0])
@@ -66,11 +66,11 @@ allTroves = [ (x[0], (x[1], versions.VersionFromString(x[2]),
                    deps.ThawFlavor(x[3]))) for x in cu ]
 
 fixes = []
-for count, (instanceId, trv) in enumerate(itertools.izip(
+for count, (instanceId, trv) in enumerate(zip(
             (x[0] for x in  allTroves), 
             store.iterTroves([ x[1] for x in allTroves ]))):
     if count % 50 == 0:
-        print "Trove %d of %d\r" % (count, len(allTroves)),
+        print("Trove %d of %d\r" % (count, len(allTroves)), end=' ')
         sys.stdout.flush()
 
     if trv.verifySignatures():
@@ -79,7 +79,7 @@ for count, (instanceId, trv) in enumerate(itertools.izip(
     trv.computeSignatures()
     fixes.append((instanceId, trv.troveInfo.sigs.freeze()))
 
-print "%d of %d troves need new sha1s" % (len(fixes), len(allTroves))
+print("%d of %d troves need new sha1s" % (len(fixes), len(allTroves)))
 
 cu.execute("CREATE TEMPORARY TABLE Fixes (instanceId INTEGER, sigs BLOB)")
 for instanceId, sigs in fixes:

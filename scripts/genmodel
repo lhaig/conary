@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -75,8 +75,8 @@ def buildSimplificationMap(g):
     return findMap
 
 def buildJobs(client, cache, model):
-    print "====== Candidate model " + "=" * 55
-    print "\t" + "\n\t".join(model.iterFormat())
+    print("====== Candidate model " + "=" * 55)
+    print("\t" + "\n\t".join(model.iterFormat()))
 
     updJob = client.newUpdateJob()
     ts = client.cmlGraph(model)
@@ -93,9 +93,9 @@ def orderByPackage(jobList):
             continue
 
         if trove.troveIsFileSet(job[0]):
-            print 'ignoring fileset %s' %job[0]
+            print('ignoring fileset %s' %job[0])
         if trove.troveIsGroup(job[0]):
-            print 'ignoring group not in platform set %s' %job[0]
+            print('ignoring group not in platform set %s' %job[0])
 
         pkgName = job[0].split(":")[0]
         if job[1][0] is not None:
@@ -149,9 +149,9 @@ def addEraseJob(model, job):
 
 
 def getAnswer(question):
-    print question,
+    print(question, end=' ')
     sys.stdout.flush()
-    return raw_input()
+    return input()
 
 def findParent(client, path, grpName, latest = False):
     releaseTroves = list(client.getDatabase().iterTrovesByPath(path))
@@ -291,7 +291,7 @@ def initialRedHatModel(client, model):
                                        fmtVer(groupOs[1]),
                                        str(groupOs[2])) ] ))
 
-    print "\t" + "\n\t".join(model.iterFormat())
+    print("\t" + "\n\t".join(model.iterFormat()))
 
 
 if __name__ == '__main__':
@@ -364,7 +364,7 @@ if __name__ == '__main__':
 
         # look for packages to install/update
         for priorityList in componentPriorities:
-            for pkgTuple, jobList in installPackageMap.items():
+            for pkgTuple, jobList in list(installPackageMap.items()):
                 if trove.troveIsGroup(pkgTuple[0]):
                     continue
 
@@ -377,7 +377,7 @@ if __name__ == '__main__':
                     continue
 
                 if pkgTuple in newInstalls:
-                    print "   updating model for job", jobList
+                    print("   updating model for job", jobList)
                     if (len(jobList) == 2 and
                         not sum(x[0].endswith('rpm') for x in jobList)):
                         # pick out the one component we use
@@ -400,7 +400,7 @@ if __name__ == '__main__':
             continue
 
         # handle packageless changes
-        for pkgTuple, jobList in installPackageMap.items():
+        for pkgTuple, jobList in list(installPackageMap.items()):
             newInstalls = set([ (x[0], x[1][0], x[1][1]) for x in jobList ])
 
             if pkgTuple in newInstalls:
@@ -436,11 +436,11 @@ if __name__ == '__main__':
 
     candidateJob, uJob.final, Ts = buildJobs(client, cache, model)
 
-    print "-----"
+    print("-----")
     findMap = buildSimplificationMap(finalTs.g)
-    print "simplification map"
-    for big, little in findMap.iteritems():
-        print "%s -> %s" % (big, little)
+    print("simplification map")
+    for big, little in findMap.items():
+        print("%s -> %s" % (big, little))
 
     finalModel = cml.CML(cfg)
     for searchOp in [x for x in model.modelOps
@@ -532,8 +532,8 @@ if __name__ == '__main__':
     candidateJobSet = set(candidateJob)
     finalJobSet = set(finalJob)
     if candidateJobSet != finalJobSet:
-        print 'Simplifying the model to remove explicit version references'
-        print 'changed the model.  Review the changes.'
+        print('Simplifying the model to remove explicit version references')
+        print('changed the model.  Review the changes.')
         addedJobs = finalJobSet - candidateJobSet
         removedJobs = candidateJobSet - finalJobSet
         updatecmd.displayChangedJobs(addedJobs, removedJobs, cfg)
@@ -598,17 +598,17 @@ if __name__ == '__main__':
             'system match the model, and would be applied to the system by ',
             'a "conary sync" operation:'] + jobData.split('\n') + ['']:
             commentLines.append(commentline)
-        print
-        print 'Some of the troves on this system are NOT represented'
-        print 'in the model.  If you apply this model, the following'
-        print 'operations will be applied to your system:'
-        print
-        print jobData
+        print()
+        print('Some of the troves on this system are NOT represented')
+        print('in the model.  If you apply this model, the following')
+        print('operations will be applied to your system:')
+        print()
+        print(jobData)
         getAnswer('Press return to continue.')
 
-    print "----"
-    print "Final Model"
-    print "\t" + "\n\t".join(finalModel.iterFormat())
+    print("----")
+    print("Final Model")
+    print("\t" + "\n\t".join(finalModel.iterFormat()))
 
     # Add the comments to the file without filling up the output
     for commentline in commentLines:
@@ -623,11 +623,11 @@ if __name__ == '__main__':
         smf.model = finalModel
         try:
             smf.write()
-            print 'model written to %s' % smf.fileName
+            print('model written to %s' % smf.fileName)
         except:
             outfd, outfn = tempfile.mkstemp()
             smf.write(fileName=outfn)
-            print 'model written to %s' % outfn
+            print('model written to %s' % outfn)
 
 
     # offer to send debugging data to rPath

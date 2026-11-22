@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -36,9 +36,9 @@ import tempfile
 
 if os.path.dirname(sys.argv[0]) != ".":
     if sys.argv[0][0] == "/":
-	fullPath = os.path.dirname(sys.argv[0])
+        fullPath = os.path.dirname(sys.argv[0])
     else:
-	fullPath = os.getcwd() + "/" + os.path.dirname(sys.argv[0])
+        fullPath = os.getcwd() + "/" + os.path.dirname(sys.argv[0])
 else:
     fullPath = os.getcwd()
 
@@ -58,7 +58,7 @@ from conary.cmds import updatecmd
 from conary import versions
 
 def usage():
-    print 'usage: %s [conarydb|manifest|rpmdb] newroot' %sys.argv[0]
+    print('usage: %s [conarydb|manifest|rpmdb] newroot' %sys.argv[0])
 
 def collectTrovesFromConaryDb(db):
     """
@@ -84,8 +84,8 @@ def collectTrovesFromConaryDb(db):
         if not version.isOnLocalHost():
             yield (name, version, flavor)
         else:
-            print >> sys.stderr, ('warning: %s is cooked locally, '
-                                  'cannot be restored' %name)
+            print(('warning: %s is cooked locally, '
+                                  'cannot be restored' %name), file=sys.stderr)
 
 def collectTrovesFromManifest(manifest):
     """
@@ -102,8 +102,8 @@ def collectTrovesFromManifest(manifest):
         if not version.isOnLocalHost():
             yield (name, version, flavor)
         else:
-            print >> sys.stderr, ('warning: %s is cooked locally, '
-                                  'cannot be restored' %name)
+            print(('warning: %s is cooked locally, '
+                                  'cannot be restored' %name), file=sys.stderr)
 
 def collectNewTrovesFromRPMDb(cfg):
     """
@@ -167,8 +167,8 @@ def collectNewTrovesFromRPMDb(cfg):
                                                    bestFlavor=False)
 
         troveList = []
-        for pkgName, vfs in troveSpace.iteritems():
-            for version, flvs in vfs.iteritems():
+        for pkgName, vfs in troveSpace.items():
+            for version, flvs in vfs.items():
                 troveList.extend((pkgName, version, x) for x in flvs)
 
         troveInfo = repos.getTroveInfo(trove._TROVEINFO_TAG_CAPSULE, troveList)
@@ -218,9 +218,9 @@ def collectNewTrovesFromRPMDb(cfg):
                 missing.add(nevra) # non-zero epoch not found
 
     if missing:
-        print >>sys.stderr, ('Could not find Conary packages for these RPMs:')
+        print(('Could not find Conary packages for these RPMs:'), file=sys.stderr)
         for nevra in sorted(missing):
-            print >> sys.stderr, (rpmhelper.NEVRA.filename(*nevra))
+            print((rpmhelper.NEVRA.filename(*nevra)), file=sys.stderr)
 
     # now add the packages that contain the components:
     matchingPackages = [(n.split(':')[0],v,f)
@@ -246,24 +246,24 @@ def buildCsList(client, troveList):
         versionDict = request.setdefault(name, {})
         flavorList = versionDict.setdefault(version, [])
         flavorList.append(flavor)
-    print >> sys.stderr, ('requesting trove information for %d troves.'
-                          %numTroves)
+    print(('requesting trove information for %d troves.'
+                          %numTroves), file=sys.stderr)
     reposTroves = client.repos.getTroveVersionFlavors(request)
 
     # verify everything actually exists, build up the applyList
     csList = []
     for name, version, flavor in troveList:
-        if not reposTroves.has_key(name):
-            print >> sys.stderr, 'repository has no trove named', name
+        if name not in reposTroves:
+            print('repository has no trove named', name, file=sys.stderr)
             continue
-        if not reposTroves[name].has_key(version):
-            print >> sys.stderr, ('repository has no trove named %s '
-                                  'with version' %(name, version.asString()))
+        if version not in reposTroves[name]:
+            print(('repository has no trove named %s '
+                                  'with version' %(name, version.asString())), file=sys.stderr)
             continue
         if not flavor in reposTroves[name][version]:
-            print >> sys.stderr, ('repository has no trove named %s '
+            print(('repository has no trove named %s '
                                   'with version %s and flavor %s'
-                                  %(name, version.asString(), flavor))
+                                  %(name, version.asString(), flavor)), file=sys.stderr)
             continue
 
         csList.append((name, (None, None), (version, flavor), 0))
@@ -295,8 +295,8 @@ def addConfigFileContents(client, cs, targetCs):
           
             diskSha1 = sha1helper.sha1FileBin(path)
             if diskSha1 == fileobj.contents.sha1():
-		targetCs.addFileContents(pathid, fileid,
-					 changeset.ChangedFileTypes.file,
+                targetCs.addFileContents(pathid, fileid,
+                                         changeset.ChangedFileTypes.file,
                                          filecontents.FromFilesystem(path),
                                          True)
             else:
@@ -304,10 +304,10 @@ def addConfigFileContents(client, cs, targetCs):
 
     # build up the repository request
     neededContents = [x[0] for x in needed]
-    print >> sys.stderr, '\ndownloading %d config file contents...' % len(neededContents),
+    print('\ndownloading %d config file contents...' % len(neededContents), end=' ', file=sys.stderr)
     sys.stderr.flush()
     contents = client.repos.getFileContents(neededContents)
-    print >> sys.stderr, 'done.'
+    print('done.', file=sys.stderr)
     # add the contents to the changeset
     for cont, ((fileid, version), (path, pathid)) in zip(contents, needed):
         #print >> sys.stderr, ('adding contents for %s (%s)'
@@ -336,7 +336,7 @@ def main(argv):
         # add ability to specify a path to an rpmdb
         troves = list(collectNewTrovesFromRPMDb(cfg))
         if not troves:
-            print >> sys.stderr, 'No unmanaged RPM packages found'
+            print('No unmanaged RPM packages found', file=sys.stderr)
             sys.exit(0)
     else:
         try:

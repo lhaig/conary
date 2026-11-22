@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -29,7 +29,7 @@ def renameSeq(s, old, new):
             l.branch = new.branch
 
 def rename(cu, old, new):
-    print 'renaming %s to %s' %(old, new)
+    print('renaming %s to %s' %(old, new))
     oldLabel = versions.Label(old)
     newLabel = versions.Label(new)
 
@@ -42,7 +42,7 @@ def rename(cu, old, new):
         version = vObj.asString()
 
         if oldVersion != version:
-            print oldVersion, version
+            print(oldVersion, version)
 
         cu.execute("update versions set version=? where versionid=?", 
                    version, versionId)
@@ -58,7 +58,7 @@ def rename(cu, old, new):
             branch = bObj.asString()
 
             if oldBranch != branch:
-                print oldBranch, branch
+                print(oldBranch, branch)
 
             cu.execute("update branches set branch=? where branchid=?", 
                        branch, branchId)
@@ -73,7 +73,7 @@ def rename(cu, old, new):
 if len(sys.argv) == 2:
     db = sqlite3.connect(sys.argv[1])
 elif len(sys.argv) > 1:
-    print "ACK"
+    print("ACK")
     sys.exit(1)
 else:
     db = sqlite3.connect("/var/lib/conarydb/conarydb")
