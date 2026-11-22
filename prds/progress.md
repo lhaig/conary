@@ -42,3 +42,18 @@ PATTERN: bytes/str - StringIO/cStringIO became io.StringIO in 29 lines; wherever
 PATTERN: bytes/str - fix_types turned types.StringType into bytes in isinstance checks (e.g. conary_test/cvctest/buildtest/cookrpmcapsuletest.py).
 PATTERN: iterator - fix_next renamed `def next` to `__next__` and rewrote x.next() as next(x); check classes with a non-iterator next() and C extension objects.
 PATTERN: runtime-only - string module functions (string.join, string.letters), buffer(), os.getcwdu are not fixed by default fixers and fail only at runtime.
+
+## 2026-11-22 - task 1.3 DONE (includes 1.4): C extensions on Python 3
+
+- Commit "feat(ext): build the C and Cython extensions against Python 3". Make.rules via sysconfig, PY_SSIZE_T_CLEAN,
+  tp_richcompare for streams, fopenIfExists via open(), str paths via os.fsencode, Cython .c regenerated.
+- py3tests/test_extensions.py: 24 failed before, 24 pass + 1 strict xfail after. Orchestrator re-ran a clean build
+  (8 .so incl. helper), pytest and compile_check (474 files, 0 failures).
+- Advisor review: MINOR (behaviour change on cross-type stream compare, pre-existing LongLongStream_Hash leak,
+  OpenSSL SHA1 deprecations); logged under Later in TASKS.md.
+
+PATTERN: build - Build extensions with `devenv/run make -C conary/lib/ext` (never the whole tree while pysqlite3 is in SUBDIRS). Regenerate Cython .c with `make -C conary/lib/ext ext`. constants.py: `make -C conary constants.py`.
+PATTERN: c-api - Every hand-written .c needs PY_SSIZE_T_CLEAN before <Python.h> with Py_ssize_t lengths for s#/z#, or 3.10+ raises SystemError at runtime.
+PATTERN: bytes/str - C extensions (pack, dep_freeze, streams) accept only bytes; 2to3'd callers and the .py fallbacks use str. `s#`/`z#` accept str silently and hide this.
+PATTERN: imports - Plain .so names work: Python 3 lists .so in EXTENSION_SUFFIXES and FileFinder prefers extensions over the .py fallback in the same directory.
+PATTERN: tooling - devenv/run passes -i; redirect stdin (</dev/null) when scripting it, or a stdin-reading command hangs.
