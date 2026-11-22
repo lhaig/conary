@@ -19,7 +19,7 @@ import os
 import warnings
 import sys
 from testrunner import suite
-from conary import sqlite3
+import sqlite3
 
 from conary_test import resources
 
@@ -39,8 +39,8 @@ class Suite(suite.TestSuite):
         assert 'rpm._rpm' not in sys.modules
         from conary_test import norpmlock
         norpmlock.open(resources.get_path('conary_test', '_norpmlock.so'))
-        if sqlite3.sqlite_version_info() < (3,7,0):
-            warnings.warn("conary.sqlite3 is linked against a too-old system "
+        if sqlite3.sqlite_version_info < (3,7,0):
+            warnings.warn("the system sqlite3 is linked against a too-old system "
                     "sqlite that is known to have bugs affecting the "
                     "repository.")
         # Some transport tests are affected by proxy environment settings
@@ -57,7 +57,7 @@ class Suite(suite.TestSuite):
         return  [ resources.get_path('conary') ]
 
     def sortTests(self, tests):
-        # Filter out e.g. conary.pysqlite3.test
+        # Only collect conary_test modules
         return [x for x in tests if x.startswith('conary_test')]
 
 

@@ -17,7 +17,7 @@
 
 all: subdirs constants.py stubs
 
-SUBDIRS=build local repository server lib pysqlite3 deps web \
+SUBDIRS=build local repository server lib deps web \
         conaryclient dbstore ScanDeps cmds
 
 # These are stubs that must be maintained for as long as there is
@@ -65,8 +65,6 @@ install: all install-subdirs pyfiles-install constants.py
 dist: default-dist
 
 clean: clean-subdirs default-clean
-	rm -f _sqlite.so _sqlite3.so
-	rm -rf sqlite sqlite3
 	rm -f constants.py
 	rm -rf *.egg-info
 	rm -f $(compat_modules)

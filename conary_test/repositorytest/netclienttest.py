@@ -32,7 +32,7 @@ from conary_test import rephelp
 from conary import callbacks
 from conary import conarycfg, conaryclient
 from conary import errors as gerrors
-from conary import sqlite3
+import sqlite3
 from conary import trove
 from conary import versions
 from conary.cmds import updatecmd
@@ -595,7 +595,7 @@ class NetclientTest(rephelp.RepositoryHelper):
             netclient.httpPutFile = old
 
     def testReferences(self):
-        if sqlite3.sqlite_version_info() < (3,7,0):
+        if sqlite3.sqlite_version_info < (3,7,0):
             raise testhelp.SkipTestException("buggy sqlite; use embedded sqlite")
         repos = self.openRepository()
         # remove anonymous access

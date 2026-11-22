@@ -45,7 +45,7 @@ from conary import conarycfg, deps, files
 from conary.repository import datastore
 from conary.lib import options, sha1helper, util
 from conary import conaryclient
-from conary import sqlite3
+import sqlite3
 from conary.local import database
 
 def usage():

@@ -19,7 +19,6 @@ import copy
 import inspect
 import re
 import shlex
-import sre_constants
 import os
 
 __developer_api__ = True
@@ -222,7 +221,7 @@ class CfgRegExp(CfgType):
     def parseString(self, val):
         try:
             return (val, re.compile(val))
-        except sre_constants.error as e:
+        except re.error as e:
             raise ParseError(str(e))
 
     def format(self, val, displayOptions=None):
@@ -246,7 +245,7 @@ class CfgSignedRegExp(CfgRegExp):
             raise ParseError("regexp value '%s' needs to start with + or -" % (val,))
         try:
             return (val, sense, re.compile(val[1:]))
-        except sre_constants.error as e:
+        except re.error as e:
             raise ParseError("regexp '%s' parse error\n" % (val[1:],) + str(e))
 
     def format(self, val, displayOptions=None):

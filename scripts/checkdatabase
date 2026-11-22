@@ -38,7 +38,7 @@ from conary import deps
 from conary import files
 from conary.lib import options, sha1helper, util
 from conary.repository import netclient, repository
-from conary import sqlite3
+import sqlite3
 from conary import trove
 from conary.local import database
 from conary import conaryclient

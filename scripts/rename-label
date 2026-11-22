@@ -18,7 +18,7 @@
 
 import sys
 
-from conary import sqlite3
+import sqlite3
 from conary import versions
 
 def renameSeq(s, old, new):

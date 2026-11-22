@@ -15,6 +15,7 @@
 #
 
 
+import importlib
 import os
 import re
 
@@ -51,7 +52,7 @@ def _loadDriver(name):
 
     modName = name + '_drv'
     try:
-        driverModule = __import__(modName, globals(), locals())
+        driverModule = importlib.import_module('.' + modName, __name__)
     except ImportError as err:
         if modName in str(err):
             # Re-throw only in cases where the dbstore driver missing.

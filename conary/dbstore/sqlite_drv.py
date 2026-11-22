@@ -18,7 +18,7 @@
 import os
 import re
 
-from conary import sqlite3
+import sqlite3
 
 from .base_drv import BaseDatabase, BaseCursor, BaseSequence, BaseKeywordDict
 from . import sqlerrors, sqllib
@@ -45,58 +45,108 @@ def _timestamp():
 class Cursor(BaseCursor):
     driver = "sqlite"
 
-    # sqlite is smart - this is only a noop
+    # Text/BLOB policy: Python str binds as TEXT and comes back as str,
+    # bytes bind as BLOB and come back as bytes. The base class would encode
+    # every str to UTF-8 bytes (and so store it as a BLOB); sqlite handles
+    # unicode natively, so turn that off.
+    _encodeRequired = False
+
+    # statements which must not implicitly open a transaction
+    _NO_IMPLICIT_BEGIN = ('SELECT', 'VACUUM', 'DETACH', 'BEGIN')
+
     def binary(self, s):
-        return s
+        """Wrap a binary value for binding as a BLOB. None passes through;
+        bytes-like objects become bytes; str is rejected so that str/bytes
+        confusion fails loudly instead of silently storing TEXT."""
+        if s is None:
+            return None
+        if isinstance(s, (bytes, bytearray, memoryview)):
+            return bytes(s)
+        raise TypeError("binary() requires bytes, not %s" %
+                type(s).__name__)
+
+    def frombinary(self, s):
+        if s is None:
+            return None
+        return bytes(s)
 
     # capture and translate exceptions
     def _tryExecute(self, func, *params, **kw):
         try:
             ret = func(*params, **kw)
-        except sqlite3.ProgrammingError as e:
-            if ((e.args[0].startswith("column") and e.args[0].endswith("not unique"))
-                    or e.args[0].startswith("UNIQUE constraint failed")):
-                raise sqlerrors.ColumnNotUnique(e)
-            elif e.args[0] == 'attempt to write a readonly database':
-                raise sqlerrors.ReadOnlyDatabase(str(e))
-            raise sqlerrors.CursorError(e.args[0], e)
-        except sqlite3.DatabaseError as e:
-            if e.args[0].startswith('duplicate column name:'):
-                raise sqlerrors.DuplicateColumnName(str(e))
-            if e.args[0].startswith('database is locked'):
-                raise sqlerrors.DatabaseLocked(str(e))
-            if e.args[0].startswith("no such table"):
-                raise sqlerrors.InvalidTable(str(e))
-            raise sqlerrors.CursorError(e.args[0], e)
+        except sqlite3.Error as e:
+            raise _translateError(e)
         return ret
+
+    def _maybeBegin(self, sql, start_transaction):
+        """Emulate the old driver's implicit 'BEGIN IMMEDIATE' before
+        statements that write (including DDL, which is transactional)."""
+        if not start_transaction or self.dbh.in_transaction:
+            return
+        head = sql.lstrip().upper()
+        if head.startswith(self._NO_IMPLICIT_BEGIN):
+            return
+        self._tryExecute(self._cursor.execute, Database.basic_transaction)
 
     def execute(self, sql, *args, **kw):
         self._executeCheck(sql)
         args, kw = self._executeArgs(args, kw)
-        if len(args) == 0:
-            ret = self._tryExecute(self._cursor.execute, sql, **kw)
-        else:
-            st = kw.pop("start_transaction", True)
-            if len(kw):
+        st = kw.pop("start_transaction", True)
+        if args:
+            if kw:
                 raise sqlerrors.CursorError(
                     "Do not pass both positional and named bind arguments",
                     *args, **kw)
-            kw["start_transaction"] = st
-            ret = self._tryExecute(self._cursor.execute, sql, *args, **kw)
-        if ret == self._cursor:
+            binds = tuple(args)
+        else:
+            binds = dict((k.lstrip(':'), v) for (k, v) in kw.items())
+        self._maybeBegin(sql, st)
+        ret = self._tryExecute(self._cursor.execute, sql, binds)
+        if ret is self._cursor:
             return self
         return ret
 
     # we need to wrap this one through the exception translation layer
     def executemany(self, sql, paramList, **kw):
         self._executeCheck(sql)
-        return self._tryExecute(self._cursor.executemany, sql, paramList, **kw)
+        st = kw.pop("start_transaction", True)
+        self._maybeBegin(sql, st)
+        ret = self._tryExecute(self._cursor.executemany, sql, paramList)
+        if ret is self._cursor:
+            return self
+        return ret
 
     def compile(self, sql):
-        return self._cursor.compile(sql)
+        # no prepared statements in the stdlib module; the statement cache
+        # makes re-executing the same SQL cheap anyway
+        return sql
 
     def execstmt(self, stmt, *args):
-        return self._tryExecute(self._cursor.execstmt, stmt, *args)
+        return self.execute(stmt, *args)
+
+
+def _translateError(e):
+    """Map a stdlib sqlite3 exception to the matching sqlerrors exception."""
+    msg = str(e)
+    code = getattr(e, 'sqlite_errorname', None) or ''
+    if isinstance(e, sqlite3.IntegrityError):
+        if (code in ('SQLITE_CONSTRAINT_UNIQUE',
+                     'SQLITE_CONSTRAINT_PRIMARYKEY')
+                or msg.startswith('UNIQUE constraint failed')
+                or (msg.startswith('column') and msg.endswith('not unique'))):
+            return sqlerrors.ColumnNotUnique(e)
+        return sqlerrors.ConstraintViolation(msg, e)
+    if code.startswith('SQLITE_BUSY') or code.startswith('SQLITE_LOCKED') \
+            or msg.startswith('database is locked'):
+        return sqlerrors.DatabaseLocked(msg)
+    if code.startswith('SQLITE_READONLY') \
+            or msg == 'attempt to write a readonly database':
+        return sqlerrors.ReadOnlyDatabase(msg)
+    if msg.startswith('no such table'):
+        return sqlerrors.InvalidTable(msg)
+    if msg.startswith('duplicate column name'):
+        return sqlerrors.DuplicateColumnName(msg)
+    return sqlerrors.CursorError(msg, e)
 
 # Sequence implementation for sqlite
 class Sequence(BaseSequence):
@@ -116,17 +166,17 @@ class Sequence(BaseSequence):
 
     def nextval(self):
         # We have to make sure we do this in a transaction
-        if not self.db.dbh.inTransaction:
+        if not self.db.dbh.in_transaction:
             self.db.transaction()
         self.cu.execute("DELETE FROM %s" % self.seqName)
         self.cu.execute("INSERT INTO %s (val) VALUES(NULL)" % self.seqName)
         self.cu.execute("SELECT val FROM %s" % self.seqName)
-        self.__currval = self.cu.fetchone()[0]
-        return self.__currval
+        self._currval = self.cu.fetchone()[0]
+        return self._currval
 
     # Enforce garbage collection to avoid circular deps
     def __del__(self):
-        if self.db.dbh.inTransaction and self.__currval is not None:
+        if self.db.dbh.in_transaction and self._currval is not None:
             self.db.commit()
         self.db = self.cu = None
 
@@ -143,16 +193,21 @@ class Database(BaseDatabase):
 
     def connect(self, **kwargs):
         assert(self.database)
-        kwargs.setdefault("timeout", self.TIMEOUT)
-        #kwargs.setdefault("command_logfile", open("/tmp/sqlite.log", "a"))
-        #kwargs.setdefault("lockJournal", True)
+        # timeouts are given in milliseconds (historical pysqlite3
+        # convention); the stdlib module takes seconds
+        timeout = kwargs.pop("timeout", self.TIMEOUT) / 1000.0
+        # fork-only options that have no stdlib equivalent
+        for key in ("command_logfile", "lockJournal", "autocommit",
+                "encoding"):
+            kwargs.pop(key, None)
+        # isolation_level=None: the module never issues BEGIN by itself and
+        # commit()/rollback() still end an open transaction. Cursor takes
+        # care of starting 'begin immediate' transactions.
+        kwargs["isolation_level"] = None
         try:
-            self.dbh = sqlite3.connect(self.database, **kwargs)
-        except sqlite3.InternalError as e:
-            if str(e) == 'database is locked':
-                raise sqlerrors.DatabaseLocked(e)
-            raise
-        except sqlite3.DatabaseError as e:
+            self.dbh = sqlite3.connect(self.database, timeout=timeout,
+                    **kwargs)
+        except sqlite3.Error as e:
             raise sqlerrors.DatabaseError(e)
         # add a regexp funtion to enable SELECT FROM bar WHERE bar REGEXP .*
         self.dbh.create_function('regexp', 2, _regexp)
@@ -212,9 +267,6 @@ class Database(BaseDatabase):
         return self.getVersion()
 
     def analyze(self, table=""):
-        if sqlite3._sqlite.sqlite_version_info() <= (3, 2, 2):
-            # ANALYZE didn't appear until 3.2.3
-            return
         # sqlite's analyzer has not been tested yet for single table updates.
         if table:
             return
@@ -223,7 +275,7 @@ class Database(BaseDatabase):
         doAnalyze = False
         cu = self.cursor()
         # if there are pending changes, just re-run ANALYZE
-        if self.dbh.inTransaction:
+        if self.dbh.in_transaction:
             doAnalyze = True
         else:
             # check to see if the sqlite_stat1 table exists.
@@ -242,7 +294,7 @@ class Database(BaseDatabase):
         Return C{True} if the connection currently has an active
         transaction.
         """
-        return self.dbh.inTransaction
+        return self.dbh.in_transaction
 
     # A trigger that syncs up the changed column
     def createTrigger(self, table, column, onAction, pinned=None):
@@ -264,17 +316,17 @@ class Database(BaseDatabase):
 
     # extract the sql fields from a schema definition
     def __parseFields(self, fStr):
-        types = """((
+        types = r"""((
         PRIMARY\ KEY | NOT\ NULL | AUTOINCREMENT | DEFAULT\ \S+ |
         (VAR)?(CHAR|BINARY) \s* (\(\w+\))? | NUMERIC \s* \(\w+(,\w+)?\) |
         INT | INTEGER | BLOB | TEXT | STR | STRING | UNIQUE ) \s*?)+
         """
-        constraint = "\s* ( ( REFERENCES \s* \w+\(\w+\) | ON \s* (DELETE|UPDATE) \s* (CASCADE|RESTRICT) ) \s* )*"
+        constraint = r"\s* ( ( REFERENCES \s* \w+\(\w+\) | ON \s* (DELETE|UPDATE) \s* (CASCADE|RESTRICT) ) \s* )*"
         # extract the fields
         fields = []
         fStr = "(%s)" % (fStr,)
         regex = re.compile(
-            """^\s* \( \s*
+            r"""^\s* \( \s*
             (?P<name>\w+) \s+ (?P<type>%s) (?P<constraint>%s)?, \s* (?P<rest>.*?)
             \s* \)  \s* $""" % (types, constraint),
             re.I | re.S | re.X)
@@ -286,7 +338,7 @@ class Database(BaseDatabase):
                     break
                 # try it as the last field
                 regex = re.compile(
-                    """^\s* \( \s*
+                    r"""^\s* \( \s*
                     (?P<name>\w+) \s+ (?P<type>%s) (?P<constraint>%s)?
                     \s* \)  \s* $""" % (types, constraint),
                     re.I | re.S | re.X)
@@ -310,7 +362,7 @@ class Database(BaseDatabase):
         oldSql = cu.fetchone()[0]
         stmt = {}
         regex = re.compile(
-            """^\s*
+            r"""^\s*
             (?P<header>CREATE\s+TABLE\s+\w+) \s*
             \( \s*
             (?P<fields>.*) \s*
@@ -380,45 +432,23 @@ class Database(BaseDatabase):
         cu.execute("DROP TABLE %s_tmp" % (table,))
         return True
 
-    def dropColumn(self, table, name):
-        assert(self.dbh)
-
     # sqlite is more peculiar when it comes to firing off transactions
     def transaction(self, name = None):
         assert(self.dbh)
         cu = self.cursor()
-        if self.dbh.inTransaction:
+        if self.dbh.in_transaction:
             return cu
         try:
-            self.dbh._begin()
-        except sqlite3.ProgrammingError as e:
-            if str(e) == 'attempt to write a readonly database':
-                raise sqlerrors.ReadOnlyDatabase(str(e))
-            raise
-        except sqlite3.DatabaseError as e:
-            if e.args[0].startswith('database is locked'):
-                raise sqlerrors.DatabaseLocked(str(e))
-            raise
+            self.dbh.execute(self.basic_transaction)
+        except sqlite3.Error as e:
+            raise _translateError(e)
         return cu
 
     def rollback(self, name=None):
         assert not name
-        # When using pysqlite3, which contains mixed python and C code, a
-        # signal arriving during a commit or rollback results in the sqlite
-        # library committing but the pysqlite3 transaction state not being
-        # updated. Try to fix this when the subsequent rollback happens.
-
-        # With the Python stdlib bindings everything is C, including the
-        # transaction flag, so this does not happen. The signal exception still
-        # gets raised after the db has already finished committing but the
-        # connection works normally afterwards.
-        try:
-            self.dbh.rollback()
-        except sqlite3.ProgrammingError as err:
-            if 'no transaction is active' in str(err):
-                self.dbh.inTransaction = 0
-            else:
-                raise
+        # A no-op when no transaction is open. The transaction flag is read
+        # from the sqlite library itself, so it cannot go stale.
+        self.dbh.rollback()
 
     # sqlite doesn't support SQL language to add a foreign key constraint
     def addForeignKey(self, *args, **kw):

@@ -34,7 +34,7 @@ try:
 except ImportError:
     hasTelnet = False
 
-from pdb import _saferepr
+from reprlib import repr as _saferepr
 
 class Epdb(pdb.Pdb):
     _historyPath = os.path.expanduser('~/.epdbhistory')

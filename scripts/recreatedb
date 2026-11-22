@@ -52,7 +52,7 @@ from conary import conarycfg
 from conary import conaryclient
 from conary import files
 from conary import rpmhelper
-from conary import sqlite3
+import sqlite3
 from conary import trove
 from conary.cmds import updatecmd
 from conary import versions
@@ -342,7 +342,7 @@ def main(argv):
         try:
             olddb = sqlite3.connect(sys.argv[1])
             troves = list(collectTrovesFromConaryDb(olddb))
-        except sqlite3._sqlite.DatabaseError:
+        except sqlite3.DatabaseError:
             manifest = file(sys.argv[1])
             troves = list(collectTrovesFromManifest(manifest))
 

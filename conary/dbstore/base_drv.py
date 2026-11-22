@@ -232,17 +232,17 @@ class BaseSequence:
         self.db = db
         self.name = name
         self.seqName = "%s_sequence" % (name,)
-        self.__currval = None
+        self._currval = None
 
     # if we have not called nextval() yet, then currval should be
     # undefined. To easily catch places where we might be doing that,
     # we raise an exception
     def currval(self):
-        if self.__currval is None:
+        if self._currval is None:
             raise sqlerrors.CursorError(
                 "Sequence has currval undefined until nextval() is called",
                 self.name)
-        return self.__currval
+        return self._currval
     # this is meant to be provided by the drivers
     def nextval(self):
         pass
