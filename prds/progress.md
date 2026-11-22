@@ -57,3 +57,18 @@ PATTERN: c-api - Every hand-written .c needs PY_SSIZE_T_CLEAN before <Python.h> 
 PATTERN: bytes/str - C extensions (pack, dep_freeze, streams) accept only bytes; 2to3'd callers and the .py fallbacks use str. `s#`/`z#` accept str silently and hide this.
 PATTERN: imports - Plain .so names work: Python 3 lists .so in EXTENSION_SUFFIXES and FileFinder prefers extensions over the .py fallback in the same directory.
 PATTERN: tooling - devenv/run passes -i; redirect stdin (</dev/null) when scripting it, or a stdin-reading command hangs.
+
+## 2026-11-22 - task 1.5 DONE: stdlib sqlite3
+
+- Commit "feat(dbstore): replace bundled pysqlite3 with stdlib sqlite3". py3tests/test_sqlite_drv.py: all 16 failed
+  before (InvalidBackend), 16 pass after; orchestrator added a compile()/execstmt() test (17) and mutation-tested it.
+  Full py3tests: 41 passed, 1 xfailed. compile_check 474 files, 0 failures.
+- Import fixes outside dbstore (needed to import conary.dbstore): epdb _saferepr via reprlib; StreamCollection
+  __slots__ '_items' clash; cfgtypes sre_constants -> re; cfg lazy-imports repository.transport (pycrypto missing).
+- Advisor review: MINOR. Edits to scripts/, conary_test/ and testsuite.py are compile-checked only.
+
+PATTERN: sqlite - isolation_level=None plus BEGIN IMMEDIATE emulation in Cursor keeps transactional DDL; use dbh.in_transaction, sqlite3.sqlite_version_info (attribute), and timeouts in seconds (dbstore API stays in ms).
+PATTERN: bytes/str - sqlite binary() rejects str and frombinary() returns bytes; str binds as TEXT. Callers passing str to binary() fail loudly.
+PATTERN: py3-port - 2to3 misses implicit relative imports via __import__ and removed modules (sre_constants); expect more in 1.6.
+PATTERN: environment - No `Crypto` (pycrypto) in the container; conary.repository, changeset, rpmhelper and openpgpfile cannot import until openpgpfile is ported (Crypto.PublicKey.pubkey is gone in pycryptodome).
+PATTERN: testing - `pytest -W error` fails at collection on existing invalid-escape SyntaxWarnings; use -W error::ResourceWarning for leak checks.
