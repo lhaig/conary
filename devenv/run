@@ -1,0 +1,24 @@
+#!/bin/bash
+# Run a command in the Conary Fedora dev container with the repo at /src.
+# Usage: devenv/run <command> [args...]   (no args: interactive bash)
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+HASH=$(shasum -a 256 "$ROOT/devenv/Dockerfile" | cut -c1-12)
+TAG="conary-devenv:$HASH"
+
+if ! docker image inspect "$TAG" >/dev/null 2>&1; then
+    echo "devenv: building $TAG" >&2
+    docker build -t "$TAG" "$ROOT/devenv" >&2
+fi
+
+[ $# -gt 0 ] || set -- bash
+
+args=(--rm -i -v "$ROOT":/src -w /src)
+[ -t 0 ] && args+=(-t)
+# Native Linux Docker does not remap ownership; avoid root-owned files.
+if [ "$(uname)" = Linux ]; then
+    args+=(--user "$(id -u):$(id -g)" -e HOME=/tmp)
+fi
+
+exec docker run "${args[@]}" "$TAG" "$@"

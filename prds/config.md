@@ -10,11 +10,12 @@ repo: https://github.com/lhaig/conary (branch py3, upstream sassoftware/conary)
 created: 2026-11-22
 
 ## Commands
-# All commands run inside the Fedora dev container (task 1.1 creates it).
-# Replace these placeholders with the real invocations when 1.1 is done.
-build: TBD (task 1.1) -- e.g. scripts/devenv make
-test: TBD (task 1.1) -- e.g. scripts/devenv python3 -m pytest <path>
-lint: TBD (task 1.1) -- e.g. scripts/devenv python3 -m compileall -q conary conary_test commands scripts
+# Everything runs in the Fedora 45 container via devenv/run (see devenv/README.md).
+toolchain_check: devenv/run devenv/check.sh
+2to3: devenv/run python3.11 -W ignore -m lib2to3 -w -n -j4 conary conary_test commands scripts
+build: devenv/run make -C conary/lib/ext   (needs Make.rules fixes from task 1.3)
+test: devenv/run python3 -m pytest <path>   (conary_test runner TBD in phase 2: testsuite.py or pytest)
+lint: devenv/run python3 -m compileall -q conary conary_test commands scripts ; devenv/run python3 -m pyflakes conary
 
 ## Subagent Defaults
 default_subagent: general-purpose
