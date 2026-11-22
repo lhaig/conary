@@ -56,10 +56,9 @@ cdef extern from "unistd.h" nogil:
 cdef extern from "Python.h":
     object PyErr_SetFromErrno(exc)
     object PyErr_SetFromErrnoWithFilename(exc, char *filename)
-    object PyFile_FromFile(FILE *fp, char *name, char *mode, int (*close)(FILE*))
     int PyObject_AsFileDescriptor(obj) except -1
-    object PyString_FromStringAndSize(char *str, Py_ssize_t size)
-    int PyString_AsStringAndSize(object str, char **out, Py_ssize_t *size) except -1
+    object PyBytes_FromStringAndSize(char *str, Py_ssize_t size)
+    int PyBytes_AsStringAndSize(object str, char **out, Py_ssize_t *size) except -1
 
 
 # vim: filetype=pyrex

@@ -15,6 +15,7 @@
  */
 
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <netinet/in.h>
 
@@ -229,6 +230,20 @@ static PyObject * NumericStream_Eq(PyObject * self, PyObject * args,
 
     Py_INCREF(Py_False);
     return Py_False;
+}
+
+static PyObject * NumericStream_RichCompare(PyObject * self, PyObject * other,
+                                     int op) {
+    int rc;
+
+    if (Py_TYPE(self) != Py_TYPE(other))
+        Py_RETURN_NOTIMPLEMENTED;
+
+    rc = NumericStream_Cmp(self, other);
+    if (rc == -1 && PyErr_Occurred())
+        return NULL;
+
+    Py_RETURN_RICHCOMPARE(rc, 0, op);
 }
 
 static long IntStream_Hash(PyObject * self) {
@@ -488,7 +503,7 @@ static int raw_NumericStream_Thaw(NumericStreamObject * self, char * frozen,
 
 static PyObject * NumericStream_Thaw(PyObject * self, PyObject * args) {
     char * frozen;
-    int frozenLen;
+    Py_ssize_t frozenLen;
 
     if (!PyArg_ParseTuple(args, "s#", &frozen, &frozenLen))
         return NULL;
@@ -502,7 +517,7 @@ static PyObject * NumericStream_Thaw(PyObject * self, PyObject * args) {
 
 static PyObject * NumericStream_Twm(PyObject * self, PyObject * args) {
     char * diff;
-    int diffLen;
+    Py_ssize_t diffLen;
     NumericStreamObject * other;
     PyObject * retVal;
 
@@ -654,7 +669,7 @@ PyTypeObject NumericStreamType = {
     0,                              /*tp_print*/
     0,                              /*tp_getattr*/
     0,                              /*tp_setattr*/
-    NumericStream_Cmp,              /*tp_compare*/
+    0,              /*tp_compare*/
     0,                              /*tp_repr*/
     0,                              /*tp_as_number*/
     0,                              /*tp_as_sequence*/
@@ -669,7 +684,7 @@ PyTypeObject NumericStreamType = {
     NULL,                           /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
+    NumericStream_RichCompare,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
@@ -693,7 +708,7 @@ PyTypeObject IntStreamType = {
     0,                              /*tp_print*/
     0,                              /*tp_getattr*/
     0,                              /*tp_setattr*/
-    NumericStream_Cmp,              /*tp_compare*/
+    0,              /*tp_compare*/
     0,                              /*tp_repr*/
     0,                              /*tp_as_number*/
     0,                              /*tp_as_sequence*/
@@ -708,7 +723,7 @@ PyTypeObject IntStreamType = {
     NULL,                           /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
+    NumericStream_RichCompare,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
@@ -727,7 +742,7 @@ PyTypeObject ShortStreamType = {
     0,                              /*tp_print*/
     0,                              /*tp_getattr*/
     0,                              /*tp_setattr*/
-    NumericStream_Cmp,              /*tp_compare*/
+    0,              /*tp_compare*/
     0,                              /*tp_repr*/
     0,                              /*tp_as_number*/
     0,                              /*tp_as_sequence*/
@@ -742,7 +757,7 @@ PyTypeObject ShortStreamType = {
     NULL,                           /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
+    NumericStream_RichCompare,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
@@ -761,7 +776,7 @@ PyTypeObject ByteStreamType = {
     0,                              /*tp_print*/
     0,                              /*tp_getattr*/
     0,                              /*tp_setattr*/
-    NumericStream_Cmp,              /*tp_compare*/
+    0,              /*tp_compare*/
     0,                              /*tp_repr*/
     0,                              /*tp_as_number*/
     0,                              /*tp_as_sequence*/
@@ -776,7 +791,7 @@ PyTypeObject ByteStreamType = {
     NULL,                           /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
+    NumericStream_RichCompare,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
@@ -795,7 +810,7 @@ PyTypeObject LongLongStreamType = {
     0,                              /*tp_print*/
     0,                              /*tp_getattr*/
     0,                              /*tp_setattr*/
-    NumericStream_Cmp,              /*tp_compare*/
+    0,              /*tp_compare*/
     0,                              /*tp_repr*/
     0,                              /*tp_as_number*/
     0,                              /*tp_as_sequence*/
@@ -810,7 +825,7 @@ PyTypeObject LongLongStreamType = {
     NULL,                           /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
+    NumericStream_RichCompare,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */

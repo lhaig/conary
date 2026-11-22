@@ -15,10 +15,10 @@
 #
 
 
-PYVER=$(shell python -c 'import sys; print(sys.version[0:3])')
-PYTHON = /usr/bin/python${PYVER}
-PYINCLUDE = /usr/include/python${PYVER}
-CYTHON = $(PYTHON) /usr/bin/cython
+PYTHON ?= python3
+PYVER = $(shell $(PYTHON) -c 'import sysconfig; print(sysconfig.get_python_version())')
+PYINCLUDE = $(shell $(PYTHON) -c 'import sysconfig; print(sysconfig.get_paths()["include"])')
+CYTHON = $(PYTHON) -m cython -3
 SED = sed
 INSTALL = install
 CP = cp

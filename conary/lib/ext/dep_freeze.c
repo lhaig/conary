@@ -15,6 +15,7 @@
  */
 
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "pycompat.h"
 
@@ -94,7 +95,7 @@ static PyObject * depSetSplit(PyObject *self, PyObject *args) {
     }
 
     return Py_BuildValue("iis#",
-            endPtr - data + 1, tag, dataPtr, endPtr - dataPtr);
+            (int) (endPtr - data + 1), tag, dataPtr, (Py_ssize_t) (endPtr - dataPtr));
 
 }
 

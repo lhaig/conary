@@ -15,6 +15,7 @@
  */
 
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <netinet/in.h>
 
@@ -611,7 +612,7 @@ static PyObject * StreamSet_Ne(PyObject * self,
 /* this is a python class method */
 static PyObject * StreamSet_Find(PyObject * objClass, PyObject * args) {
     char * data;
-    int dataLen;
+    Py_ssize_t dataLen;
     char * chptr, * end;
     int targetStreamId, size, sizeType;
     unsigned int streamId;
@@ -649,7 +650,7 @@ static PyObject * StreamSet_Find(PyObject * objClass, PyObject * args) {
         }
 
         if (!(obj = PyObject_CallFunction(ssd->tags[ssdIdx].type, "s#",
-                                          chptr, size)))
+                                          chptr, (Py_ssize_t) size)))
             return NULL;
 
         return obj;
@@ -759,7 +760,7 @@ static int StreamSet_Init(PyObject * o, PyObject * args,
     int i;
     int offset = 0;
     char * data = NULL;
-    int dataLen;
+    Py_ssize_t dataLen;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|z#i", kwlist, &data, 
 				     &dataLen, &offset)) {
@@ -810,7 +811,7 @@ static void StreamSet_Dealloc(PyObject * self) {
 
 static PyObject * StreamSet_Thaw(PyObject * o, PyObject * args) {
     char * data = NULL;
-    int dataLen;
+    Py_ssize_t dataLen;
     StreamSetDefObject * ssd;
 
     if (!PyArg_ParseTuple(args, "s#", &data, &dataLen))
@@ -881,7 +882,7 @@ static int Thaw_raw(PyObject * self, StreamSetDefObject * ssd,
         if (!attr) {
             return -1;
         }
-	ro = PyObject_CallMethod(attr, "thaw", "s#", streamData, size);
+	ro = PyObject_CallMethod(attr, "thaw", "s#", streamData, (Py_ssize_t) size);
 	Py_DECREF(attr);
 	if (!ro) {
 	    return -1;
@@ -988,7 +989,7 @@ static PyObject * StreamSet_Twm(StreamSetObject * self, PyObject * args,
                                 PyObject * kwargs) {
     char * kwlist[] = { "diff", "base", "skip", NULL };
     char * diff;
-    int diffLen;
+    Py_ssize_t diffLen;
     StreamSetObject * base;
     PyObject * skipSet = Py_None;
     StreamSetDefObject * ssd;
@@ -1088,7 +1089,7 @@ static PyObject * StreamSet_Twm(StreamSetObject * self, PyObject * args,
 	attr = PyObject_GetAttr((PyObject *) self, ssd->tags[i].name);
 	baseAttr = PyObject_GetAttr((PyObject *) base,
 				    ssd->tags[i].name);
-	ro = PyObject_CallMethod(attr, "twm", "s#O", streamData, size, 
+	ro = PyObject_CallMethod(attr, "twm", "s#O", streamData, (Py_ssize_t) size,
 				 baseAttr);
 	Py_DECREF(attr);
 	Py_DECREF(baseAttr);

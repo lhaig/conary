@@ -15,6 +15,7 @@
  */
 
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #include <alloca.h>
@@ -43,7 +44,8 @@ static PyMethodDef methods[] = {
  * file descriptors, and compute a SHA-1 digest of the decompressed contents.
  */
 static PyObject * sha1Copy(PyObject *module, PyObject *args) {
-    off_t inFd, inSize, inStart, inStop, inAt, to_read, to_write, to_write2;
+    int inFd;
+    off_t inSize, inStart, inStop, inAt, to_read, to_write, to_write2;
     PyObject * outFdList, *pyInStart, *pyInSize;
     int * outFds, outFdCount, i, rc, inflate_rc;
     uint8_t inBuf[1024 * 256];

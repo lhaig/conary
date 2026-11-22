@@ -19,6 +19,8 @@
 Collection of wrappers around file-related C functions.
 """
 
+import os
+
 include "common.pxi"
 
 
@@ -88,26 +90,23 @@ def fchmod(fobj, int mode):
         PyErr_SetFromErrno(OSError)
 
 
-def fopenIfExists(char *path, char *mode):
+def fopenIfExists(path, mode):
     """Open a file, or return C{None} if opening failed."""
-    cdef FILE *fp
-
-    with nogil:
-        fp = fopen(path, mode)
-
-    if fp == NULL:
+    try:
+        return open(path, mode)
+    except IOError:
         return None
-    else:
-        return PyFile_FromFile(fp, path, mode, fclose)
 
 
-def lexists(char *path):
+def lexists(path):
     """Return C{True} if C{path} exists."""
     cdef stat sb
-    if lstat(path, &sb) == -1:
+    cdef bytes bpath = os.fsencode(path)
+    cdef char *cpath = bpath
+    if lstat(cpath, &sb) == -1:
         if errno in (ENOENT, ENOTDIR, ENAMETOOLONG, EACCES):
             return False
-        PyErr_SetFromErrnoWithFilename(OSError, path)
+        PyErr_SetFromErrnoWithFilename(OSError, cpath)
     return True
 
 
@@ -149,12 +148,14 @@ def massCloseFileDescriptors(int start, int count, int end):
         PyErr_SetFromErrno(OSError)
 
 
-def mkdirIfMissing(char *path):
+def mkdirIfMissing(path):
     """Make a directory at C{path} if it does not exist."""
-    if mkdir(path, 0777) == -1:
+    cdef bytes bpath = os.fsencode(path)
+    cdef char *cpath = bpath
+    if mkdir(cpath, 0o777) == -1:
         if errno == EEXIST:
             return False
-        PyErr_SetFromErrnoWithFilename(OSError, path)
+        PyErr_SetFromErrnoWithFilename(OSError, cpath)
     return True
 
 
@@ -177,7 +178,7 @@ def pread(fobj, size_t count, off_t offset):
         PyMem_Free(data)
         PyErr_SetFromErrno(OSError)
 
-    ret = PyString_FromStringAndSize(data, rc)
+    ret = PyBytes_FromStringAndSize(data, rc)
     PyMem_Free(data)
     return ret
 
@@ -201,10 +202,12 @@ def pwrite(fobj, bytes data_p, off_t offset):
     return rc
 
 
-def removeIfExists(char *path):
+def removeIfExists(path):
     """Try to unlink C{path}, but don't fail if it doesn't exist."""
-    if unlink(path):
+    cdef bytes bpath = os.fsencode(path)
+    cdef char *cpath = bpath
+    if unlink(cpath):
         if errno in (ENOENT, ENAMETOOLONG):
             return False
-        PyErr_SetFromErrnoWithFilename(OSError, path)
+        PyErr_SetFromErrnoWithFilename(OSError, cpath)
     return True

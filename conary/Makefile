@@ -50,6 +50,9 @@ stubs:
 
 subdirs: default-subdirs
 
+VERSION ?= 2.5.9
+CHANGESET ?=
+
 constants.py: constants.py.in ../Makefile
 	$(SED) -e s,@version@,$(VERSION),g -e s,@changeset@,$(CHANGESET),g $< > $@
 

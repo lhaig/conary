@@ -15,6 +15,7 @@
  */
 
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <netinet/in.h>
 
@@ -84,6 +85,20 @@ static int StringStream_Cmp(PyObject * self, PyObject * other) {
 	return 0;
     
     return 1;
+}
+
+static PyObject * StringStream_RichCompare(PyObject * self, PyObject * other,
+                                     int op) {
+    int rc;
+
+    if (Py_TYPE(self) != Py_TYPE(other))
+        Py_RETURN_NOTIMPLEMENTED;
+
+    rc = StringStream_Cmp(self, other);
+    if (rc == -1 && PyErr_Occurred())
+        return NULL;
+
+    Py_RETURN_RICHCOMPARE(rc, 0, op);
 }
 
 static void StringStream_Dealloc(PyObject * self) {
@@ -226,7 +241,7 @@ static PyObject * StringStream_Thaw(StringStreamObject * self,
 
 static PyObject * StringStream_Twm(StringStreamObject * self, PyObject * args) {
     char * diff;
-    int diffLen;
+    Py_ssize_t diffLen;
     StringStreamObject * other;
 
     /* string streams don't implement a true diff.  A merge is a wholesale
@@ -288,7 +303,7 @@ PyTypeObject StringStreamType = {
     0,                              /*tp_print*/
     0,                              /*tp_getattr*/
     0,                              /*tp_setattr*/
-    StringStream_Cmp,		    /*tp_compare*/
+    0,		    /*tp_compare*/
     0,                              /*tp_repr*/
     0,                              /*tp_as_number*/
     0,                              /*tp_as_sequence*/
@@ -303,7 +318,7 @@ PyTypeObject StringStreamType = {
     NULL,                           /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
+    StringStream_RichCompare,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */

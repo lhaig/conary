@@ -24,4 +24,4 @@ cdef extern from "helper_sha256_nonstandard.h" nogil:
 def digest(data):
     cdef unsigned char buf[32]
     sha256ns_digest(data, len(data), buf)
-    return PyString_FromStringAndSize(<char*>buf, 32)
+    return PyBytes_FromStringAndSize(<char*>buf, 32)
