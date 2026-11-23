@@ -86,3 +86,20 @@ PATTERN: generators - 2to3's next(x) inside a generator turns StopIteration into
 PATTERN: crypto - pycryptodomex has no raw RSA/DSA; use pow() on ints and skip RSA/DSA.construct. Any len(hex(n)) arithmetic relied on Python 2's L suffix.
 PATTERN: bytes/str - io.BytesIO.truncate(n) does not move the position (Py2 StringIO did); util.ExtendedStringIO restores the old behaviour.
 PATTERN: testing - Legacy test constants in conary_test can be read with ast.literal_eval without importing testrunner; Py2 str literals -> .encode('latin-1').
+
+## 2026-11-23 - task 1.7 DONE: every module imports
+
+- Commit "feat: make every conary module import on Python 3". py3tests/test_imports.py (one subprocess per module):
+  134 failed before, 0 after; 4 allow-listed modules assert the exact missing package (pgsql, kid).
+- Decision: dependency names, flags, flavors and frozen deps are str in Python and in dep_freeze.c; bytes only on the wire.
+- Advisor review: MINOR. Orchestrator fixed the hidden cgi dependency in repository/transport.py (cgi left the stdlib in
+  3.13; webob installs a third-party cgi.py that masked it) with an email.message helper matching cgi.parse_header on
+  five cases, plus a test that blocks cgi and imports transport (fails on the old code).
+- Gates: 364 passed; compile_check 475 files, 0 failures; check.sh passes.
+
+PATTERN: build - conary/lib/elf.so is built by `devenv/run make -C conary/lib elf.so`, separate from conary/lib/ext.
+PATTERN: py3-port - Class-body comprehensions cannot see class variables in Python 3; use a plain loop.
+PATTERN: py3-port - imp.load_module/load_source -> util.loadSourceModule(name, path).
+PATTERN: testing - Import tests need one subprocess per module; in-process ordering hides failures.
+PATTERN: container - Third-party packages can reinstate removed stdlib modules (webob brings cgi.py); test critical imports with the module blocked via sys.meta_path.
+PATTERN: bytes/str - Dependency/flavor strings are text everywhere above the wire; dep_freeze.c rejects bytes.
