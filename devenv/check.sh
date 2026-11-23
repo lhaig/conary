@@ -20,6 +20,10 @@ ok "Cython $cyver"
 pfver=$(python3 -m pyflakes --version 2>&1) || fail "pyflakes not runnable for python3"
 ok "pyflakes $pfver"
 
+python3 -c 'import Cryptodome.Cipher.CAST, Cryptodome.Cipher.Blowfish, Cryptodome.Cipher.DES3, Cryptodome.Cipher.AES, Cryptodome.Hash.RIPEMD160' \
+    || fail "pycryptodomex (Cryptodome) not importable for python3"
+ok "pycryptodomex $(python3 -c 'import Cryptodome; print(Cryptodome.__version__)')"
+
 python3 -m pytest --version >/dev/null 2>&1 || fail "pytest not runnable"
 T=$(mktemp -d /tmp/devenv-check.XXXXXX)
 trap 'rm -rf "$T"' EXIT

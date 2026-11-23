@@ -25,29 +25,13 @@ import sys
 import tempfile
 import textwrap
 import time
-import math
 
-try:
-    from Crypto.Hash import RIPEMD
-except ImportError:
-    RIPEMD = 'RIPEMD'
-try:
-    from io import StringIO
-except ImportError:
-    from io import StringIO
-from Crypto.Cipher import AES
-from Crypto.Cipher import DES3
-from Crypto.Cipher import Blowfish
-from Crypto.Cipher import CAST
-from Crypto.PublicKey import RSA
-
-# We know pycrypto imports sha directly
-import warnings
-warnings.filterwarnings("ignore", r"the sha module is deprecated",
-    DeprecationWarning, "^.*Crypto\.Hash\.SHA.*$")
-from Crypto.PublicKey import DSA
-
-from Crypto.PublicKey import pubkey
+import io
+from Cryptodome.Cipher import AES
+from Cryptodome.Cipher import DES3
+from Cryptodome.Cipher import Blowfish
+from Cryptodome.Cipher import CAST
+from Cryptodome.Hash import RIPEMD160
 
 from conary import constants
 from conary.lib import util, digestlib
@@ -185,9 +169,9 @@ TRUST_ULTIMATE  = 6
 TRUST_TRUSTED   = 120
 
 #trust packet headers
-TRP_VERSION     = chr(1)
-TRP_KEY         = chr(12)
-TRP_USERID      = chr(13)
+TRP_VERSION     = b'\x01'
+TRP_KEY         = b'\x0c'
+TRP_USERID      = b'\x0d'
 
 TRUST_PACKET_LENGTH = 40
 
@@ -283,6 +267,81 @@ class MergeError(PGPError):
 class SignatureError(PGPError):
     pass
 
+def _toBytes(data):
+    """Return data as bytes. Text is encoded as UTF-8."""
+    if isinstance(data, str):
+        return data.encode('utf-8')
+    return bytes(data)
+
+def _hashRIPEMD160(data = b''):
+    # pycryptodomex's module object is not callable, and hashlib may not
+    # provide ripemd160 in OpenSSL 3 builds
+    return RIPEMD160.new(data)
+
+class _RSAKey(object):
+    """
+    Raw RSA key. Replaces the key objects pycrypto used to hand out: none of
+    the raw (textbook RSA) operations OpenPGP needs are exposed by
+    pycryptodomex, so they are implemented with Python integer arithmetic.
+    """
+    __slots__ = ['n', 'e', 'd', 'p', 'q', 'u']
+
+    def __init__(self, n, e, d = None, p = None, q = None, u = None):
+        self.n, self.e, self.d, self.p, self.q, self.u = n, e, d, p, q, u
+
+    def has_private(self):
+        return self.d is not None
+
+    def publickey(self):
+        return _RSAKey(self.n, self.e)
+
+    @staticmethod
+    def _toInt(m):
+        if isinstance(m, int):
+            return m
+        return int.from_bytes(m, 'big')
+
+    def sign(self, M, K):
+        """Raw RSA signature. K is unused (kept for pycrypto compatibility)"""
+        if not self.has_private():
+            raise TypeError("Private key not available in this object")
+        return (pow(self._toInt(M), self.d, self.n), )
+
+    def verify(self, M, signature):
+        return pow(signature[0], self.e, self.n) == self._toInt(M)
+
+class _DSAKey(object):
+    """Raw DSA key, see _RSAKey"""
+    __slots__ = ['p', 'q', 'g', 'y', 'x']
+
+    def __init__(self, p, q, g, y, x = None):
+        self.p, self.q, self.g, self.y, self.x = p, q, g, y, x
+
+    def has_private(self):
+        return self.x is not None
+
+    def publickey(self):
+        return _DSAKey(self.p, self.q, self.g, self.y)
+
+    def sign(self, M, K):
+        if not self.has_private():
+            raise TypeError("Private key not available in this object")
+        m = _RSAKey._toInt(M)
+        r = pow(self.g, K, self.p) % self.q
+        s = (pow(K, -1, self.q) * (m + self.x * r)) % self.q
+        return (r, s)
+
+    def verify(self, M, signature):
+        r, s = signature
+        if not (0 < r < self.q and 0 < s < self.q):
+            return False
+        m = _RSAKey._toInt(M)
+        w = pow(s, -1, self.q)
+        u1 = (m * w) % self.q
+        u2 = (r * w) % self.q
+        v = (pow(self.g, u1, self.p) * pow(self.y, u2, self.p)) % self.p
+        return (v % self.q) == r
+
 def getKeyId(keyRing):
     pkt = PGP_Message.newPacketFromStream(keyRing, start = -1)
     assert pkt is not None
@@ -348,22 +407,22 @@ def armorKeyData(keyData, stream):
     @param stream: A stream open in write mode
     @type stream: file
     """
-    assert(isinstance(keyData, str))
+    keyData = _toBytes(keyData)
     assert(hasattr(stream, "write"))
 
     crc = CRC24(keyData).base64digest()
 
-    stream.write("-----BEGIN PGP PUBLIC KEY BLOCK-----\n")
-    stream.write("Version: Conary ")
-    stream.write(constants.version)
-    stream.write("\n\n")
-    for line in textwrap.wrap(base64.b64encode(keyData), 72):
-        stream.write(line)
-        stream.write('\n')
+    stream.write(b"-----BEGIN PGP PUBLIC KEY BLOCK-----\n")
+    stream.write(b"Version: Conary ")
+    stream.write(constants.version.encode('ascii'))
+    stream.write(b"\n\n")
+    for line in textwrap.wrap(base64.b64encode(keyData).decode('ascii'), 72):
+        stream.write(line.encode('ascii'))
+        stream.write(b'\n')
     # Add the CRC
-    stream.write('=')
-    stream.write(crc)
-    stream.write("\n-----END PGP PUBLIC KEY BLOCK-----")
+    stream.write(b'=')
+    stream.write(crc.encode('ascii'))
+    stream.write(b"\n-----END PGP PUBLIC KEY BLOCK-----")
     return stream
 
 def verifySelfSignatures(keyId, stream):
@@ -374,27 +433,28 @@ def verifySelfSignatures(keyId, stream):
 
 def fingerprintToInternalKeyId(fingerprint):
     if len(fingerprint) == 0:
-        return ''
+        return b''
     fp = fingerprint[-16:]
     return binascii.unhexlify(fp)
 
 def binSeqToString(sequence):
     """sequence is a sequence of unsigned chars.
-    Return the string with a corresponding char for each item"""
-    return "".join([ chr(x) for x in sequence ])
+    Return the bytes with a corresponding octet for each item"""
+    return bytes(sequence)
 
 def stringToAscii(sequence):
-    """sequence is a sequence of characters.
-    Return the string with the hex representation for each character"""
-    return "".join("%02x" % ord(c) for c in sequence).upper()
+    """sequence is a bytes object.
+    Return the string with the hex representation for each octet"""
+    return binascii.hexlify(_toBytes(sequence)).decode('ascii').upper()
 
 def simpleS2K(passPhrase, hashAlg, keySize):
     # RFC 2440 3.6.1.1.
-    r = ''
+    passPhrase = _toBytes(passPhrase)
+    r = b''
     iteration = 0
     keyLength = ((keySize + 7) // 8)
     while len(r) < keyLength:
-        d = hashAlg(chr(0) * iteration)
+        d = hashAlg(b'\x00' * iteration)
         d.update(passPhrase)
         r += d.digest()
         iteration += 1
@@ -402,12 +462,14 @@ def simpleS2K(passPhrase, hashAlg, keySize):
 
 def saltedS2K(passPhrase, hashAlg, keySize, salt):
     # RFC 2440 3.6.1.2.
-    r = ''
+    passPhrase = _toBytes(passPhrase)
+    salt = _toBytes(salt)
+    r = b''
     iteration = 0
     keyLength = ((keySize + 7) // 8)
     while(len(r) < keyLength):
         d = hashAlg()
-        buf = chr(0) * iteration
+        buf = b'\x00' * iteration
         buf += salt + passPhrase
         d.update(buf)
         r += d.digest()
@@ -416,14 +478,16 @@ def saltedS2K(passPhrase, hashAlg, keySize, salt):
 
 def iteratedS2K(passPhrase, hashAlg, keySize, salt, count):
     # RFC 2440 3.6.1.3.
-    r=''
+    passPhrase = _toBytes(passPhrase)
+    salt = _toBytes(salt)
+    r = b''
     iteration = 0
     count=(16 + (count & 15)) << ((count >> 4) + 6)
     buf = salt + passPhrase
     keyLength = (keySize + 7) // 8
     while(len(r) < keyLength):
         d = hashAlg()
-        d.update(iteration * chr(0))
+        d.update(b'\x00' * iteration)
         total = 0
         while (count - total) > len(buf):
             d.update(buf)
@@ -439,7 +503,7 @@ def iteratedS2K(passPhrase, hashAlg, keySize, salt, count):
 def getUserIdsFromString(keyId, data):
     keyRing = util.ExtendedStringIO(data)
     key = seekKeyById(keyId, keyRing)
-    if key is None:
+    if not key:
         return []
     return list(key.getUserIds())
 
@@ -497,7 +561,7 @@ def addPackets(pkts, fpath, pktIdFunc, messageFactory, streamIterFunc):
 
     # Lock the stream
     try:
-        stream = file(fpath, "r+")
+        stream = open(fpath, "r+b")
         while 1:
             streamfd = stream.fileno()
             fcntl.lockf(streamfd, fcntl.LOCK_EX)
@@ -505,7 +569,7 @@ def addPackets(pkts, fpath, pktIdFunc, messageFactory, streamIterFunc):
             # There is a possibility that another writer that was previously
             # holding the lock replaced the file, which would mean our current
             # stream is stale.
-            newstream = file(fpath, "r+")
+            newstream = open(fpath, "r+b")
             oStat = os.fstat(streamfd)
             nStat = os.fstat(newstream.fileno())
             if (oStat.st_dev, oStat.st_ino) == (nStat.st_dev, nStat.st_ino):
@@ -546,7 +610,7 @@ def verifyRFC2440Checksum(data):
     # RFC 2440 5.5.3 - Secret Key Packet Formats documents the checksum
     if len(data) < 2:
         return 0
-    checksum = [ ord(x) for x in data[-2:] ]
+    checksum = list(data[-2:])
     checksum = int2FromBytes(*checksum)
     runningCount = computeRFC2440Checksum(data[:-2])
     return (runningCount == checksum)
@@ -554,7 +618,7 @@ def verifyRFC2440Checksum(data):
 def computeRFC2440Checksum(data):
     runningCount=0
     for c in data:
-        runningCount += ord(c)
+        runningCount += c
         runningCount %= 65536
     return runningCount
 
@@ -570,7 +634,7 @@ def computeSHAChecksum(data):
     return m.digest()
 
 def xorStr(str1, str2):
-    return ''.join(chr(ord(x) ^ ord(y)) for x, y in zip(str1, str2))
+    return bytes(x ^ y for x, y in zip(str1, str2))
 
 def countKeys(keyRing):
     # counts the public and private keys in a key ring (does not count subkeys)
@@ -624,41 +688,51 @@ def parseAsciiArmor(asciiData, dest):
     """
 
     if hasattr(asciiData, 'read'):
-        data = asciiData
+        content = asciiData.read()
     else:
-        data = StringIO(asciiData)
-    crc = None
-    nextLine = data.read(1)
-    if nextLine and (ord(nextLine[0]) & 0x80):
+        content = asciiData
+    if isinstance(content, str):
+        # Armor is ASCII. Binary data in a str can only come from
+        # latin-1 style round trips.
+        content = content.encode('latin-1')
+    if not content:
+        return False
+    if content[0] & 0x80:
         # This is already a binary packet
-        dest.write(nextLine)
-        PGP_BasePacket._copyStream(data, dest)
+        dest.write(content)
         return True
 
-    try:
-        while(nextLine[0] != '-'):
-            nextLine = data.readline()
-        while (nextLine[0] != "\r") and (nextLine[0] != "\n"):
-            nextLine = data.readline()
-        buf = ""
+    data = io.BytesIO(content)
+    crc = None
+    nextLine = data.readline()
+    while(nextLine[0:1] != b'-'):
         nextLine = data.readline()
-        while(nextLine[0] != '=' and nextLine[0] != '-'):
-            buf = buf + nextLine
-            nextLine = data.readline()
-        if nextLine[0] == '=':
-            # This is the CRC
-            crc = nextLine.strip()[1:]
-    except IndexError:
-        return False
+        if not nextLine:
+            return False
+    while (nextLine[0:1] != b"\r") and (nextLine[0:1] != b"\n"):
+        nextLine = data.readline()
+        if not nextLine:
+            return False
+    buf = b""
+    nextLine = data.readline()
+    while(nextLine[0:1] != b'=' and nextLine[0:1] != b'-'):
+        if not nextLine:
+            return False
+        buf = buf + nextLine
+        nextLine = data.readline()
+    if nextLine[0:1] == b'=':
+        # This is the CRC
+        crc = nextLine.strip()[1:]
 
     try:
         keyData = base64.b64decode(buf)
-    except TypeError:
+    except (TypeError, ValueError):
+        # binascii.Error is a ValueError
         return False
     if crc:
         crcobj = CRC24(keyData)
         ccrc = crcobj.base64digest()
-        if crc != ccrc:
+        if crc.decode('latin-1') != ccrc:
             raise PGPError("Message does not verify CRC checksum", crc, ccrc)
 
     dest.write(keyData)
@@ -687,14 +761,14 @@ class CRC24(object):
     CRC24_INIT = 0xb704ce
     CRC24_POLY = 0x1864cfb
 
-    def __init__(self, data=''):
+    def __init__(self, data=b''):
         self._crc = self.CRC24_INIT
         self.update(data)
 
     def update(self, data):
         crc = self._crc
-        for ch in data:
-            crc ^= (ord(ch) << 16)
+        for ch in _toBytes(data):
+            crc ^= (ch << 16)
             for i in range(8):
                 crc <<= 1
                 if crc & 0x1000000:
@@ -703,14 +777,14 @@ class CRC24(object):
 
     def digest(self):
         r = self._crc & 0xffffff
-        return chr((r >> 16) & 0xff) + chr((r >> 8) & 0xff) + chr(r & 0xff)
+        return bytes([(r >> 16) & 0xff, (r >> 8) & 0xff, r & 0xff])
 
     def base64digest(self):
-        return base64.b64encode(self.digest())
+        return base64.b64encode(self.digest()).decode('ascii')
 
 def _crc24(stream):
-    if isinstance(stream, str):
-        stream = StringIO(stream)
+    if isinstance(stream, (str, bytes)):
+        stream = io.BytesIO(_toBytes(stream))
     crc = CRC24()
     while 1:
         buf = stream.read(8192)
@@ -774,7 +848,7 @@ class PGP_Message(object):
             if pkt is None:
                 break
             yield pkt
-            pkt = next(pkt)
+            pkt = pkt._nextPacket()
 
     def iterTrustPackets(self):
         """Iterate over all trust packets"""
@@ -859,7 +933,7 @@ class PGP_PacketFromStream(object):
             # No more packets to read from this file object
             return
 
-        first = ord(first)
+        first = first[0]
 
         if not (first & 0x80):
             raise InvalidPacketError("First bit not 1")
@@ -1067,11 +1141,11 @@ class PGP_BasePacket(object):
         # Add the tag.
         fbyte |= self.tag
 
-        stream.write(chr(fbyte))
+        stream.write(bytes([fbyte]))
 
         if self.headerLength == 6:
             # 5-byte body length length, first byte is 255
-            stream.write(chr(255))
+            stream.write(b'\xff')
             blen = self.bodyLength & 0xffffffff
             self._writeBin(stream, len4ToBytes(blen))
             return
@@ -1087,7 +1161,7 @@ class PGP_BasePacket(object):
             if not (self.bodyLength < 192):
                 raise InvalidPacketError("Invalid body length %s for "
                     "header length %s" % (self.bodyLength, self.headerLength))
-            stream.write(chr(self.bodyLength))
+            stream.write(bytes([self.bodyLength]))
             return
         raise InvalidPacketError("Invalid header length %s" % self.headerLength)
 
@@ -1112,10 +1186,10 @@ class PGP_BasePacket(object):
             # 1 byte packet-length field (no changes to first byte needed)
             bsrepr = 1
 
-        stream.write(chr(fbyte))
+        stream.write(bytes([fbyte]))
         # prepare the size octets
         for i in range(1, bsrepr + 1):
-            stream.write(chr((self.bodyLength >> ((bsrepr - i) << 3)) & 0xff))
+            stream.write(bytes([(self.bodyLength >> ((bsrepr - i) << 3)) & 0xff]))
 
     def writeBody(self, stream):
         self.resetBody()
@@ -1153,7 +1227,7 @@ class PGP_BasePacket(object):
     def _readBin(stream, bytes):
         """Read bytes from stream, checking that enough bytes were read.
         Return a list of bytes"""
-        return [ ord(x) for x in PGP_BasePacket._readExact(stream, bytes) ]
+        return list(PGP_BasePacket._readExact(stream, bytes))
 
     def readExact(self, bytes):
         """Read bytes from stream, checking that enough bytes were read"""
@@ -1165,10 +1239,9 @@ class PGP_BasePacket(object):
         return self._readBin(self._bodyStream, bytes)
 
     @staticmethod
-    def _writeBin(stream, bytes):
-        """Write the bytes in binary format"""
-        for b in bytes:
-            stream.write(chr(b))
+    def _writeBin(stream, octets):
+        """Write the octets (a sequence of ints) in binary format"""
+        stream.write(bytes(octets))
 
     @staticmethod
     def _copyStream(src, dst):
@@ -1196,8 +1269,7 @@ class PGP_BasePacket(object):
         @param hashObj: a hash object
         @param binSeq: a sequence of bytes
         """
-        for b in binSeq:
-            hashObj.update(chr(b))
+        hashObj.update(bytes(binSeq))
 
     @staticmethod
     def checkStreamLength(stream, length):
@@ -1231,12 +1303,18 @@ class PGP_BasePacket(object):
     def isEmpty(self):
         return self.headerLength == 0
 
-    def __next__(self):
+    def _nextPacket(self):
+        """Return the packet following this one, or None if there is none.
+        (Generators must not let StopIteration escape, so this is the
+        variant to use inside them.)"""
         if self._nextStream is None:
-            raise StopIteration()
+            return None
 
-        newPkt = self._msgClass.newPacketFromStream(self._nextStream,
-                                                       self._nextStreamPos)
+        return self._msgClass.newPacketFromStream(self._nextStream,
+                                                  self._nextStreamPos)
+
+    def __next__(self):
+        newPkt = self._nextPacket()
         if newPkt is None:
             raise StopIteration()
 
@@ -1248,10 +1326,11 @@ class PGP_BasePacket(object):
     def _iterSubPackets(self, limitTags):
         """Iterate over the packets following this packet, until we reach a
         packet of the specified type as the limit"""
-        pkt = next(self)
-        while not pkt.isEmpty() and pkt.tag not in limitTags:
+        pkt = self._nextPacket()
+        while pkt is not None and not pkt.isEmpty() and \
+                pkt.tag not in limitTags:
             yield pkt
-            pkt = next(pkt)
+            pkt = pkt._nextPacket()
 
     @staticmethod
     def _hashSet(items):
@@ -1324,21 +1403,21 @@ class PGP_BaseKeySig(PGP_BasePacket):
 
     @staticmethod
     def _writeMPI(stream, mpi):
-        bytes = []
+        octets = []
         while mpi != 0:
-            bytes.append(mpi & 0xFF)
+            octets.append(mpi & 0xFF)
             mpi >>= 8
 
         # Compute length in bits
-        if not bytes:
+        if not octets:
             # Zero length
             bitlen = 0
         else:
             # The only variable part can be the one in the most significant
             # octet, which is the last
-            bitlen = 8 * (len(bytes) - 1) + num_bitLen(bytes[-1])
+            bitlen = 8 * (len(octets) - 1) + num_bitLen(octets[-1])
         PGP_BaseKeySig._writeBin(stream, int2ToBytes(bitlen))
-        PGP_BaseKeySig._writeBin(stream, reversed(bytes))
+        PGP_BaseKeySig._writeBin(stream, reversed(octets))
 
 
     def skipMPIs(self, stream, algType):
@@ -1366,23 +1445,23 @@ class PGP_Signature(PGP_BaseKeySig):
     }
     # hashPads from RFC2440 section 5.2.2
     HashAlgPads = {
-        1:  "\x30\x20\x30\x0C\x06\x08\x2A\x86"
-            "\x48\x86\xF7\x0D\x02\x05\x05\x00"
-            "\x04\x10",
-        2:  "\x30\x21\x30\x09\x06\x05\x2b\x0E"
-            "\x03\x02\x1A\x05\x00\x04\x14",
-        8:  "\x30\x31\x30\x0d\x06\x09\x60\x86"
-            "\x48\x01\x65\x03\x04\x02\x01\x05"
-            "\x00\x04\x20",
-        9:  "\x30\x41\x30\x0d\x06\x09\x60\x86"
-            "\x48\x01\x65\x03\x04\x02\x02\x05"
-            "\x00\x04\x30",
-        10: "\x30\x51\x30\x0d\x06\x09\x60\x86"
-            "\x48\x01\x65\x03\x04\x02\x03\x05"
-            "\x00\x04\x40",
-        11: "\x30\x31\x30\x0d\x06\x09\x60\x86"
-            "\x48\x01\x65\x03\x04\x02\x04\x05"
-            "\x00\x04\x1C",
+        1:  b"\x30\x20\x30\x0C\x06\x08\x2A\x86"
+            b"\x48\x86\xF7\x0D\x02\x05\x05\x00"
+            b"\x04\x10",
+        2:  b"\x30\x21\x30\x09\x06\x05\x2b\x0E"
+            b"\x03\x02\x1A\x05\x00\x04\x14",
+        8:  b"\x30\x31\x30\x0d\x06\x09\x60\x86"
+            b"\x48\x01\x65\x03\x04\x02\x01\x05"
+            b"\x00\x04\x20",
+        9:  b"\x30\x41\x30\x0d\x06\x09\x60\x86"
+            b"\x48\x01\x65\x03\x04\x02\x02\x05"
+            b"\x00\x04\x30",
+        10: b"\x30\x51\x30\x0d\x06\x09\x60\x86"
+            b"\x48\x01\x65\x03\x04\x02\x03\x05"
+            b"\x00\x04\x40",
+        11: b"\x30\x31\x30\x0d\x06\x09\x60\x86"
+            b"\x48\x01\x65\x03\x04\x02\x04\x05"
+            b"\x00\x04\x1C",
     }
 
     def initialize(self):
@@ -1570,7 +1649,7 @@ class PGP_Signature(PGP_BaseKeySig):
         if stream is None:
             return tlevel, tamt, None
         # Trust packet is NULL-terminated
-        tregex = stream.read()[:-1]
+        tregex = stream.read()[:-1].decode('utf-8', 'replace')
         return tlevel, tamt, tregex
 
     def rewriteBody(self):
@@ -1776,10 +1855,9 @@ class PGP_Signature(PGP_BaseKeySig):
             # 5-octet length
             header.append(255)
             header.extend(len4ToBytes(spktLen))
-        for d in header:
-            stream.write(chr(d))
+        stream.write(bytes(header))
         # Type
-        stream.write(chr(spktType))
+        stream.write(bytes([spktType]))
         PGP_Signature._copyStream(spktStream, stream)
 
     def _completeHashV3(self, hashObj):
@@ -1837,9 +1915,13 @@ class PGP_Signature(PGP_BaseKeySig):
         # RFC 2440 5.2.2 and RFC 2313 10.1.2
         if pubKeyAlg in PK_ALGO_ALL_RSA:
             hashPad = PGP_Signature.HashAlgPads[hashAlg]
-            padLen = (len(hex(cryptoKey.n)) - 5 -
-                2 * (len(sigString) + len(hashPad) + 1)) // 2 - 1
-            sigString = chr(1) + chr(0xFF) * padLen + chr(0) + hashPad + sigString
+            # EMSA-PKCS1-v1_5: 0x00 0x01 PS 0x00 T. The leading zero octet
+            # is implicit in the integer value, so the encoded message is
+            # k - 1 octets long, where k is the modulus length in octets.
+            k = (cryptoKey.n.bit_length() + 7) // 8
+            padLen = k - len(hashPad) - len(sigString) - 3
+            sigString = (b'\x01' + b'\xff' * padLen + b'\x00' + hashPad +
+                         sigString)
 
         return sigString
 
@@ -1870,12 +1952,13 @@ class PGP_Signature(PGP_BaseKeySig):
         # A succinct description http://tools.ietf.org/html/rfc4880#section-13.6
         if self.pubKeyAlg == PK_ALGO_DSA:
             # get q bit length
-            qLen = int(math.ceil(math.log(cryptoKey.q, 2)))
+            qLen = cryptoKey.q.bit_length()
             # 384 is not required by the standard, but we add it since
             # our testsuite has this case
             assert qLen in [ 160, 224, 256, 384 ]
-            if int(math.ceil(math.log(pubkey.bytes_to_long(digest), 2))) > qLen:
-                digest = digest[:(qLen/8)]
+            # Use the leftmost qLen bits of the digest
+            if len(digest) > qLen // 8:
+                digest = digest[:(qLen // 8)]
 
         # Validate it against the short digest
         if digest[:2] != self.hashSig:
@@ -1891,6 +1974,16 @@ class PGP_Signature(PGP_BaseKeySig):
     @staticmethod
     def verifySignature(sigString, cryptoKey, signature, pubKeyAlg, hashAlg):
         """Verify the signature on sigString generated with cryptoKey"""
+        # A signature made with one key type never verifies against a key
+        # of the other type; report that as a failed verification instead
+        # of letting the RSA padding code look up attributes a DSA key
+        # does not have.
+        if pubKeyAlg in PK_ALGO_ALL_RSA:
+            if not isinstance(cryptoKey, _RSAKey):
+                return False
+        elif pubKeyAlg == PK_ALGO_DSA:
+            if not isinstance(cryptoKey, _DSAKey):
+                return False
         sigString = PGP_Signature.finalizeSignature(sigString, cryptoKey,
                                                     pubKeyAlg, hashAlg)
         return cryptoKey.verify(sigString, signature)
@@ -1903,13 +1996,12 @@ class PGP_Signature(PGP_BaseKeySig):
     def addTrust(self, level, amount, regexLimit = None):
         """Mark this signature packet as being a trust signature"""
         stream = util.ExtendedStringIO()
-        stream.write(chr(level))
-        stream.write(chr(amount))
+        stream.write(bytes([level, amount]))
         self._hashedSubPackets.append((SIG_SUBPKT_TRUST, stream))
         if regexLimit:
             stream = util.ExtendedStringIO()
-            stream.write(regexLimit)
-            stream.write('\x00')
+            stream.write(_toBytes(regexLimit))
+            stream.write(b'\x00')
             # Mark this packet as critical
             self._hashedSubPackets.append((0x80 | SIG_SUBPKT_REGEX, stream))
 
@@ -1963,7 +2055,7 @@ class PGP_UserID(PGP_BasePacket):
 
     def parseBody(self):
         # A user ID's data is just the user ID
-        self.id = self.readBody()
+        self.id = self.readBody().decode('utf-8', 'replace')
 
     def toString(self):
         return self.id
@@ -2014,7 +2106,7 @@ class PGP_UserID(PGP_BasePacket):
         """Write a UserID packet in a stream, in order to be hashed.
         Described in RFC 4880 5.2.4 computing signatures."""
         if keyVersion == 4:
-            stream.write(chr(self.signingConstant))
+            stream.write(bytes([self.signingConstant]))
             stream.write(struct.pack("!I", self.bodyLength))
         self.writeBody(stream)
 
@@ -2352,10 +2444,10 @@ class PGP_Key(PGP_BaseKeySig):
         pkTuple = self.getPublicKeyTuple()
         if self.pubKeyAlg in PK_ALGO_ALL_RSA:
             n, e = pkTuple
-            return RSA.construct((n, e))
+            return _RSAKey(n, e)
         if self.pubKeyAlg == PK_ALGO_DSA:
             p, q, g, y = pkTuple
-            return DSA.construct((y, g, p, q))
+            return _DSAKey(p, q, g, y)
         raise MalformedKeyRing("Can't use El-Gamal keys in current version")
 
     def getCryptoKey(self, passPhrase = None):
@@ -2728,7 +2820,8 @@ class PGP_SecretAnyKey(PGP_Key):
                  'count', 'encMpiFile']
     pubTag = None
 
-    _hashes = [ 'Unknown', digestlib.md5, digestlib.sha1, RIPEMD, 'Double Width SHA',
+    _hashes = [ 'Unknown', digestlib.md5, digestlib.sha1, _hashRIPEMD160,
+                'Double Width SHA',
                 'MD2', 'Tiger/192', 'HAVAL-5-160' ]
     # Ciphers and their associated key sizes
     _ciphers = [ ('Unknown', 0), ('IDEA', 0), (DES3, 192), (CAST, 128),
@@ -2839,7 +2932,7 @@ class PGP_SecretAnyKey(PGP_Key):
                 # Use the same salt as the main key
                 self.salt = _salt
             else:
-                self.salt = file("/dev/urandom").read(8)
+                self.salt = os.urandom(8)
 
             stream.seek(0)
             io = self._encryptStream(stream, newPassPhrase)
@@ -2880,9 +2973,9 @@ class PGP_SecretAnyKey(PGP_Key):
     def _getCipher(self, passPhrase):
         if self.symmEncAlg not in self._legalCiphers:
             # We only support the algorithms in self._legalCiphers
-            if self.symmEngAlg >= len(self._ciphers):
+            if self.symmEncAlg >= len(self._ciphers):
                 raise IncompatibleKey("Unknown cipher %s" %
-                                      self.symmEngAlg)
+                                      self.symmEncAlg)
             raise IncompatibleKey("Cipher %s is unusable" % self.symmEncAlg)
 
         if self.hashAlg >= len(self._hashes):
@@ -2900,12 +2993,21 @@ class PGP_SecretAnyKey(PGP_Key):
         elif self.s2kType == 0x03:
             key = iteratedS2K(passPhrase, hashAlg, cipherKeySize, self.salt,
                               self.count)
+        else:
+            raise IncompatibleKey('Unsupported string-to-key type %s' %
+                                  self.s2kType)
         if self.symmEncAlg > 6:
             cipherBlockSize = 16
         else:
             cipherBlockSize = 8
 
-        cipher = cipherAlg.new(key,1)
+        # The CFB variant used by OpenPGP is built by hand on top of the raw
+        # block cipher (ECB)
+        try:
+            cipher = cipherAlg.new(key, cipherAlg.MODE_ECB)
+        except ValueError as e:
+            # For example, DES3 refuses degenerate keys
+            raise BadPassPhrase("Unusable cipher key: %s" % e)
         return cipher, cipherBlockSize
 
     def _decryptStream(self, stream, passPhrase):
@@ -2929,7 +3031,7 @@ class PGP_SecretAnyKey(PGP_Key):
         io = util.ExtendedStringIO()
         cryptFunc = cipher.encrypt
         # Initial vector is random data
-        block = file("/dev/urandom").read(cipherBlockSize)
+        block = os.urandom(cipherBlockSize)
         FRE = cryptFunc(block)
         io.write(FRE)
         FRE = cryptFunc(FRE)
@@ -2952,11 +3054,11 @@ class PGP_SecretAnyKey(PGP_Key):
         if self.pubKeyAlg in PK_ALGO_ALL_RSA:
             n, e = pkTuple
             d, p, q, u = secMPIs
-            return RSA.construct((n, e, d, p, q, u))
+            return _RSAKey(n, e, d, p, q, u)
         if self.pubKeyAlg == PK_ALGO_DSA:
             p, q, g, y = pkTuple
             x, = secMPIs
-            return DSA.construct((y, g, p, q, x))
+            return _DSAKey(p, q, g, y, x)
         raise MalformedKeyRing("Can't use El-Gamal keys in current version")
 
     def getCryptoKey(self, passPhrase):
@@ -3363,24 +3465,23 @@ def num_gcd(a, b):
     return a
 
 def num_bitLen(a):
-    r=0
-    while a:
-        a, r = a/2, r+1
-    return r
+    return a.bit_length()
 
 def num_getRelPrime(q):
     # Use os module to ensure reads are unbuffered so as not to
     # artifically deflate entropy
     randFD = os.open('/dev/urandom', os.O_RDONLY)
-    b = num_bitLen(q)/8 + 1
-    r = 0
-    while r < 2:
-        for i in range(b):
-            r = r*256 + ord(os.read(randFD, 1))
-            r %= q
-        while num_gcd(r, q-1) != 1:
-            r = (r+1) % q
-    os.close(randFD)
+    try:
+        b = num_bitLen(q) // 8 + 1
+        r = 0
+        while r < 2:
+            for i in range(b):
+                r = r*256 + os.read(randFD, 1)[0]
+                r %= q
+            while num_gcd(r, q-1) != 1:
+                r = (r+1) % q
+    finally:
+        os.close(randFD)
     return r
 
 class TimestampPacketDispatcher(PacketTypeDispatcher):
@@ -3456,7 +3557,7 @@ class KeyTimestampPacket(PGP_Trust):
         stream.write(self._keyId)
         stream.write(binSeqToString(int4ToBytes(self._refreshTimestamp)))
         # Write padding
-        stream.write('\0' * 25)
+        stream.write(b'\0' * 25)
         stream.seek(0)
         return stream
 
@@ -3486,14 +3587,14 @@ class PublicKeyring(object):
     def _createFile(fileName):
         try:
             util.mkdirChain(os.path.dirname(fileName))
-            file(fileName, "a+")
+            open(fileName, "ab").close()
         except (IOError, OSError) as e:
             raise KeyringError(e.errno, e.strerror, e.filename)
 
     def addKeys(self, keys, timestamp = None):
         self._createFile(self._keyringPath)
         # Expand generators
-        if hasattr(keys, 'next'):
+        if hasattr(keys, '__next__'):
             keys = list(keys)
         for key in keys:
             assert(isinstance(key, PGP_MainKey))
@@ -3503,8 +3604,11 @@ class PublicKeyring(object):
 
     def _extractKey(self, key):
         if not key:
-            return ""
-        if ord(key[0]) & 0x80:
+            return b""
+        if isinstance(key, str):
+            # Armored (or, if some caller was sloppy, binary data in a str)
+            key = key.encode('latin-1')
+        if key[0] & 0x80:
             # Most likely already binary
             return key
         return parseAsciiArmorKey(key)
@@ -3512,7 +3616,7 @@ class PublicKeyring(object):
     def addKeysAsStrings(self, keys, timestamp = None):
         sio = util.ExtendedStringIO()
         for k in keys:
-            assert(isinstance(k, str))
+            assert(isinstance(k, (str, bytes)))
             sio.write(self._extractKey(k))
         msg = PGP_Message(sio, start = 0)
         return self.addKeys(msg.iterMainKeys(), timestamp = timestamp)
@@ -3520,7 +3624,7 @@ class PublicKeyring(object):
     def updateTimestamps(self, keyIds, timestamp = None):
         self._createFile(self._tsDbPath)
         # Expand generators
-        if hasattr(keyIds, 'next'):
+        if hasattr(keyIds, '__next__'):
             keyIds = list(keyIds)
         for keyId in keyIds:
             assert(len(keyId) >= 16)
@@ -3551,7 +3655,7 @@ class PublicKeyring(object):
 
     def _parseTsDb(self):
         # Stat the timestamp database
-        stream = file(self._tsDbPath)
+        stream = open(self._tsDbPath, 'rb')
         streamfd = stream.fileno()
         mtime = os.fstat(streamfd).st_mtime
         if self._tsDbTimestamp == mtime:

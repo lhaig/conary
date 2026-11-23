@@ -17,10 +17,6 @@
 
 import weakref
 
-try:
-    from io import StringIO
-except ImportError:
-    from io import StringIO
 import base64
 
 from conary.lib import openpgpfile, openpgpkey, util
@@ -81,7 +77,7 @@ class OpenPGPKeyTable:
             # origKey now is a superset of both the old key and the incoming
             # key. we can't allow the repo to let go of subkeys or
             # revocations.
-            sio = StringIO()
+            sio = util.ExtendedStringIO()
             origKey.writeAll(sio)
             keyData = sio.getvalue()
 
@@ -150,9 +146,9 @@ class OpenPGPKeyTable:
     def getAsciiPGPKeyData(self, keyId):
         # don't trap exceptions--that way we can assume we found a key.
         keyData = self.getPGPKeyData(keyId)
-        sio = StringIO()
+        sio = util.ExtendedStringIO()
         openpgpfile.armorKeyData(keyData, sio)
-        return sio.getvalue()
+        return sio.getvalue().decode('ascii')
 
     def getUsersMainKeys(self, user):
         cu = self.db.cursor()

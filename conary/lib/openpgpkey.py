@@ -112,6 +112,14 @@ class OpenPGPKey(object):
     def getTimestamp(self):
         return self.timestamp
 
+    @staticmethod
+    def _signedData(data, timeStamp):
+        # The signed payload is the data followed by the decimal ASCII
+        # timestamp; text is encoded as UTF-8 first.
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        return bytes(data) + str(timeStamp).encode('ascii')
+
     def signString(self, data):
         if self.isDSA():
             K = self.cryptoKey.q + 1
@@ -121,7 +129,7 @@ class OpenPGPKey(object):
             K = 0
         timeStamp = int(time())
         return (self.fingerprint, timeStamp,
-                self.cryptoKey.sign(data+str(timeStamp), K))
+                self.cryptoKey.sign(self._signedData(data, timeStamp), K))
 
     def verifyString(self, data, sig):
         """
@@ -142,7 +150,8 @@ class OpenPGPKey(object):
         # of failed/passed signatures all at once.
 
         if (self.fingerprint == sig[0]
-            and self.cryptoKey.verify(data+str(sig[1]), sig[2])):
+            and self.cryptoKey.verify(self._signedData(data, sig[1]),
+                                      sig[2])):
             return self.trustLevel
         else:
             return -1
@@ -464,7 +473,8 @@ class DiskKeyCacheCallback(KeyCacheCallback):
         "@see: KeyCacheCallback.findOpenPGPKey"
         keyFile = os.path.join(self.dirSource, "%s.asc" % keyId.lower())
         try:
-            return file(keyFile).read()
+            with open(keyFile, 'rb') as f:
+                return f.read()
         except IOError as e:
             if e.errno in (2, 13):
                 # No such file, permission denied

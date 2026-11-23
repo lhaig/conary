@@ -893,7 +893,7 @@ class ExtendedFdopen(object):
             while 1:
                 s = os.read(self.fd, bufSize)
                 if not s:
-                    return ''.join(l)
+                    return b''.join(l)
                 l.append(s)
         return os.read(self.fd, bytes)
 
@@ -940,12 +940,21 @@ class ExtendedFile(ExtendedFdopen):
         # we use a file object here to avoid parsing the mode ourself, as well
         # as to get the right exceptions on open. we have to keep the file
         # object around to keep it from getting garbage collected though
-        self.fObj = file(path, mode)
+        self.fObj = open(path, mode)
         self.name = path
         fd = self.fObj.fileno()
         ExtendedFdopen.__init__(self, fd)
 
-class ExtendedStringIO(io.StringIO):
+class ExtendedStringIO(io.BytesIO):
+
+    def truncate(self, size = None):
+        # Like the Python 2 StringIO this class replaces, never leave the
+        # position beyond the end of the data
+        pos = self.tell()
+        rc = io.BytesIO.truncate(self, size)
+        if size is not None and pos > size:
+            self.seek(size, 0)
+        return rc
 
     def pread(self, bytes, offset):
         pos = self.tell()
