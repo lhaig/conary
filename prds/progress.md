@@ -72,3 +72,17 @@ PATTERN: bytes/str - sqlite binary() rejects str and frombinary() returns bytes;
 PATTERN: py3-port - 2to3 misses implicit relative imports via __import__ and removed modules (sre_constants); expect more in 1.6.
 PATTERN: environment - No `Crypto` (pycrypto) in the container; conary.repository, changeset, rpmhelper and openpgpfile cannot import until openpgpfile is ported (Crypto.PublicKey.pubkey is gone in pycryptodome).
 PATTERN: testing - `pytest -W error` fails at collection on existing invalid-escape SyntaxWarnings; use -W error::ResourceWarning for leak checks.
+
+## 2026-11-23 - task 1.6 DONE: OpenPGP on pycryptodomex
+
+- Decision (user, 2026-11-23): pycryptodomex, not cryptography. Task renumbering: crypto port is 1.6, imports 1.7, --version 1.8.
+- Commit "feat(openpgp): port OpenPGP code from pycrypto to pycryptodomex". py3tests/test_openpgp.py: 65 tests
+  (collection failed before: no module Crypto). Full py3tests 106 passed, 1 xfailed; compile_check 0 failures; check.sh passes.
+- Advisor review: MINOR. Orchestrator narrowed a pytest.raises(Exception) negative test; it was hiding an AttributeError
+  when an RSA signature was checked against a DSA key. Added a key-type guard in verifySignature, mutation-tested.
+
+PATTERN: testing - Never use pytest.raises(Exception) for negative checks in the port; it hides TypeError/AttributeError from porting bugs (it hid one in 1.6).
+PATTERN: generators - 2to3's next(x) inside a generator turns StopIteration into RuntimeError (PEP 479); use a None-returning helper.
+PATTERN: crypto - pycryptodomex has no raw RSA/DSA; use pow() on ints and skip RSA/DSA.construct. Any len(hex(n)) arithmetic relied on Python 2's L suffix.
+PATTERN: bytes/str - io.BytesIO.truncate(n) does not move the position (Py2 StringIO did); util.ExtendedStringIO restores the old behaviour.
+PATTERN: testing - Legacy test constants in conary_test can be read with ast.literal_eval without importing testrunner; Py2 str literals -> .encode('latin-1').
