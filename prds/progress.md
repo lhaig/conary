@@ -103,3 +103,15 @@ PATTERN: py3-port - imp.load_module/load_source -> util.loadSourceModule(name, p
 PATTERN: testing - Import tests need one subprocess per module; in-process ordering hides failures.
 PATTERN: container - Third-party packages can reinstate removed stdlib modules (webob brings cgi.py); test critical imports with the module blocked via sys.meta_path.
 PATTERN: bytes/str - Dependency/flavor strings are text everywhere above the wire; dep_freeze.c rejects bytes.
+
+## 2026-11-23 - task 1.8 DONE: conary --version with clean stderr; phase 1 complete
+
+- Commit "fix: remove Python 3 SyntaxWarnings so the CLI runs with clean stderr": 92 warnings (81 escapes, 11 is-literal).
+  py3tests/test_cli.py and test_syntax_warnings.py; full py3tests 369 passed; compile_check 0 failures.
+- Orchestrator verified: conary/cvc --version rc 0 and 0 bytes stderr; a full AST comparison of the 38 changed files shows only
+  the 9 is-literal files changed AST, so the escape rewrite kept every string value.
+- Deviation logged: bare --help exits 1 by upstream design (mainhandler.usage rc=1); tests assert 1.
+- Phase 1 collapsed into TASKS-archive.md.
+
+PATTERN: verification - After a mechanical literal rewrite, compare ast.dump of HEAD vs working tree per file; only files with intended semantic edits may differ.
+PATTERN: testing - conary/constants.py defines lowercase `version`.
