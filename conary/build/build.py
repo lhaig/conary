@@ -4076,7 +4076,7 @@ class BuildMSI(BuildAction):
     EXAMPLES
     ========
     C{r.BuildMSI('mypackage-1.2.3.4.zip',
-        dest=r'\%ProgramFiles%\MyPackage\',
+        dest=r'\\%ProgramFiles%\\MyPackage\',
         manufacturer='Example Corp.',
         description='Web application for demonstrating Windows packaging.')}
     """

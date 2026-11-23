@@ -747,7 +747,7 @@ def rpmExpandMacro(val):
         rawRpmModulePath = rpm.__file__
     sonames = [ x[1] for x in elf.inspect(rawRpmModulePath)[0]
                     if x[0] == 'soname']
-    rpmLibs = [ x for x in sonames if re.match('librpm[-\.].*so', x) ]
+    rpmLibs = [ x for x in sonames if re.match(r'librpm[-\.].*so', x) ]
     assert(len(rpmLibs) == 1)
     librpm = ctypes.CDLL(rpmLibs[0])
     librpm.expandMacros.argtypes = (c_void_p, c_void_p, c_void_p, c_long)

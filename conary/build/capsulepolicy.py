@@ -254,7 +254,7 @@ class RPMProvides(policy.Policy):
         'provisions': {}
     }
 
-    provisionRe = re.compile('(.+?):([^()]+)\(?([^()]*)\)?')
+    provisionRe = re.compile(r'(.+?):([^()]+)\(?([^()]*)\)?')
 
     def __init__(self, *args, **keywords):
         policy.Policy.__init__(self, *args, **keywords)
@@ -262,7 +262,7 @@ class RPMProvides(policy.Policy):
         self.exceptDeps = []
 
     def updateArgs(self, *args, **keywords):
-        if len(args) is 2:
+        if len(args) == 2:
             name = args[1]
             if ':' not in name:
                 name = name + ':rpm'
@@ -398,8 +398,8 @@ class RPMRequires(policy.Policy):
         'exceptDeps' : []
         }
 
-    requirementRe = re.compile('(.+?):([^()]+)\(?([^()]*)\)?')
-    rpmStringRe = re.compile('(.*?)\[(.*?)\]')
+    requirementRe = re.compile(r'(.+?):([^()]+)\(?([^()]*)\)?')
+    rpmStringRe = re.compile(r'(.*?)\[(.*?)\]')
 
     def __init__(self, *args, **keywords):
         policy.Policy.__init__(self, *args, **keywords)
@@ -409,7 +409,7 @@ class RPMRequires(policy.Policy):
         self.mergeKmodSymbols = False
 
     def updateArgs(self, *args, **keywords):
-        if len(args) is 2:
+        if len(args) == 2:
             name = args[1]
             if ':' not in name:
                 name = name + ':rpm'

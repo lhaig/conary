@@ -128,7 +128,7 @@ class RemoveNonPackageFilesTest(rephelp.RepositoryHelper):
         Make sure that "extra" libraries are removed, and nothing
         else.
         """
-        recipestr1 = """
+        recipestr1 = r"""
 class TestRemoveNonPackageFiles(PackageRecipe):
     name = 'test'
     version = '0'
@@ -1208,7 +1208,7 @@ class NormalizePythonInterpreterVersionTest(rephelp.RepositoryHelper):
 
     @conary_test.installed_conarydb
     def testNormalizePythonInterpreterVersionTest1(self):
-        """
+        r"""
         Test to make sure that #!/usr/bin/python[\d.]+ get fixed
         """
         recipestr = """
@@ -1354,7 +1354,7 @@ class TestNormalizePythonInterpreterVersionMap(PackageRecipe):
 class NormalizeInfoPages(rephelp.RepositoryHelper):
 
     def testNormalizeInfoPages1(self):
-        """
+        r"""
         Test to make sure that #!/usr/bin/python[\d.]+ get fixed
         """
         recipestr = """
@@ -1503,7 +1503,7 @@ class PythonEggsTest(rephelp.RepositoryHelper):
 
     def testNonPackagePythonEgg(self):
         eggFile = self.makeEgg()
-        recipeStr = """class EggRecipe(PackageRecipe):
+        recipeStr = r"""class EggRecipe(PackageRecipe):
         name = 'egg-recipe'
         version = '1'
 
@@ -1616,7 +1616,7 @@ missing2>=1.2,<=1.3\"\"\")
 
         self.mock(packagepolicy.Requires, '_enforceProvidedPath',
                 lambda x, path, *args, **kwargs: \
-                        (re.search('present\d', path).group() + ":python"))
+                        (re.search(r'present\d', path).group() + ":python"))
 
         self.logFilter.add()
         (built, d) = self.buildRecipe(recipeStr, 'EggRequiresRecipe')
@@ -1649,7 +1649,7 @@ missing1>=0.3\"\"\")
         self.addDbComponent(self.openDatabase(), 'python-setuptools:python')
         self.mock(packagepolicy.Requires, '_enforceProvidedPath',
                 lambda x, path, *args, **kwargs: \
-                        (re.search('present\d', path).group() + ":python"))
+                        (re.search(r'present\d', path).group() + ":python"))
 
         self.logFilter.add()
         (built, d) = self.buildRecipe(recipeStr, 'EggRequiresRecipe')
@@ -1680,7 +1680,7 @@ class EggRequiresRecipe(PackageRecipe):
 
         self.mock(packagepolicy.Requires, '_enforceProvidedPath',
                 lambda x, path, *args, **kwargs: \
-                        (re.search('present\d', path).group() + ":python"))
+                        (re.search(r'present\d', path).group() + ":python"))
 
         self.addDbComponent(self.openDatabase(), 'python-setuptools:python')
         (built, d) = self.buildRecipe(recipeStr, 'EggRequiresRecipe')
@@ -1714,7 +1714,7 @@ class EggRequiresRecipe(PackageRecipe):
 """
         self.mock(packagepolicy.Requires, '_enforceProvidedPath',
                 lambda x, path, *args, **kwargs: \
-                        (re.search('present\d', path).group() + ":python"))
+                        (re.search(r'present\d', path).group() + ":python"))
         self.addComponent('egg-requires:source=1', 
                           [('egg-requires.recipe', recipeStr)])
         self.addDbComponent(self.openDatabase(), 'python-setuptools:python')

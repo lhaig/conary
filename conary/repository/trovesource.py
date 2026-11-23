@@ -406,7 +406,7 @@ class SearchableTroveSource(AbstractTroveSource):
             troveSpecList = []
             for name, versionDict in troveSpecs.items():
                 for version, flavorList in versionDict.items():
-                    if flavorList is None or flavorList is '':
+                    if flavorList is None or flavorList == '':
                         troveSpecList.append((name, version, flavorList))
                     else:
                         troveSpecList.extend((name, version, x) for x in

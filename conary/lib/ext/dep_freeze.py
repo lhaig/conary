@@ -23,7 +23,7 @@ def _escapeName(name):
 
 
 def _escapeFlags(name):
-    return name.replace(':', '\:')
+    return name.replace(':', r'\:')
 
 
 def depSetFreeze(members):

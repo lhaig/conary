@@ -2816,7 +2816,7 @@ class RepositoryHelper(testhelp.TestCase):
         '''
 
         minWhitespace = None
-        pattern = re.compile('^(\s*)\S')
+        pattern = re.compile(r'^(\s*)\S')
         for line in recipe.splitlines():
             match = pattern.match(line)
             if match:

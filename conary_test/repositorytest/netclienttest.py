@@ -548,7 +548,7 @@ class NetclientTest(rephelp.RepositoryHelper):
         self.logFilter.add()
         (updJob, suggMap) = self.discardOutput(
             client.updateChangeSet, applyList)
-        self.logFilter.regexpCompare('warning: Unhandled exception occurred when invoking callback:\n.*netclienttest\.py:[0-9]+\n Exception: Except me')
+        self.logFilter.regexpCompare('warning: Unhandled exception occurred when invoking callback:\n.*netclienttest\\.py:[0-9]+\n Exception: Except me')
 
         # CNY-2304 - by default we don't stop the update. Make one that's
         # stoppable
@@ -565,7 +565,7 @@ class NetclientTest(rephelp.RepositoryHelper):
                 client.updateChangeSet, applyList)
         except errors.RepositoryError:
             pass
-        self.logFilter.regexpCompare('warning: Unhandled exception occurred when invoking callback:\n.*netclienttest\.py:[0-9]+\n CancelOperationException: Except me')
+        self.logFilter.regexpCompare('warning: Unhandled exception occurred when invoking callback:\n.*netclienttest\\.py:[0-9]+\n CancelOperationException: Except me')
 
         self.assertRaises(errors.RepositoryError,
             client.applyUpdate, updJob)

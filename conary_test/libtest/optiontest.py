@@ -49,7 +49,7 @@ class OptionTest(testhelp.TestCase):
                          callback=options.optParamCallback,
                          dest='coverage')
         option, args = parser.parse_args(['foo', '--coverage', 'bar'])
-        assert(option.coverage is 'bar')
+        assert(option.coverage == 'bar')
         assert(args == ['foo'])
         option, args = parser.parse_args(['foo', '--coverage=bar'])
         assert(option.coverage == 'bar')

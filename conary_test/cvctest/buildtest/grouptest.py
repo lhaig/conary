@@ -3304,7 +3304,7 @@ class copiedGroup(GroupRecipe):
                   copyCompatibilityClass = True)
 """
         grp = self.build(groupCopy, 'copiedGroup', returnName = 'group-copy')
-        assert(grp.getCompatibilityClass() is 0)
+        assert(grp.getCompatibilityClass() == 0)
         grpBasic = self.openRepository().getTrove('group-basic',
                         grp.getVersion(), grp.getFlavor() )
         assert(grpBasic.getCompatibilityClass() == 3)

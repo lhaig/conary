@@ -305,12 +305,12 @@ class TestSuiteFiles(policy.Policy):
 
     invariantinclusions = [ '.*[tT][eE][sS][tT].*',
                             'Makefile.*',
-                            '.*\.exp', #used by dejagnu
+                            r'.*\.exp', #used by dejagnu
                             '.*/config.*',
                             '.*/shconfig',
                             '.*/acconfig.*',
                             '.*/aclocal.*',
-                            '.*\.la', ]
+                            r'.*\.la', ]
 
     keywords = { 'build': None,
                  'builddirlinks' : None}

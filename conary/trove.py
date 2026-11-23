@@ -3297,7 +3297,7 @@ class Trove(streams.StreamSet):
             if name.count(':') > 1:
                 raise TroveError('More than one ":" is not allowed in a trove name')
 
-            if not re.match('^[_A-Za-z0-9+\.\-:@]+$', name):
+            if not re.match(r'^[_A-Za-z0-9+\.\-:@]+$', name):
                 raise TroveError("Illegal characters in trove name '%s'" % name)
 
             if 0 in [ len(x) for x in name.split(":") ]:

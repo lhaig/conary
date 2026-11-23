@@ -558,7 +558,7 @@ class CfgBytes(CfgType):
             ('',    1),
             ]
     scales_d = dict(scales)
-    pattern = '^(\d+) *([kKMG]?i?)([bB]?)[/p]?s?$'
+    pattern = r'^(\d+) *([kKMG]?i?)([bB]?)[/p]?s?$'
 
     def __init__(self, defaultScale='', perSecond=False):
         assert defaultScale in self.scales_d

@@ -227,7 +227,7 @@ class PatchTest(unittest.TestCase):
         first = [ "line\n" ]
         second = [ "line\n", "another" ]
         diff = list(unifiedDiff(first, second))
-        assert(diff[-1] == '\ No newline at end of file\n')
+        assert(diff[-1] == '\\ No newline at end of file\n')
         assert(diff[-2][-1] == '\n')
 
         result = patch(first, diff[2:])

@@ -227,10 +227,10 @@ class _RpmHeader(object):
                 yield f
 
     # regexs used in _getDepsetFromHeader below
-    flagre = re.compile('\((.*?)\)')
-    depnamere = re.compile('(.*?)\(.*')
-    localere = re.compile('locale\((.*)\)')
-    kmodre = re.compile('(kernel|ksym)\((.*)\)')
+    flagre = re.compile(r'\((.*?)\)')
+    depnamere = re.compile(r'(.*?)\(.*')
+    localere = re.compile(r'locale\((.*)\)')
+    kmodre = re.compile(r'(kernel|ksym)\((.*)\)')
 
     def _getDepsetFromHeader(self, tags, mergeKmodSymbols=False,
             enableRPMVersionDeps=True):
@@ -794,7 +794,7 @@ def UncompressedRpmPayload(fileIn):
 
 
 class NEVRA(namedtuple('NEVRA', 'name epoch version release arch')):
-    _re = re.compile("^(.*)-([^-]*)-([^-]*)\.([^.]*)$")
+    _re = re.compile(r"^(.*)-([^-]*)-([^-]*)\.([^.]*)$")
 
     @classmethod
     def fromHeader(cls, header):

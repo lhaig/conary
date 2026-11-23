@@ -234,7 +234,7 @@ class TestPutFiles(PackageRecipe):
 
     def testPutFilesTest4(self):
         # test strange names
-        recipestr = """
+        recipestr = r"""
 class TestPutFiles(PackageRecipe):
     name = 'test'
     version = '0'

@@ -51,8 +51,8 @@ class TestUse(rephelp.RepositoryHelper):
         m1.r = 'foo++'
         assert(m1.r == 'foo++')
         assert(m1['r'] == 'foo++')
-        assert(str(m1['r.literalRegex']) == 'foo\+\+')
-        assert(str("%(r.literalRegex)s" % m1) == 'foo\+\+')
+        assert(str(m1['r.literalRegex']) == r'foo\+\+')
+        assert(str("%(r.literalRegex)s" % m1) == r'foo\+\+')
 
     def testIterItems(self):
         m1 = macros.Macros()

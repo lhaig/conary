@@ -402,9 +402,9 @@ class ConaryClient(ClientClone, ClientBranch, ClientUpdate, ClientNewTrove,
         """
         # a flavor of None is common in some cases so we use 0
         # as our "unset" case.
-        if flavor is 0:
+        if flavor == 0:
             flavor = self.cfg.flavor
-        if installLabelPath is 0:
+        if installLabelPath == 0:
             installLabelPath = self.cfg.installLabelPath
 
         searchMethod = resolvemethod.RESOLVE_LEAVES_FIRST

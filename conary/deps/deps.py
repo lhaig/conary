@@ -383,7 +383,7 @@ class DependencyClass(object):
                  WORD=class_.WORD, IDENT=class_.IDENT)
 
         # zero or more space-separated flags
-        flagFmt = '(?:\( *(%(flagFormat)s?(?: +%(flagFormat)s)*) *\))?'
+        flagFmt = r'(?:\( *(%(flagFormat)s?(?: +%(flagFormat)s)*) *\))?'
         # add ^ and $ to ensure we match the entire string passed in
         regexp = ('^ *(%(depFormat)s) *' + flagFmt + ' *$') % d
         # word is a slightly larger group of chars than ident -
@@ -708,7 +708,7 @@ class CILDependencies(DependencyClass):
     justOne = False
     depClass = Dependency
     flags = DEP_CLASS_HAS_FLAGS
-    depFormat = 'IDENT(?:\.IDENT)*' # foo[.bar]*
+    depFormat = r'IDENT(?:\.IDENT)*' # foo[.bar]*
     flagFormat = '[0-9.]+'          # 0-9[.0-9]*
 _registerDepClass(CILDependencies)
 
@@ -1893,14 +1893,14 @@ dependencyCache = weakref.WeakValueDictionary()
 
 ident = '(?:[0-9A-Za-z_-]+)'
 flag = '(?:~?!?IDENT)'
-useFlag = '(?:!|~!)?FLAG(?:\.IDENT)?'
-archFlags = '\(( *FLAG(?: *, *FLAG)*)\)'
+useFlag = r'(?:!|~!)?FLAG(?:\.IDENT)?'
+archFlags = r'\(( *FLAG(?: *, *FLAG)*)\)'
 archClause = ' *(?:(IDENT)(?:ARCHFLAGS)?)?'
 archGroup = '(?:ARCHCLAUSE(?:((?:  *ARCHCLAUSE)*))?)'
 useClause = '(USEFLAG *(?:, *USEFLAG)*)?'
 
 
-depFlags = ' *(?:\([^)]*\))? *' # anything inside parens
+depFlags = r' *(?:\([^)]*\))? *' # anything inside parens
 depName = r'(?:[^ (]+)' # anything except for a space or an opening paren
 depClause = depName + depFlags
 depRegexpStr = r'(IDENT): *(DEPCLAUSE) *'

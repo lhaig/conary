@@ -770,7 +770,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         for i, flavor in enumerate(flavorSet.keys()):
             flavorId = i + 1
             flavorSet[flavor] = flavorId
-            if flavor is '':
+            if flavor == '':
                 # empty flavor yields a dummy dep on a null flag
                 cu.execute("""INSERT INTO tmpFlavorMap
                 (flavorId, base, sense, depClass, flag)

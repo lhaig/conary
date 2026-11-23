@@ -36,7 +36,7 @@ class WindowsActionTest(rephelp.RepositoryHelper):
         self.cfg.macros.pop('targetos')
         rephelp.RepositoryHelper.tearDown(self)
 
-    test_recipe1 = """
+    test_recipe1 = r"""
 class WindowsAppTest(CapsuleRecipe):
     name = 'WindowsAppTest'
     version = '1.2.3.4'

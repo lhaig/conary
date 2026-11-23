@@ -632,7 +632,7 @@ class TestExcludeDirectories(PackageRecipe):
         r.MakeDirs('%(bam)s', mode=0770)
 """
         self.reset()
-        self.logFilter.ignore('^\+ (Methods|Building test|changing mode|'
+        self.logFilter.ignore(r'^\+ (Methods|Building test|changing mode|'
                                     'Cleaning your old build tree|'
                                     'Processing test|creating directory|'
                                     'deleting ).*')
@@ -2839,7 +2839,7 @@ class TestRequires(PackageRecipe):
             provides.addDep(deps.JavaDependencies, deps.Dependency(d, []))
         self.addComponent('fake-jre:runtime', '1', provides = provides)
         self.updatePkg('fake-jre:runtime')
-        recipestr = """
+        recipestr = r"""
 class TestRequires(PackageRecipe):
     name = 'foo'
     version = '1'
@@ -2870,7 +2870,7 @@ class TestRequires(PackageRecipe):
             provides.addDep(deps.JavaDependencies, deps.Dependency(d, []))
         self.addComponent('fake-jre:runtime', '1', provides = provides)
         self.updatePkg('fake-jre:runtime')
-        recipestr = """
+        recipestr = r"""
 class TestRequires(PackageRecipe):
     name = 'foo'
     version = '1'
@@ -4628,7 +4628,7 @@ EOF
         asdfSonameRE = re.compile(
             r'soname: ELF[^/]*/libfoo\.so\.0\(.*asdf[^)]*\)'+'\n'
             r'soname: ELF[^/]*/libfoo\.so\.0\.0\(')
-        sillySonameRE = re.compile('soname: ELF[^/]*/libblah.so.0\(.*\)')
+        sillySonameRE = re.compile(r'soname: ELF[^/]*/libblah.so.0\(.*\)')
         findnotSonameRE = re.compile('soname:.*/usr/bin/findnot')
         smbumountSonameRe = re.compile('soname:.*/usr/bin/smbumount')
         testdirSonameRe = re.compile('soname:.*/var/conary/tests')
@@ -5036,7 +5036,7 @@ class TestProvides(PackageRecipe):
         self.assertIn('perl: foo::blah', prov)
 
     def testEL5PathProvideRegexp(self):
-        recipestr = """
+        recipestr = r"""
 class TestProvides(PackageRecipe):
     name = 'foo'
     version = '1'

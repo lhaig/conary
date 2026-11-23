@@ -1265,7 +1265,7 @@ class TestSuiteRecipe(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Run('mkdir test; echo -e \#\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
+        r.Run('mkdir test; echo -e \\#\\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
         r.TestSuite('test', autoBuildMakeDependencies=False)
         r.Create('/etc/foo')
         r.ComponentSpec('runtime', '%(sysconfdir)s/')

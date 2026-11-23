@@ -229,7 +229,7 @@ def _formatDocString(docString):
     docString = docString.replace('::\n', ':\n')
     # Next, reformat headers:
     docString = _formatHeaders(docString)
-    docStringRe = re.compile('[A-Z]\{[^{}]*\}')
+    docStringRe = re.compile(r'[A-Z]\{[^{}]*\}')
     srch = re.search(docStringRe, docString)
     while srch:
         oldString = srch.group()

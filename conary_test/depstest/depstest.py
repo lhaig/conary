@@ -67,9 +67,9 @@ class DepsTest(unittest.TestCase):
         assert(parseDep(str(first)).freeze() == frzForm)
 
     def testColonFlag(self):
-        self._testStr('rpm: foo(:flag)', '16#foo:\:flag')
+        self._testStr('rpm: foo(:flag)', r'16#foo:\:flag')
         self.assertRaises(ParseError,
-                          self._testStr, 'trove: foo(:flag)', '16#foo:\:flag')
+                          self._testStr, 'trove: foo(:flag)', r'16#foo:\:flag')
 
     def testColonName(self):
         self._testStr('perl: foo::bar', '12#foo::::bar')

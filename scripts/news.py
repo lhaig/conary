@@ -34,7 +34,7 @@ HEADINGS = [
 KINDS = set(x[0] for x in HEADINGS)
 NEWSDIR = 'NEWS.src'
 
-RE_ISSUE = re.compile('^[A-Z0-9]+-\d+')
+RE_ISSUE = re.compile(r'^[A-Z0-9]+-\d+')
 
 
 def git(args):

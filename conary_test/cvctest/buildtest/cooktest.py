@@ -810,7 +810,7 @@ class TestMultipleMainPackage(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Run('mkdir test; echo -e \#\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
+        r.Run('mkdir test; echo -e \\#\\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
         r.TestSuite('test', autoBuildMakeDependencies=False)
         r.Create('/a')
 """
@@ -827,7 +827,7 @@ class TestMultipleMainPackage(PackageRecipe):
         """
         Test file names that include strange file names 
         """
-        recipestr1 = """
+        recipestr1 = r"""
 class TestStrangeNames(PackageRecipe):
     name = 'foo'
     version = '1'
@@ -1516,7 +1516,7 @@ class TestClass(CPackageRecipe):
             self.cookItem(repos, self.cfg, 'foo')
             assert 0, "should have raised exception"
         except Exception as err:
-            err = re.sub('[^ ]*\.recipe', 'RECIPE', str(err))
+            err = re.sub(r'[^ ]*\.recipe', 'RECIPE', str(err))
             assert(err == '''\
 unable to load recipe file RECIPE:
 Error in recipe file RECIPE", line 1:
@@ -2064,7 +2064,7 @@ class Test(PackageRecipe):
 + adding source file test.recipe
 + found test.recipe in repository
 + test.recipe not yet cached, fetching...""")
-        self.assertTrue(re.match('\+ copying [^\s]*? to [^\s]*?',
+        self.assertTrue(re.match(r'\+ copying [^\s]*? to [^\s]*?',
                 self.logFilter.records[-1]))
 
     def testSuperClassOverride(self):

@@ -49,7 +49,7 @@ class TestTestComponent(PackageRecipe):
         
 """
 
-recipe2="""
+recipe2=r"""
 class TestTestComponent(PackageRecipe):
     name = 'testpkg'
     version = '1.0'

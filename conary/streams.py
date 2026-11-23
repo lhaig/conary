@@ -328,7 +328,7 @@ class OptionalFlavorStream(InfoStream):
             self.deps = FlavorsStream(val.freeze())
 
     def twm(self, diff, base):
-        if diff is '\0':
+        if diff == '\0':
             self.deps = None
         else:
             if self.deps is None:

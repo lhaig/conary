@@ -541,8 +541,8 @@ class SigTest(rephelp.RepositoryHelper):
         cfg = conarycfg.ConaryConfiguration()
 
         cfg.configLine("signatureKey %s" % fingerprints[0])
-        cfg.configLine("signatureKeyMap .*\.example\.com %s" % fingerprints[1])
-        cfg.configLine("signatureKeyMap conary\.example\.com %s" % \
+        cfg.configLine(r"signatureKeyMap .*\.example\.com %s" % fingerprints[1])
+        cfg.configLine(r"signatureKeyMap conary\.example\.com %s" % \
                        fingerprints[2])
 
         self.assertFalse(signtrove.selectSignatureKey( \

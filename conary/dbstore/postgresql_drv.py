@@ -63,7 +63,7 @@ def _mungeSQL(sql):
             d["kwIdx"] = len(keys)
         return "%(pre)s%(s)s$%(kwIdx)d" % d
 
-    sql = re.sub("(?i)(?P<pre>[(,<>=]|(LIKE|AND|BETWEEN|LIMIT|OFFSET)\s)(?P<s>\s*)(?P<kw>:\w+|[?])",
+    sql = re.sub(r"(?i)(?P<pre>[(,<>=]|(LIKE|AND|BETWEEN|LIMIT|OFFSET)\s)(?P<s>\s*)(?P<kw>:\w+|[?])",
                  __match, sql)
     # force dbi compliance here. args or kw or none, no mixes
     if len(keys) and keys[0] is not None:
@@ -89,7 +89,7 @@ class Cursor(BaseCursor):
             msg = e.args[0]
             if msg.find("violates foreign key constraint") > 0:
                 raise sqlerrors.ConstraintViolation(msg)
-            if re.search('relation \S+ does not exist', msg, re.I):
+            if re.search(r'relation \S+ does not exist', msg, re.I):
                 raise sqlerrors.InvalidTable(msg)
             if re.search("duplicate key (value )?violates unique constraint", msg):
                 raise sqlerrors.ColumnNotUnique(msg)

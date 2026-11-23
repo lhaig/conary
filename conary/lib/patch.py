@@ -154,7 +154,7 @@ def patch(oldLines, unifiedDiff):
                 fromCount += 1
             elif ch == "+":
                 toCount += 1
-            elif unifiedDiff[i] == '\ No newline at end of file\n':
+            elif unifiedDiff[i] == '\\ No newline at end of file\n':
                 del lines[-1]
                 lines[-1] = lines[-1][:-1]
             else:
@@ -266,7 +266,7 @@ def unifiedDiff(first, second, *args, **kwargs):
             missingNewLines.append(i)
 
     for i in reversed(missingNewLines):
-        diff.insert(i + 1, '\ No newline at end of file\n')
+        diff.insert(i + 1, '\\ No newline at end of file\n')
         diff[i] += '\n'
 
     # be a drop in replacement for difflib.unified_diff

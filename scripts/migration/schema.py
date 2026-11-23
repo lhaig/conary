@@ -57,13 +57,13 @@ class PrintDatabase:
         pass
     # simulate non-existent tables for delete statements
     def __skip_delete(self, sql):
-        delfrom = re.compile("(?i)DELETE\s+FROM.*")
+        delfrom = re.compile(r"(?i)DELETE\s+FROM.*")
         if delfrom.match(sql):
             raise sqlerrors.DatabaseError
         return False
     # ignore create temporary tables
     def __skip_tempTables(self, sql):
-        tmptbl = re.compile("(?i)CREATE\s+TEMPORARY\s+TABLE\s+(?P<table>[^ (]+).*")
+        tmptbl = re.compile(r"(?i)CREATE\s+TEMPORARY\s+TABLE\s+(?P<table>[^ (]+).*")
         m = tmptbl.match(sql)
         if m is not None:
             d = m.groupdict()
@@ -73,7 +73,7 @@ class PrintDatabase:
         return False
     # ignore indexes for temporary tables
     def __skip_Indexes(self, sql, skipAll = False):
-        tmpidx = re.compile("(?i)CREATE\s+(UNIQUE\s+)?INDEX\s+\S+\s+ON\s+(?P<table>[^ (]+).*")
+        tmpidx = re.compile(r"(?i)CREATE\s+(UNIQUE\s+)?INDEX\s+\S+\s+ON\s+(?P<table>[^ (]+).*")
         m = tmpidx.match(sql)
         if m is not None:
             d = m.groupdict()
@@ -82,13 +82,13 @@ class PrintDatabase:
                 return True
         return False
     def __skip_Triggers(self, sql, skipAll = False):
-        tmptrg = re.compile("(?i)CREATE\s+(OR\s+REPLACE\s+)?((DEFINER.*)?TRIGGER|FUNCTION)")
+        tmptrg = re.compile(r"(?i)CREATE\s+(OR\s+REPLACE\s+)?((DEFINER.*)?TRIGGER|FUNCTION)")
         if tmptrg.match(sql):
             return skipAll
         return False
     def __skip_Tables(self, sql, skipAll = False):
         tbl = re.compile(
-            "^(?i)(CREATE|ALTER)\s+(TABLE\s+(?P<table>[^(]+)|(\s?DEFINER.*)?(\s?SQL SECURITY.*)?VIEW\s+(?P<view>[^( ]+))\s*([(]|ADD|AS).*"
+            r"^(?i)(CREATE|ALTER)\s+(TABLE\s+(?P<table>[^(]+)|(\s?DEFINER.*)?(\s?SQL SECURITY.*)?VIEW\s+(?P<view>[^( ]+))\s*([(]|ADD|AS).*"
             )
         m = tbl.match(sql)
         if m is not None:
@@ -208,7 +208,7 @@ def getIndexes(driver = "sqlite"):
 def write_stmt(driver, stmt):
     sys.stdout.write("%s ;" % (stmt,))
     if driver == "ingres":
-        sys.stdout.write("\g")
+        sys.stdout.write(r"\g")
     sys.stdout.write("\n")
     sys.stdout.flush()
 

@@ -72,7 +72,7 @@ class NetworkConvertors(object):
 
     def toFlavor(self, f):
         assert(f is not None)
-        if f is 0:
+        if f == 0:
             return None
         return deps.deps.ThawFlavor(f)
 
