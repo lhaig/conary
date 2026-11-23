@@ -21,7 +21,8 @@ Contains functions to assist in dealing with deb files.
 
 import os
 import gzip
-import rfc822
+import email.parser
+import email.policy
 import tarfile
 
 from conary.lib import ar
@@ -47,8 +48,14 @@ class ControlFileParser(object):
         """
         Yields tuples (key, valueLines)
         """
-        m = rfc822.Message(fileObj)
-        for k, v in list(m.items()):
+        # Like the old rfc822.Message.items(): lowercased names, the last
+        # occurrence of a repeated name wins, folded lines keep their "\n".
+        m = email.parser.BytesParser(policy=email.policy.compat32).parse(
+            fileObj, headersonly=True)
+        headers = {}
+        for k, v in m.items():
+            headers[k.lower()] = str(v).strip()
+        for k, v in headers.items():
             arr = v.split('\n')
             rarr = [ arr[0] ]
             for l in arr[1:]:

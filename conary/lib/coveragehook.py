@@ -21,7 +21,8 @@
     start running coverage.  Forks will continue to run coverage, to a different pid.
 """
 import atexit
-import imp
+import importlib.machinery
+import importlib.util
 import os
 import signal
 import traceback
@@ -62,7 +63,12 @@ def _install():
              or sys.modules['coverage'].__file__ == coverageLoc + 'c')):
         coverage = sys.modules['coverage']
     else:
-        coverage = imp.load_source('coverage', coverageLoc)
+        loader = importlib.machinery.SourceFileLoader('coverage', coverageLoc)
+        spec = importlib.util.spec_from_file_location('coverage', coverageLoc,
+                                                      loader=loader)
+        coverage = importlib.util.module_from_spec(spec)
+        sys.modules['coverage'] = coverage
+        loader.exec_module(coverage)
     the_coverage = coverage.the_coverage
     if hasattr(the_coverage, 'pid') and the_coverage.pid == os.getpid():
         _run(coverage)

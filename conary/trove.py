@@ -516,7 +516,7 @@ class TroveSignatures(streams.StreamSet):
     for those signatures.
     """
 
-    __slots__ = ( 'digitalSigs', 'sha1', 'vSigs', 'ignoreUnknown', 'streamDict' )
+    __slots__ = ( 'digitalSigs', 'sha1', 'vSigs' )
 
     ignoreUnknown = True
     streamDict = {
@@ -764,7 +764,12 @@ class MetadataItem(streams.StreamSet):
     _zeroIsValidSet = set(('sizeOverride',))
 
     _skipSet = { 'id' : True, 'signatures': True, 'oldSignatures' : True }
-    _keys = [ x[2] for x in streamDict.values() if x[2] not in _skipSet ]
+    # (a comprehension in a class body cannot see _skipSet in Python 3)
+    _keys = []
+    for _item in streamDict.values():
+        if _item[2] not in _skipSet:
+            _keys.append(_item[2])
+    del _item
 
     def _digest(self, version=0):
         # version 0 is stored in old signatures, and doesn't include any

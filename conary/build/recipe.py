@@ -30,7 +30,6 @@ from conary.local import database
 from conary.conaryclient import cmdline
 
 import glob
-import imp
 import os
 import sys
 
@@ -93,7 +92,7 @@ def loadMacros(paths):
     for path in loadPaths:
         compiledPath = path+'c'
         deleteCompiled = not util.exists(compiledPath)
-        macroModule = imp.load_source('tmpmodule', path)
+        macroModule = util.loadSourceModule('tmpmodule', path)
         if deleteCompiled:
             util.removeIfExists(compiledPath)
         baseMacros.update(x for x in macroModule.__dict__.items()

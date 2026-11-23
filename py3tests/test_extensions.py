@@ -148,18 +148,54 @@ def test_pack_roundtrip():
     assert list(vals) == [b'hello']
 
 
+# Decision: dependency names, flags and frozen forms are text (str) at the
+# Python level; bytes appear only at the stream / wire boundary.
 def test_dep_freeze_split():
     mod = _load('dep_freeze')
-    assert mod.depSplit(b'foo:~bar:baz') == (b'foo', [b'~bar', b'baz'])
+    assert mod.depSplit('foo:~bar:baz') == ('foo', ['~bar', 'baz'])
+    assert mod.depSplit('a::b:c\\:d') == ('a:b', ['c:d'])
 
 
-@pytest.mark.xfail(strict=True, reason="depSetSplit builds its frozen "
-        "element with s# so it returns str while depSplit returns bytes; "
-        "bytes/str semantics are out of scope for the build task")
-def test_dep_set_split_bytes():
+def test_dep_freeze_rejects_bytes():
     mod = _load('dep_freeze')
-    nxt, tag, frozen = mod.depSetSplit(0, b'4#foo:bar|5#baz')
-    assert (nxt, tag, frozen) == (10, 4, b'foo:bar')
+    with pytest.raises(TypeError):
+        mod.depSplit(b'foo:bar')
+    with pytest.raises(TypeError):
+        mod.depSetSplit(0, b'4#foo')
+
+
+def test_dep_set_split_text():
+    mod = _load('dep_freeze')
+    nxt, tag, frozen = mod.depSetSplit(0, '4#foo:bar|5#baz')
+    assert (nxt, tag, frozen) == (10, 4, 'foo:bar')
+    assert mod.depSetSplit(nxt, '4#foo:bar|5#baz') == (16, 5, 'baz')
+
+
+def test_dep_set_split_non_ascii_offsets_are_characters():
+    mod = _load('dep_freeze')
+    data = '4#f\u00f6o|5#b\u00e4r'
+    nxt, tag, frozen = mod.depSetSplit(0, data)
+    assert (nxt, tag, frozen) == (6, 4, 'f\u00f6o')
+    assert mod.depSetSplit(nxt, data) == (len(data) + 1, 5, 'b\u00e4r')
+    with pytest.raises(ValueError):
+        mod.depSetSplit(100, data)
+
+
+def test_dep_set_freeze_text():
+    mod = _load('dep_freeze')
+
+    class Dep(object):
+        def __init__(self, name, flags):
+            self.name, self.flags = name, flags
+
+    class Cls(object):
+        def __init__(self, tag, members):
+            self.tag, self.members = tag, members
+
+    members = {4: Cls(4, {'foo:bar': Dep('foo:bar', {'b': 1, 'a': 2})})}
+    frozen = mod.depSetFreeze(members)
+    assert frozen == '4#foo::bar:~a:b'
+    assert mod.depSetFreeze({}) == ''
 
 
 def test_streams_freeze_thaw_compare():

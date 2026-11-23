@@ -19,7 +19,6 @@
 Base classes and data used for all policy
 """
 
-import imp
 import itertools
 import os
 import sys
@@ -837,11 +836,8 @@ def loadPolicy(recipeObj, policySet = None, internalPolicyModules = (),
             if not filename.endswith('.py') or not util.isregular(fullpath):
                 continue
             # do not load shared libraries as policy!
-            desc = [x for x in imp.get_suffixes() if x[0] == '.py'][0]
-            f = file(fullpath)
             modname = filename[:-3]
-            m = imp.load_module(modname, f, fullpath, desc)
-            f.close()
+            m = util.loadSourceModule(modname, fullpath)
             policyPathMap[fullpath] = m
 
             for symbolName in m.__dict__:

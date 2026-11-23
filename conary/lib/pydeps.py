@@ -21,7 +21,6 @@ try:
 except ImportError:
     import pickle
 import os
-import imp
 import modulefinder
 import struct
 import sys
@@ -80,11 +79,11 @@ class DirBasedModuleFinder(modulefinder.ModuleFinder):
     def load_file(self, pathname):
         ext = os.path.splitext(pathname)[1]
         if pathname.endswith('.pyc'):
-            fileType = imp.PY_COMPILED
+            fileType = modulefinder._PY_COMPILED
             mode = 'rb'
         else:
-            fileType = imp.PY_SOURCE
-            mode = 'rU'
+            fileType = modulefinder._PY_SOURCE
+            mode = 'rb'
         fp = open(pathname, mode)
         stuff = (ext, mode, fileType)
         missing = self.missing.setdefault(pathname, set())

@@ -24,7 +24,6 @@ if 'CONARY_PATH' in os.environ:
     sys.path.insert(0, os.environ['CONARY_PATH']+"/conary/scripts")
             
 import shlex
-import imp
 
 from conary import conarycfg
 from conary.lib import options, util
@@ -128,15 +127,10 @@ def main(argv):
         if name.endswith('.py'):
             name = name[:-3]
         if dirname:
-            searchPath = [dirname]
-            try:
-                f, pathName, description = imp.find_module(name, searchPath)
-            except:
+            pathName = os.path.join(dirname, name + '.py')
+            if not os.path.isfile(pathName):
                 break
-            try:
-                mod = imp.load_module(name, f, pathName, description)
-            finally:
-                f.close()
+            mod = util.loadSourceModule(name, pathName)
         else:
             try:
                 mod = __import__(name)

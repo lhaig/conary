@@ -20,7 +20,7 @@
     XMLRPC commands to be sent, hence the XMLOpener class """
 
 import base64
-import cgi
+import email.message
 import socket
 import io
 import sys
@@ -35,6 +35,19 @@ from conary.lib.http import http_error
 from conary.lib.http import opener
 from conary.lib.http import proxy_map
 from conary.repository import errors
+
+
+
+def _parseHeader(value):
+    """Split a Content-Type style header into its value and a dict of
+    parameters, as cgi.parse_header did (cgi was removed in Python 3.13)."""
+    msg = email.message.Message()
+    msg['content-type'] = value
+    params = msg.get_params(header='content-type', unquote=True)
+    if not params:
+        return '', {}
+    return params[0][0], dict((k.lower(), v) for k, v in params[1:])
+
 
 # For compatibility
 AbortError = http_error.AbortError
@@ -222,7 +235,7 @@ class Transport(xmlrpc.client.Transport):
                 break
             key, value = line.split(': ')
             if key.lower() == 'content-type':
-                ctype = cgi.parse_header(value)[0]
+                ctype = _parseHeader(value)[0]
             elif key.lower() == 'content-encoding':
                 cenc = value
             elif key.lower() == 'content-length':
@@ -231,7 +244,7 @@ class Transport(xmlrpc.client.Transport):
 
     def parse_response(self, response):
         ctype = response.headers.get('content-type', '')
-        ctype, pdict = cgi.parse_header(ctype)
+        ctype, pdict = _parseHeader(ctype)
         if ctype in self.contentTypes:
             return xmlrpc.client.Transport.parse_response(self, response)
         elif ctype != self.mixedType:
@@ -241,7 +254,7 @@ class Transport(xmlrpc.client.Transport):
 
         # Read XMLRPC response
         rpcHeaders, rpcBody = decoder.get()
-        if (cgi.parse_header(rpcHeaders.get('content-type'))[0]
+        if (_parseHeader(rpcHeaders.get('content-type'))[0]
                 not in self.contentTypes):
             raise xmlrpc.client.ResponseError(
                     "Response has invalid or missing Content-Type")

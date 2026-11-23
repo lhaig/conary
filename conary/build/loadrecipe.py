@@ -16,10 +16,8 @@
 
 
 import copy
-import imp
 import inspect
 import itertools
-import new
 import os
 import string
 import sys
@@ -102,7 +100,7 @@ class Importer(object):
         self.fileName = fileName
         self.baseName = os.path.basename(self.fileName)
         # can't have a '.' in a module name or import code gets confused
-        self.module = imp.new_module(self.baseName.replace('.', '-'))
+        self.module = types.ModuleType(self.baseName.replace('.', '-'))
         self.subloadData = subloadData
         self.loadedTroves = []
         self.loadedSpecs = {}
@@ -170,7 +168,7 @@ class Importer(object):
                     newDict[name] = copy.deepcopy(attr)
 
             self.module.__dict__[className] = \
-                            new.classobj(className, tuple(newMro), newDict)
+                            type(className, tuple(newMro), newDict)
 
     def _localImport(self, package, modules=()):
         """

@@ -19,12 +19,10 @@ Module used after C{%(destdir)s} has been finalized to create the
 initial packaging.  Also contains error reporting.
 """
 import codecs
-import imp
 import itertools
 import os
 import re
 import site
-import sre_constants
 import stat
 import subprocess
 import sys
@@ -512,11 +510,8 @@ class ComponentSpec(_filterSpec):
 
     def loadFilter(self, filterType, map, filename, fullpath):
         # do not load shared libraries
-        desc = [x for x in imp.get_suffixes() if x[0] == '.py'][0]
-        f = file(fullpath)
         modname = filename[:-3]
-        m = imp.load_module(modname, f, fullpath, desc)
-        f.close()
+        m = util.loadSourceModule(modname, fullpath)
 
         if not 'filters' in m.__dict__:
             self.warn('%s missing "filters"; not a valid component'
@@ -2737,7 +2732,7 @@ class Provides(_dependency):
             try:
                 exceptDeps.append((filter.Filter(fE, macros),
                                    re.compile(rE % self.macros)))
-            except sre_constants.error as e:
+            except re.error as e:
                 self.error('Bad regular expression %s for file spec %s: %s', rE, fE, e)
         self.exceptDeps= exceptDeps
         for filespec, provision in self.provisions:
@@ -3100,7 +3095,7 @@ class Provides(_dependency):
                 try:
                     exceptDeps.append((filter.Filter(fE, macros),
                                        re.compile(rE % macros)))
-                except sre_constants.error as e:
+                except re.error as e:
                     self.error('Bad regular expression %s for file spec %s: %s',
                         rE, fE, e)
             # We will no longer need this, we have the compiled version now
@@ -3549,7 +3544,7 @@ class Requires(_addInfo, _dependency):
         for fE, rE in self.exceptDeps:
             try:
                 exceptDeps.append((filter.Filter(fE, macros), re.compile(rE % macros)))
-            except sre_constants.error as e:
+            except re.error as e:
                 self.error('Bad regular expression %s for file spec %s: %s', rE, fE, e)
         self.exceptDeps= exceptDeps
         _dependency.preProcess(self)

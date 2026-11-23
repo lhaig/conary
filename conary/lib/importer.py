@@ -21,16 +21,28 @@
     ModuleProxy, not a module, and will not have the correct attributes.
     Barring introspection, however, the module will behave as normal.
 """
+import importlib.machinery
+import importlib.util
 import sys
-import imp
 import types
 
-def makeImportedModule(name, pathname, desc, scope):
+def _loadFromSpec(name, spec):
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    return mod
+
+def makeImportedModule(name, spec, scope):
     """ Returns a ModuleProxy that has access to a closure w/
         information about the module to load, but is otherwise
         empty.  On an attempted access of any member of the module,
         the module is loaded.
     """
+    pathname = spec.origin
 
     def _loadModule():
         """ Load the given module, and insert it into the parent
@@ -39,18 +51,7 @@ def makeImportedModule(name, pathname, desc, scope):
 
         mod = sys.modules.get(name, None)
         if mod is None or not isinstance(mod, types.ModuleType):
-            try:
-                file = open(pathname, 'U')
-            except:
-                file = None
-
-            try:
-                mod = imp.load_module(name, file, pathname, desc)
-            finally:
-                if file is not None:
-                    file.close()
-
-            sys.modules[name] = mod
+            mod = _loadFromSpec(name, spec)
 
         scope[name] = mod
 
@@ -112,29 +113,24 @@ class OnDemandLoader(object):
         "loads" it - in this case returning loading a proxy that
         will only load the class when an attribute is accessed.
     """
-    def __init__(self, name, file, pathname, desc, scope):
-        self.file = file
+    def __init__(self, name, spec, scope):
         self.name = name
-        self.pathname = pathname
-        self.desc = desc
+        self.spec = spec
+        self.pathname = spec.origin
         self.scope = scope
 
-    def load_module(self, fullname):
+    def create_module(self, spec):
+        fullname = spec.name
         if fullname in __builtins__:
-            try:
-                mod = imp.load_module(self.name, self.file,
-                                      self.pathname, self.desc)
-            finally:
-                if self.file:
-                    self.file.close()
-            sys.modules[fullname] = mod
+            mod = _loadFromSpec(self.name, self.spec)
         else:
-            if self.file:
-                self.file.close()
-            mod = makeImportedModule(self.name, self.pathname, self.desc,
-                                     self.scope)
-            sys.modules[fullname] = mod
+            mod = makeImportedModule(self.name, self.spec, self.scope)
+        sys.modules[fullname] = mod
         return mod
+
+    def exec_module(self, module):
+        # create_module already did the work (or returned a lazy proxy)
+        pass
 
 class OnDemandImporter(object):
     """ The on-demand importer imports a module proxy that
@@ -142,12 +138,12 @@ class OnDemandImporter(object):
         an attribute from the module is actually used.
     """
 
-    def find_module(self, fullname, path=None):
+    def find_spec(self, fullname, path=None, target=None):
         origName = fullname
         if not path:
             mod = sys.modules.get(fullname, False)
             if mod is None or mod and isinstance(mod, types.ModuleType):
-                return mod
+                return None
 
         frame = sys._getframe(1)
         global_scope = frame.f_globals
@@ -166,13 +162,14 @@ class OnDemandImporter(object):
             if hasattr(mod, '__path__'):
                 path = mod.__path__
 
-        try:
-            file, pathname, desc = imp.find_module(fullname, path)
-            return OnDemandLoader(origName, file, pathname, desc, global_scope)
-        except ImportError:
-            # don't return an import error.  That will stop
+        spec = importlib.machinery.PathFinder.find_spec(fullname, path)
+        if spec is None or spec.origin is None or spec.loader is None:
+            # don't raise an import error.  That will stop
             # the automated search mechanism from working.
             return None
+        return importlib.util.spec_from_loader(
+            origName, OnDemandLoader(origName, spec, global_scope),
+            origin=spec.origin)
 
 def install():
     if hasattr(sys, 'pypy_version_info'):

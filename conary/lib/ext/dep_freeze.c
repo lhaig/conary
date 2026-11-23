@@ -19,6 +19,38 @@
 #include <Python.h>
 #include "pycompat.h"
 
+/*
+ * Dependency names, flags and frozen forms are text (str) at the Python
+ * level. Frozen forms are ASCII for flavors; names of other dependency
+ * classes (e.g. file paths) may be any UTF-8. Everything is converted to
+ * and from UTF-8 here, so the C code works on UTF-8 bytes internally.
+ * Offsets used by depSetSplit are character offsets into the str, which
+ * equal byte offsets whenever the string is ASCII.
+ */
+
+/* Number of bytes the first charOffset characters of UTF-8 data occupy,
+ * or -1 if charOffset is past the end. */
+static Py_ssize_t charToByteOffset(const char *data, Py_ssize_t size,
+                                   Py_ssize_t charOffset) {
+    Py_ssize_t i = 0;
+    while (charOffset > 0 && i < size) {
+        i++;
+        while (i < size && (data[i] & 0xC0) == 0x80)
+            i++;
+        charOffset--;
+    }
+    return charOffset ? -1 : i;
+}
+
+static Py_ssize_t byteToCharOffset(const char *data, Py_ssize_t byteOffset) {
+    Py_ssize_t i, chars = 0;
+    for (i = 0; i < byteOffset; i++) {
+        if ((data[i] & 0xC0) != 0x80)
+            chars++;
+    }
+    return chars;
+}
+
 static PyObject * depSetSplit(PyObject *self, PyObject *args);
 static PyObject * depSplit(PyObject *self, PyObject *args);
 static PyObject * depSetFreeze(PyObject *self, PyObject *args);
@@ -36,7 +68,7 @@ static PyObject * depSetSplit(PyObject *self, PyObject *args) {
     PyObject *offsetArg, *dataArg;
     Py_ssize_t dataSize;
     char *data, *dataPtr, *endPtr, *limit;
-    int offset, tag;
+    int offset, tag, ascii;
 
     /* This avoids PyArg_ParseTuple because it's sloooow */
     if (PyTuple_GET_SIZE(args) != 2) {
@@ -50,13 +82,25 @@ static PyObject * depSetSplit(PyObject *self, PyObject *args) {
     if (!PYINT_CheckExact(offsetArg)) {
         PyErr_SetString(PyExc_TypeError, "first argument must be an int");
         return NULL;
-    } else if (!PYBYTES_CheckExact(dataArg)) {
+    } else if (!PyUnicode_CheckExact(dataArg)) {
         PyErr_SetString(PyExc_TypeError, "second argument must be a string");
         return NULL;
     }
 
     offset = PYINT_AS_LONG(offsetArg);
-    PYBYTES_AsStringAndSize(dataArg, &data, &dataSize);
+    data = (char *) PyUnicode_AsUTF8AndSize(dataArg, &dataSize);
+    if (data == NULL) {
+        return NULL;
+    }
+    ascii = PyUnicode_IS_ASCII(dataArg);
+    if (!ascii) {
+        Py_ssize_t byteOffset = charToByteOffset(data, dataSize, offset);
+        if (byteOffset < 0) {
+            PyErr_SetString(PyExc_ValueError, "offset out of bounds");
+            return NULL;
+        }
+        offset = (int) byteOffset;
+    }
     limit = data + dataSize;
 
     if (offset > dataSize) {
@@ -94,8 +138,12 @@ static PyObject * depSetSplit(PyObject *self, PyObject *args) {
         return NULL;
     }
 
+    offset = (int) (endPtr - data + 1);
+    if (!ascii) {
+        offset = (int) byteToCharOffset(data, offset);
+    }
     return Py_BuildValue("iis#",
-            (int) (endPtr - data + 1), tag, dataPtr, (Py_ssize_t) (endPtr - dataPtr));
+            offset, tag, dataPtr, (Py_ssize_t) (endPtr - dataPtr));
 
 }
 
@@ -116,12 +164,15 @@ static PyObject * depSplit(PyObject *self, PyObject *args) {
 
     dataArg = PyTuple_GET_ITEM(args, 0);
 
-    if (!PYBYTES_CheckExact(dataArg)) {
+    if (!PyUnicode_CheckExact(dataArg)) {
         PyErr_SetString(PyExc_TypeError, "first argument must be a string");
         goto cleanup;
     }
 
-    origData = PYBYTES_AS_STRING(dataArg);
+    origData = (char *) PyUnicode_AsUTF8(dataArg);
+    if (origData == NULL) {
+        goto cleanup;
+    }
 
     /* Copy the original string over, replace single : with a '\0' and
        double :: with a single :, and \X with X (where X is anything,
@@ -154,7 +205,7 @@ static PyObject * depSplit(PyObject *self, PyObject *args) {
     /* We're left with a '\0' separated list of name, flag1, ..., flagN. Get
        the name first. */
     chptr = data;
-    name = PYBYTES_FromString(chptr);
+    name = PyUnicode_FromString(chptr);
     if (name == NULL) {
         goto cleanup;
     }
@@ -165,7 +216,7 @@ static PyObject * depSplit(PyObject *self, PyObject *args) {
         goto cleanup;
     }
     while (chptr < endPtr) {
-        flag = PYBYTES_FromString(chptr);
+        flag = PyUnicode_FromString(chptr);
         if (flag == NULL) {
             goto cleanup;
         }
@@ -189,14 +240,13 @@ cleanup:
 }
 
 static void escapeName(char ** sPtr, PyObject * strObj) {
-    int size;
+    Py_ssize_t size;
     char * s;
     char * r = *sPtr;
 
     /* dep names get : turned into :: */
 
-    s = PYBYTES_AS_STRING(strObj);
-    size = PYBYTES_GET_SIZE(strObj);
+    s = (char *) PyUnicode_AsUTF8AndSize(strObj, &size);
 
     while (size--) {
         if (*s == ':')
@@ -208,14 +258,13 @@ static void escapeName(char ** sPtr, PyObject * strObj) {
 }
 
 static void escapeFlags(char ** sPtr, PyObject * strObj) {
-    int size;
+    Py_ssize_t size;
     char * s;
     char * r = *sPtr;
 
     /* Flags get : turned to \: */
 
-    s = PYBYTES_AS_STRING(strObj);
-    size = PYBYTES_GET_SIZE(strObj);
+    s = (char *) PyUnicode_AsUTF8AndSize(strObj, &size);
 
     while (size--) {
         if (*s == ':')
@@ -232,8 +281,8 @@ struct depFlag {
 };
 
 static int flagSort(const void * a, const void * b) {
-    return strcmp(PYBYTES_AS_STRING( ((struct depFlag *) a)->flag),
-                  PYBYTES_AS_STRING( ((struct depFlag *) b)->flag) );
+    return strcmp(PyUnicode_AsUTF8( ((struct depFlag *) a)->flag),
+                  PyUnicode_AsUTF8( ((struct depFlag *) b)->flag) );
 }
 
 static int depFreezeRaw(PyObject * nameObj, PyObject * dict,
@@ -246,11 +295,16 @@ static int depFreezeRaw(PyObject * nameObj, PyObject * dict,
     int itemCount;
     int itemSize;
     int i, rc = -1;
+    Py_ssize_t nameSize, flagSize;
     char * next, *result = NULL;
     struct depFlag *flags = NULL;
 
-    if (!PYBYTES_CheckExact(nameObj)) {
+    if (!PyUnicode_CheckExact(nameObj)) {
         PyErr_SetString(PyExc_TypeError, "first argument must be a string");
+        return -1;
+    }
+    nameSize = 0;
+    if (PyUnicode_AsUTF8AndSize(nameObj, &nameSize) == NULL) {
         return -1;
     }
 
@@ -278,8 +332,11 @@ static int depFreezeRaw(PyObject * nameObj, PyObject * dict,
         flags[i].flag = PyTuple_GET_ITEM(itemTuple, 0);
         senseObj = PyTuple_GET_ITEM(itemTuple, 1);
 
-        if (!PYBYTES_CheckExact(flags[i].flag)) {
+        if (!PyUnicode_CheckExact(flags[i].flag)) {
             PyErr_SetString(PyExc_TypeError, "dict keys must be strings");
+            goto cleanup;
+        }
+        if (PyUnicode_AsUTF8AndSize(flags[i].flag, &flagSize) == NULL) {
             goto cleanup;
         }
 
@@ -289,14 +346,14 @@ static int depFreezeRaw(PyObject * nameObj, PyObject * dict,
         }
 
         flags[i].sense = PYINT_AS_LONG(senseObj);
-        itemSize += PYBYTES_GET_SIZE(flags[i].flag);
+        itemSize += (int) flagSize;
     }
 
     qsort(flags, itemCount, sizeof(*flags), flagSort);
 
     /* Frozen form is name:SENSEflag:SENSEflag. Worst case size for name/flag
        is * 2 due to : expansion */
-    result = PyMem_Malloc((PYBYTES_GET_SIZE(nameObj) * 2) + 1 +
+    result = PyMem_Malloc((nameSize * 2) + 1 +
                     (itemSize * 2) + itemCount * 3);
     if (result == NULL) {
         PyErr_NoMemory();
@@ -402,12 +459,17 @@ static int depClassFreezeRaw(PyObject * tagObj, PyObject * dict,
     memset(depList, 0, depCount * sizeof(*depList));
     for (i = 0; i < depCount; i++) {
         tuple = PyList_GET_ITEM(depObjList, i);
-        if (!PYBYTES_CheckExact(PyTuple_GET_ITEM(tuple, 0))) {
+        if (!PyUnicode_CheckExact(PyTuple_GET_ITEM(tuple, 0))) {
             PyErr_SetString(PyExc_TypeError, "dict keys must be strings");
             rc = -1;
             goto cleanup;
         }
-        depList[i].className = PYBYTES_AS_STRING(PyTuple_GET_ITEM(tuple, 0));
+        depList[i].className = (char *) PyUnicode_AsUTF8(
+                                        PyTuple_GET_ITEM(tuple, 0));
+        if (depList[i].className == NULL) {
+            rc = -1;
+            goto cleanup;
+        }
         depList[i].dep = PyTuple_GET_ITEM(tuple, 1);
     }
 
@@ -523,7 +585,7 @@ static PyObject * depSetFreeze(PyObject * self, PyObject * args) {
     memberCount = PyList_GET_SIZE(memberList);
     if (!memberCount) {
         Py_DECREF(memberList);
-        return PYBYTES_FromString("");
+        return PyUnicode_FromString("");
     }
 
     members = PyMem_Malloc(sizeof(*members) * memberCount);
@@ -582,7 +644,7 @@ static PyObject * depSetFreeze(PyObject * self, PyObject * args) {
     /* chop off the trailing | */
     next--;
 
-    rc = PYBYTES_FromStringAndSize(result, next - result);
+    rc = PyUnicode_FromStringAndSize(result, next - result);
 
 cleanup:
     Py_XDECREF(classMembers);

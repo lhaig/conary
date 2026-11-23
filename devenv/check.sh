@@ -24,6 +24,11 @@ python3 -c 'import Cryptodome.Cipher.CAST, Cryptodome.Cipher.Blowfish, Cryptodom
     || fail "pycryptodomex (Cryptodome) not importable for python3"
 ok "pycryptodomex $(python3 -c 'import Cryptodome; print(Cryptodome.__version__)')"
 
+for mod in rpm psycopg2 webob; do
+    python3 -c "import $mod" || fail "$mod not importable for python3"
+    ok "$mod importable for python3"
+done
+
 python3 -m pytest --version >/dev/null 2>&1 || fail "pytest not runnable"
 T=$(mktemp -d /tmp/devenv-check.XXXXXX)
 trap 'rm -rf "$T"' EXIT

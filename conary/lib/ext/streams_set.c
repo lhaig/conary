@@ -373,6 +373,30 @@ static PyObject *concatStrings(StreamSetDefObject *ssd,
 
     assert(includeEmpty == INCLUDE_EMPTY || includeEmpty == EXCLUDE_EMPTY);
 
+    /* Frozen forms are bytes. Streams whose natural frozen form is text
+       (dependency sets, flavors, versions) may return str from freeze();
+       it is stored as UTF-8, like StringStream.set does. */
+    for (tagIdx = 0; tagIdx < ssd->tagCount; tagIdx++) {
+        PyObject * enc;
+        if (vals[tagIdx] == Py_None || PYBYTES_CheckExact(vals[tagIdx]))
+            continue;
+        if (PyUnicode_CheckExact(vals[tagIdx])) {
+            enc = PyUnicode_AsUTF8String(vals[tagIdx]);
+        } else {
+            PyErr_SetString(PyExc_TypeError,
+                            "frozen stream must be bytes or str");
+            enc = NULL;
+        }
+        if (enc == NULL) {
+            int j;
+            for (j = 0; j < ssd->tagCount; j++)
+                Py_DECREF(vals[j]);
+            return NULL;
+        }
+        Py_DECREF(vals[tagIdx]);
+        vals[tagIdx] = enc;
+    }
+
     /* first calculate the amount of space needed (worst case) */
     len = 0;
     for (tagIdx = 0; tagIdx < ssd->tagCount; tagIdx++) {

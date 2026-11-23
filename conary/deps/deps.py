@@ -1154,6 +1154,10 @@ class DependencySet(object):
 
     def __init__(self, frz = None):
         if frz is not None:
+            # Frozen forms are text; streams hand us the UTF-8 bytes they
+            # keep on the wire.
+            if isinstance(frz, bytes):
+                frz = frz.decode('utf-8')
             frz = sys.intern(frz)
             self._members = frz
         else:
@@ -1200,11 +1204,12 @@ def ThawFlavor(frz):
     @raises ValueError: could be raised if frozen object is malformed
     """
     f = Flavor()
-    if isinstance(frz, str):
-        try:
-            frz = frz.encode("ascii")
-        except UnicodeEncodeError:
-            raise ParseError("invalid characters in flavor '%s'" % frz)
+    if isinstance(frz, bytes):
+        frz = frz.decode("ascii", "replace")
+    try:
+        frz.encode("ascii")
+    except UnicodeEncodeError:
+        raise ParseError("invalid characters in flavor '%s'" % frz)
     f.thaw(frz)
     return f
 
@@ -1529,11 +1534,13 @@ def parseFlavor(s, mergeBase = None, raiseError = False):
     if isinstance(s, DependencySet):
         return s
 
-    if isinstance(s, str):
-        try:
-            s = s.encode("ascii")
-        except UnicodeEncodeError:
-            raise ParseError("invalid characters in flavor '%s'" % s)
+    # flavors are text; CNY-3381: reject anything that is not plain ASCII
+    if isinstance(s, bytes):
+        s = s.decode("ascii", "replace")
+    try:
+        s.encode("ascii")
+    except UnicodeEncodeError:
+        raise ParseError("invalid characters in flavor '%s'" % s)
     s = s.strip()
     match = flavorRegexp.match(s)
     if not match:

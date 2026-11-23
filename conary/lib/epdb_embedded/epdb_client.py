@@ -23,10 +23,9 @@ import select
 import signal
 import struct
 import sys
-import telnetlib
 import termios
 
-from telnetlib import IAC, IP, SB, SE, NAWS
+from conary.lib.epdb_embedded._telnet import telnetlib, IAC, IP, SB, SE, NAWS
 
 TERMKEY = '\x1d' # equals ^]
 

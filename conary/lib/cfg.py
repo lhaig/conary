@@ -30,6 +30,7 @@ from . import urlparse
 
 from conary.lib import util, api
 from conary.lib.http import proxy_map
+from conary.repository import transport
 from conary import constants, errors
 
 configVersion = 1
@@ -748,8 +749,6 @@ class ConfigFile(_Config):
         return proxy_map.ProxyMap()
 
     def _getOpener(self):
-        # imported lazily: conary.repository pulls in the OpenPGP/Crypto stack
-        from conary.repository import transport
         return transport.URLOpener(proxyMap=self.getProxyMap())
 
     def _openUrl(self, url):

@@ -23,7 +23,6 @@ Recipes
 import os
 import re
 import stat
-import sre_constants
 
 from conary import files
 from conary.lib import util
@@ -312,7 +311,7 @@ class RPMProvides(policy.Policy):
             try:
                 exceptDeps.append((filter.Filter(fE, self.macros),
                                    re.compile(rE % self.macros)))
-            except sre_constants.error as e:
+            except re.error as e:
                 self.error('Bad regular expression %s for file spec %s: %s',
                     rE, fE, e)
         self.exceptDeps = exceptDeps
@@ -470,7 +469,7 @@ class RPMRequires(policy.Policy):
             try:
                 exceptDeps.append((filter.Filter(fE, self.macros),
                                    re.compile(rE % self.macros)))
-            except sre_constants.error as e:
+            except re.error as e:
                 self.error('Bad regular expression %s for file spec %s: %s',
                            rE, fE, e)
         self.exceptDeps=exceptDeps

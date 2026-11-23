@@ -44,7 +44,7 @@ class KeywordDict(BaseKeywordDict):
 
 
 class Cursor(BaseCursor):
-    binaryClass = buffer
+    binaryClass = memoryview
     driver = "psycopg2"
     _encodeRequired = False
 
@@ -385,8 +385,8 @@ def _formatBulk(row):
     for col in row:
         if col is None:
             out.append(r'\N')
-        elif isinstance(col, buffer):
-            out.append(r'\\x' + str(col).encode('hex'))
+        elif isinstance(col, (bytes, bytearray, memoryview)):
+            out.append(r'\\x' + bytes(col).hex())
         elif isinstance(col, str):
             if isinstance(col, str):
                 col = col.encode('utf8')

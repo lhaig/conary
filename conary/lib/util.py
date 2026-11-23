@@ -23,6 +23,8 @@ import errno
 import fnmatch
 import gzip
 import hashlib
+import importlib.machinery
+import importlib.util
 import os
 import re
 import select
@@ -2586,3 +2588,21 @@ class SystemIdFactory(object):
             self.systemId = base64.b64encode(sha.hexdigest())
 
         return self.systemId
+
+
+def loadSourceModule(name, path):
+    """
+    Execute the Python source file at path (whatever its extension) as a
+    module called name, register it in sys.modules and return it. This
+    replaces imp.load_source and imp.load_module for source files.
+    """
+    loader = importlib.machinery.SourceFileLoader(name, path)
+    spec = importlib.util.spec_from_file_location(name, path, loader=loader)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    return module

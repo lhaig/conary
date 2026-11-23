@@ -27,7 +27,7 @@ import tempfile
 import time
 import webob
 import zlib
-from email import MIMEText
+from email.mime import text as mimetext
 from webob import exc as web_exc
 
 from conary.lib import log as cny_log
@@ -41,7 +41,6 @@ from conary.repository import xmlshims
 from conary.repository.netrepos import netserver
 from conary.repository.netrepos import proxy
 from conary.repository.netrepos.auth_tokens import AuthToken
-from conary.web import repos_web
 from conary.web import webauth
 
 log = logging.getLogger('wsgi_hooks')
@@ -192,7 +191,7 @@ class ConaryRouter(object):
                 hostname=socket.gethostname(),
                 firstLine=firstLine,
                 )
-        msg = MIMEText.MIMEText(trace)
+        msg = mimetext.MIMEText(trace)
         msg['Subject'] = cfg.bugsEmailSubject % crashVars
         msg['From'] = fromEmail = '"%s" <%s>' % (cfg.bugsEmailName,
                 cfg.bugsFromEmail)
@@ -426,6 +425,9 @@ class ConaryHandler(object):
         if not self.cfg.webEnabled:
             return self._makeError('404 Not Found',
                     "Web interface disabled by administrator.")
+        # Imported here: the web UI needs the kid template engine, which has
+        # no Python 3 package; the rest of the server works without it.
+        from conary.web import repos_web
         web = repos_web.ReposWeb(self.cfg, self.shimServer, authToken=self.auth)
         return web._handleRequest(request)
 

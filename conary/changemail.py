@@ -20,8 +20,7 @@ import os
 import sys
 import smtplib
 import traceback
-# python 2.4 does not have email.mime; email.MIMEText is available in 2.6
-from email.MIMEText import MIMEText
+from email.mime.text import MIMEText
 
 if 'CONARY_PATH' in os.environ:
     sys.path.insert(0, os.environ['CONARY_PATH'])
