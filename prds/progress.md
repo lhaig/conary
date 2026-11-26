@@ -431,3 +431,14 @@ PATTERN: py3-port - tempfile.NamedTemporaryFile: setting `.delete = False` on th
 PATTERN: bytes/str - Wire base64 goes through sha1helper.toBase64/fromBase64; base64.encodestring/decodestring are gone.
 PATTERN: testing - A driver hook used only by explicit callers (cu.encode) is not exercised by plain execute(); test it through the caller's path.
 PATTERN: tooling - Do not edit source while devenv/conary_test_baseline.sh runs; the container bind-mounts the live tree.
+
+## 2026-11-26 - task 3.17 DONE
+
+- conary/state.py stateFileExists: exact-case listdir check plus isfile, shared with ConaryStateFromFile. Used at cook.guessSourceVersion,
+  checkin.setContext and the cvc cook command. CONARYFileMissing 596 -> 0 in tmp/baseline-20261126-t317 (1038 pass / 1605 fail / 167 skip).
+- The unblocked tests fail one step later: captureOutput passes `_printOnError` to cook.cookObject (626, new task 3.18). Next after that:
+  sqlite CursorError bindings, sha1ToString 159, py3 semantics 71 (modelupdatetest UnboundLocalError `exception`).
+- py3tests 1125 passed; compile gate clean; pyflakes no new warnings. Review MINOR (per-module counts: only buildtest moved, 0/56 -> 1/55).
+
+PATTERN: testing - A guard test for a case-insensitive-filesystem fix must fold case itself (monkeypatch os.path.exists/isfile), or it passes vacuously on Linux.
+PATTERN: testing - Removing a top failure signature can leave the pass count flat; check what the same tests hit next before sizing the gain.
