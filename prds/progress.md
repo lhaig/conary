@@ -388,3 +388,10 @@ PATTERN: tooling - Never git stash in a tree shared with a concurrent task; comp
 
 PATTERN: py3-port - Recipe-style method introspection: Py3 class attributes are plain functions; use getattr(x, '__func__', x).
 PATTERN: bytes/str - Text bound for the wire (XML-RPC base64, HTTP auth) goes through sha1helper.toBytes so surrogate-escaped input reproduces the Py2 bytes.
+
+## 2026-11-26 - checkpoint after 3.11/3.13 (native, HEAD f96366f, tmp/baseline-20261126-f96366f)
+
+- 2810 ids: 757 pass, 177 fail, 1876 skip, 0 not run (was 637/298/1875 after 3.9/3.6; 242/821/1653/94 at the 2.7 baseline).
+- Classes: unknown 94 (38 are PolicyError at policy.loadPolicy: 'missing required policy SharedLibrary'), bytes/str other 32,
+  streams/trove 26, network/xmlrpc 7, harness gap 7, file I/O 0, hashing 0, py2 in tests 0.
+- Skips: sqlharness 1720, rpm/chroot 91, other 61. Tasks 3.14 and 3.15 remain (repository milestone).
