@@ -359,3 +359,10 @@ PATTERN: tooling - Parallel tasks in one tree must own disjoint files in practic
 PATTERN: bytes/str - Decide str vs bytes per stream field with a TextStream subclass, not per call site; the wire bytes stay identical.
 PATTERN: bytes/str - Indexing bytes gives an int, so compare single-byte tags with a slice (frz[0:1] == b'd'); an index comparison silently fails.
 PATTERN: review - Run pyflakes on new py3tests files too, and compute "before" counts from the checkpoint junit.
+
+## 2026-11-26 - checkpoint after 3.9/3.6 (native, HEAD 8fcd721, tmp/baseline-20261126-8fcd721)
+
+- 2810 ids: 637 pass, 298 fail, 1875 skip, 0 not run (was 488/467/1852 after 3.5).
+- Classes: py3 semantics other 83 (74 of them are IsADirectoryError in util.loadSourceModule = 3.10), unknown 61, file I/O 41,
+  bytes/str other 41, streams/trove 25, removed stdlib 16, harness gap 11, sort/compare 10 (cml.iterFormat 8), py2 in tests 0.
+- Skips: sqlharness 1719, rpm/chroot 91 (no cap_sys_chroot in the container), other 61.
