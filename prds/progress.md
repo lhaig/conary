@@ -328,3 +328,21 @@ PATTERN: harness - A "deleted cwd" crash can come from production code that chro
 - Classes (469): py3 semantics other 117, bytes/str streams/trove 83, file I/O 63, py2 code in tests 61, bytes/str other 43,
   unknown 56, removed stdlib 16, iterator 10, harness gap 8, sort/compare 6, integer division 2, network 2, arch 1, timeout 1,
   hashing 0.
+
+## 2026-11-26 - tasks 3.7 and 3.8 DONE
+
+- 3.7: The task text was wrong on three points: nothing subclassed sqlite3.Connection, DictAsCsf was not missing __next__ (2to3
+  renamed the attribute read `self.next` to `self.__next__`), and has_key was in sqllib.CaselessDict. Fixes: a Connection subclass
+  via factory= so dbh._BEGIN works; next(cu); self-recursive 2to3 methods; PEP 479; CaselessDict. The 7 target modules went from
+  37F/17P to 27F/27P; the rest is streams/trove (files.py:419, troveinfo.py:43), removed stdlib (Marshaller.dump_string)
+  and py2-in-tests.
+- 3.8: Bytes signatures plus os.fsdecode for metadata, across magic, javadeps, rpmhelper, cpiostream, ar, logger, xmllog,
+  filecontainer and util readers. The 3 strict xfails in py3tests are gone. Large module gains (magictest, cpiostreamtest,
+  rpmhelpertest, artest, rpmtest).
+- The two ran concurrently in one tree and overlapped in util.py, changeset.py and filecontainer.py. They were committed as two
+  commits, with the overlap carried in the db commit and noted in its message.
+- py3tests 819 passed; compile gate clean.
+
+PATTERN: testing - A lock or transaction test that uses a statement exempt from the code path (SELECT) passes vacuously; assert the SQL actually sent with set_trace_callback.
+PATTERN: py3-port - 2to3 turned attribute reads `self.next` into `self.__next__` and `items()` bodies into `list(self.items())` (infinite recursion); grep for both.
+PATTERN: tooling - Parallel tasks in one tree must own disjoint files in practice, not just on paper: shared helpers (util.py) get touched by both.
