@@ -17,6 +17,7 @@
 
 #include <Python.h>
 #include <arpa/inet.h>
+#include <Python.h>
 #include "pycompat.h"
 
 static PyObject * unpack(PyObject *self, PyObject *args);

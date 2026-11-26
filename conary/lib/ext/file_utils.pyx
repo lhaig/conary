@@ -177,7 +177,7 @@ def pread(fobj, size_t count, off_t offset):
         PyMem_Free(data)
         PyErr_SetFromErrno(OSError)
 
-    ret = PyString_FromStringAndSize(data, rc)
+    ret = PyBytes_FromStringAndSize(data, rc)
     PyMem_Free(data)
     return ret
 

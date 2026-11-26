@@ -16,6 +16,7 @@
 
 
 #include <Python.h>
+#include <Python.h>
 #include "pycompat.h"
 
 static PyObject * depSetSplit(PyObject *self, PyObject *args);

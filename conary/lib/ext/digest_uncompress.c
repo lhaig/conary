@@ -25,6 +25,7 @@
 #include <sys/param.h>
 #include <zlib.h>
 
+#include <Python.h>
 #include "pycompat.h"
 
 static PyObject * sha1Copy(PyObject *self, PyObject *args);

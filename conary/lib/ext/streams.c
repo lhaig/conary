@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
+#include <Python.h>
 #include "pycompat.h"
 #include "streams.h"
 
