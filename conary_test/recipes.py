@@ -196,11 +196,11 @@ libhelloRecipe = libhelloRecipePreface + r"""
         self.Run('%(cc)s %(ldflags)s -static -o true true.c')
         self.Run('%(cc)s %(ldflags)s -nostdlib -o user user.c libhello.so.0.0')
         self.Install('libhello.so.0.0', '%(libdir)s/libhello.so.0.0')
-        self.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
-        self.Install('user', '%(essentialsbindir)s/user', mode=0755)
+        self.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
+        self.Install('user', '%(essentialsbindir)s/user', mode=0o755)
         self.Create('/etc/ld.so.conf', contents='/%(lib)s')
         self.Create('%(essentialbindir)s/script', 
-                    contents='#!%(essentialsbindir)s/user', mode = 0755)
+                    contents='#!%(essentialsbindir)s/user', mode = 0o755)
         self.Provides('file',  '%(essentialsbindir)s/user')
         self.ComponentSpec('runtime', '%(essentialsbindir)s/ldconfig',
                            '%(libdir)s/libhello.so.0.*',
@@ -216,12 +216,12 @@ libhelloRecipeLdConfD = libhelloRecipePreface + r"""
         self.Run('%(cc)s %(ldflags)s -nostdlib -o user user.c libhello.so.0.0')
         self.Install('libhello.so.0.0', '%(libdir)s/libhello.so.0.0')
         self.Install('libhello.so.0.0', '%(essentiallibdir)s/libhello.so.0.0')
-        self.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
-        self.Install('user', '%(essentialsbindir)s/user', mode=0755)
+        self.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
+        self.Install('user', '%(essentialsbindir)s/user', mode=0o755)
         self.Create('/etc/ld.so.conf', contents='/opt/foo')
         self.Create('/etc/ld.so.conf.d/first.conf', contents='%(essentiallibdir)s')
         self.Create('%(essentialbindir)s/script', 
-                    contents='#!%(essentialsbindir)s/user', mode = 0755)
+                    contents='#!%(essentialsbindir)s/user', mode = 0o755)
         self.Provides('file',  '%(essentialsbindir)s/user')
         self.ComponentSpec('runtime', '%(essentialsbindir)s/ldconfig',
                            '%(libdir)s/libhello.so.0.*',
@@ -237,12 +237,12 @@ libhelloRecipeNoVersion = libhelloRecipePreface + """\
         self.Run('%(cc)s %(ldflags)s -fPIC -shared -Wl,-soname,libhello.so -o libhello.so libhello.c -nostdlib')
         self.Run('%(cc)s %(ldflags)s -static -o true true.c')
         self.Run('%(cc)s %(ldflags)s -nostdlib -o user user.c libhello.so')
-        self.Install('libhello.so', '%(libdir)s/libhello.so', mode=0644)
-        self.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
-        self.Install('user', '%(essentialsbindir)s/user', mode=0755)
+        self.Install('libhello.so', '%(libdir)s/libhello.so', mode=0o644)
+        self.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
+        self.Install('user', '%(essentialsbindir)s/user', mode=0o755)
         self.Create('/etc/ld.so.conf', contents='/lib')
         self.Create('%(essentialbindir)s/script', 
-                    contents='#!%(essentialsbindir)s/user', mode = 0755)
+                    contents='#!%(essentialsbindir)s/user', mode = 0o755)
         self.Provides('file',  '%(essentialsbindir)s/user')
         self.ComponentSpec('runtime', '%(essentialsbindir)s/ldconfig',
                            '%(libdir)s/libhello.so',
@@ -259,8 +259,8 @@ class Bash(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         del r.NormalizeInterpreterPaths
-        r.Create('%(essentialbindir)s/bash', mode=0755)
-        r.Create('%(essentialbindir)s/conflict', mode=0755)
+        r.Create('%(essentialbindir)s/bash', mode=0o755)
+        r.Create('%(essentialbindir)s/conflict', mode=0o755)
         r.Provides('file', '%(essentialbindir)s/(ba)?sh')
         if Use.ssl:
             # turn on this use flag; we use this in the tests for flavor
@@ -275,7 +275,7 @@ class Bash(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         del r.NormalizeInterpreterPaths
-        r.Create('%(essentialbindir)s/conflict', mode=0755)
+        r.Create('%(essentialbindir)s/conflict', mode=0o755)
         if Use.ssl:
             # turn on this use flag; we use this in the tests for flavor
             # dependent resolution
@@ -289,7 +289,7 @@ class BashUser(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         del r.NormalizeInterpreterPaths
-        r.Create('%(essentialbindir)s/script', mode=0755,
+        r.Create('%(essentialbindir)s/script', mode=0o755,
                  contents = '#!/bin/bash')
 """
 
@@ -300,7 +300,7 @@ class BashTroveUser(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         del r.NormalizeInterpreterPaths
-        r.Create('%(essentiallibdir)s/empty', mode=0644)
+        r.Create('%(essentiallibdir)s/empty', mode=0o644)
         r.Requires('bash:runtime', '%(essentiallibdir)s/empty')
 
 """
@@ -312,7 +312,7 @@ class Gconf(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         r.Create('%(sysconfdir)s/gconf/schemas/foo')
-        r.Install('/bin/true', '%(bindir)s/gconftool-2', mode=0755)
+        r.Install('/bin/true', '%(bindir)s/gconftool-2', mode=0o755)
         self.ComponentSpec('runtime', '%(sysconfdir)s/')
 """
 
@@ -351,8 +351,8 @@ EOF
         
 ''')
         self.Run('%(cc)s %(ldflags)s -static -o chkconfig chkconfig.c')
-        self.Install("chkconfig", "%(essentialsbindir)s/", mode = 0755)
-        self.Install("testchk", "%(initdir)s/", mode = 0755)
+        self.Install("chkconfig", "%(essentialsbindir)s/", mode = 0o755)
+        self.Install("testchk", "%(initdir)s/", mode = 0o755)
         self.Strip(debuginfo=False)
 """
 
@@ -664,7 +664,7 @@ implements    files update
 implements    files remove
 datasource    multitag
 ''')
-        r.Create('%(taghandlerdir)s/foo', mode=0755, contents='''\
+        r.Create('%(taghandlerdir)s/foo', mode=0o755, contents='''\
 #!/bin/bash
 
 exit 0
@@ -783,7 +783,7 @@ class Unresolved(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/usr/bin/test', mode=0755)
+        r.Create('/usr/bin/test', mode=0o755)
         r.Requires('bar:foo', '/usr/bin/test')
 """
 
@@ -794,7 +794,7 @@ class A(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/usr/bin/a', mode=0755)
+        r.Create('/usr/bin/a', mode=0o755)
 """
 
 testTroveDepB = """\
@@ -804,7 +804,7 @@ class B(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/usr/bin/b', mode=0755)
+        r.Create('/usr/bin/b', mode=0o755)
         r.Requires('a:runtime', '/usr/bin/b')
 """
 
@@ -853,7 +853,7 @@ class TestRecipe%(num)d(PackageRecipe):
 #!/bin/sh
 echo "This is test%(num)s"
 %(fileContents)s
-''', mode=0755)
+''', mode=0o755)
         del r.NormalizeInterpreterPaths
 
         if %(binary)s:
@@ -943,7 +943,7 @@ class FileTypeChange(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('%(essentialbindir)s/foo', mode=0755, contents = 'some text')
+        r.Create('%(essentialbindir)s/foo', mode=0o755, contents = 'some text')
 """
 
 fileTypeChangeRecipe2="""\
@@ -1244,7 +1244,7 @@ class Bar(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(bindir)s/bar', mode=0755)
+        r.Create('%(bindir)s/bar', mode=0o755)
         r.Requires('%(libdir)s/libfoo.so.1' %r.macros, '%(bindir)s/bar')
 """
 
@@ -1255,7 +1255,7 @@ class Baz(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(bindir)s/baz', mode=0755)
+        r.Create('%(bindir)s/baz', mode=0o755)
         r.Requires('%(libdir)s/libfoo.so.2' %r.macros, '%(bindir)s/baz')
 """
 
@@ -1265,7 +1265,7 @@ class TestSuiteRecipe(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Run('mkdir test; echo -e \\#\\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
+        r.Run('mkdir test; echo -e \\\\#\\\\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
         r.TestSuite('test', autoBuildMakeDependencies=False)
         r.Create('/etc/foo')
         r.ComponentSpec('runtime', '%(sysconfdir)s/')

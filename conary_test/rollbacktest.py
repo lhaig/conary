@@ -302,7 +302,7 @@ class testRecipe(PackageRecipe):
     clearBuildReqs()
 
     def setup(self):
-        self.Create("/bin/ls", mode=0755)
+        self.Create("/bin/ls", mode=0o755)
         self.Create("%(debugsrcdir)s/%(name)s-%(version)s/foo")
 """
 

@@ -73,7 +73,7 @@ class TestISOArchive(PackageRecipe):
     
     def setup(r):
         r.addArchive('jcd.iso', dir='/')
-        r.SetModes('%(bindir)s/touch', 0755)
+        r.SetModes('%(bindir)s/touch', 0o755)
 """
         trove = self.build(recipestr, "TestISOArchive")
         repos = self.openRepository()
@@ -94,7 +94,7 @@ class TestISOArchive(PackageRecipe):
     
     def setup(r):
         r.addArchive('rrcd.iso', dir='/')
-        r.SetModes('%(bindir)s/touch', 0755)
+        r.SetModes('%(bindir)s/touch', 0o755)
 """
         trove = self.build(recipestr, "TestISOArchive")
         repos = self.openRepository()
@@ -522,7 +522,7 @@ class TestApplyMacrosSource(PackageRecipe):
         r.macros.a = 'XXX'
         r.macros.b = 'YYY'
         r.macros.c = 'ZZZ'
-        r.addSource('sourcefile', macros=True, mode=0676)
+        r.addSource('sourcefile', macros=True, mode=0o676)
 """
         self.resetWork()
         (built, d) = self.buildRecipe(recipestr1, "TestApplyMacrosSource")

@@ -220,7 +220,7 @@ class TestRecipe1(PackageRecipe):
     def setup(self):
         self.Create('/usr/bin/foo', contents='''#!/bin/sh
 echo "Hello!"
-''', mode=0755) 
+''', mode=0o755) 
         self.Run('''
 cat > hello.c <<'EOF'
 #include <stdio.h>
@@ -275,7 +275,7 @@ class TestRecipe1(PackageRecipe):
             if Use.readline:
                 self.Create('/usr/bin/foo', contents='''#!/bin/sh
                             echo "Hello!"
-                            ''', mode=0755) 
+                            ''', mode=0o755) 
 """
 
         d = tempfile.mkdtemp(dir=self.workDir)
@@ -810,7 +810,7 @@ class TestMultipleMainPackage(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Run('mkdir test; echo -e \\#\\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
+        r.Run('mkdir test; echo -e \\\\#\\\\!/bin/notthere\\nhi > test/foo; chmod 755 test/foo')
         r.TestSuite('test', autoBuildMakeDependencies=False)
         r.Create('/a')
 """
@@ -834,10 +834,10 @@ class TestStrangeNames(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         r.MakeDirs('/usr/share/foo')
-        r.MakeDirs('/usr/share/%%bar', mode=0700)
+        r.MakeDirs('/usr/share/%%bar', mode=0o700)
         r.Create('/usr/share/foo/[', contents='Bar')
-        r.Create('/usr/share/foo/%%foo', contents='Blah', mode=0400)
-        r.Run('echo "Foo" >>  %(destdir)s/usr/share/foo/%%#\@\!\ Foo\(\(\)')
+        r.Create('/usr/share/foo/%%foo', contents='Blah', mode=0o400)
+        r.Run('echo "Foo" >>  %(destdir)s/usr/share/foo/%%#\\@\\!\\ Foo\\(\\(\\)')
         r.ComponentSpec('foo-sub:test', '/usr/share/foo/%%foo')
 """
         self.resetRepository()
@@ -919,7 +919,7 @@ class TestCase(PackageRecipe):
         for i in range(0,4):
             r.Create('/usr/bin/testcase-%s' % i, contents='''#!/bin/sh
     echo "Hello, %s!"
-    ''' % i, mode=0755) 
+    ''' % i, mode=0o755) 
         r.PackageSpec('testcase-1', '/usr/bin/testcase-1')
         r.ComponentSpec('testcase:devel', '/usr/bin/testcase-2')
         r.ComponentSpec('testcase-3:runtime', '/usr/bin/testcase-3')

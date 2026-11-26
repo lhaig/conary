@@ -37,7 +37,7 @@ class TestTestComponent(PackageRecipe):
                  echo "aaa" > bin/exec1;
                  mkdir doc;
                  echo "bbb" > doc/exec1''')
-        r.Install('bin/exec1', '/bin/exec1', mode=0755) 
+        r.Install('bin/exec1', '/bin/exec1', mode=0o755) 
         r.Install('doc/exec1', '%(thisdocdir)s/exec1')
         # some files that should not be copied over to test component
         # (unless asked to be)
@@ -58,7 +58,7 @@ class TestTestComponent(PackageRecipe):
     def setup(r):
         r.Run('''mkdir TestFoo;
                  touch TestFoo/bar;
-                 touch TestFoo/name\ with\ spaces;
+                 touch TestFoo/name\\ with\\ spaces;
                  touch Makefile''')
 
         # now for creating files in destdir that are linked to 

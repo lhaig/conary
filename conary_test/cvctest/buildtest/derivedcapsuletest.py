@@ -359,9 +359,9 @@ class Test(DerivedCapsuleRecipe):
 
     def setup(r):
         r.Create('/usr/share/with-config.txt',
-            contents='some other content\n', mode=0755)
+            contents='some other content\n', mode=0o755)
         r.Create('/usr/share/new-content.txt',
-            contents='some new content\n', mode=0644)
+            contents='some new content\n', mode=0o644)
 """
 
         self.updateSourceTrove(pkgname, recipe, str(self.shadowLabel))

@@ -754,9 +754,9 @@ class TestPackage(CapsuleRecipe):
     def setup(r):
         r.addCapsule('with-config-special-0.3-1.noarch.rpm')
         r.Create('/usr/share/with-config-special.txt',
-            contents='some other content\n', mode=0755)
+            contents='some other content\n', mode=0o755)
         r.Create('/usr/share/new-content.txt',
-            contents='some new content\n', mode=0644)
+            contents='some new content\n', mode=0o644)
 """
         pkgname = 'with-config-special'
         self.makeSourceTrove(pkgname, recipe)
@@ -783,7 +783,7 @@ class TestPackage(CapsuleRecipe):
     clearBuildReqs()
     def setup(r):
         r.addCapsule('with-config-special-0.3-1.noarch.rpm')
-        r.SetModes('/usr/share/with-config-special.txt', 0755)
+        r.SetModes('/usr/share/with-config-special.txt', 0o755)
 """
         pkgname = 'with-config-special'
         self.makeSourceTrove(pkgname, recipe)
@@ -972,8 +972,8 @@ class TestPackage(CapsuleRecipe):
     def setup(r):
         r.addArchive('simple-1.0-1.i386.rpm', dir='/')
         r.Ownership('nobody', 'nobody', '.*')
-        r.SetModes('/dir', 0700)
-        r.SetModes('/normal', 0600)
+        r.SetModes('/dir', 0o700)
+        r.SetModes('/normal', 0o600)
 """
         src = self.makeSourceTrove('foo', recipe)
         self.cookFromRepository('foo')[0]
@@ -1011,8 +1011,8 @@ class TestPackage(CapsuleRecipe):
     def setup(r):
         r.addArchive('simple-1.0-1.i386.rpm', dir='/')
         r.Ownership('nobody', 'nobody', '.*')
-        r.SetModes('/dir', 0700)
-        r.Create('/normal', contents='different stuff\n', mode=0600)
+        r.SetModes('/dir', 0o700)
+        r.Create('/normal', contents='different stuff\n', mode=0o600)
 """
         src = self.makeSourceTrove('foo', recipe)
         self.cookFromRepository('foo')[0]

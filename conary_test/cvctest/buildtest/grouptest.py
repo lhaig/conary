@@ -46,7 +46,7 @@ class testRecipe(PackageRecipe):
     def setup(self):
         self.Create("/bin/ls")
         self.Create("/bin/cat")
-        self.SetModes("/bin/{ls,cat}", 0755)
+        self.SetModes("/bin/{ls,cat}", 0o755)
         self.Create("/bin/dd")
         self.NonBinariesInBindirs(exceptions='/bin/dd')
         self.Create("/usr/bin/vi")
@@ -1571,9 +1571,9 @@ To resolve this problem, use r.addCopy for the containing group instead of r.add
         self.addComponent('nothing:runtime', '1')
         self.addCollection('nothing', '1', [':runtime'])
         self.logFilter.add()
-        self.build(replaceNothingGroup + '\tself.replace("nothing")\n',
+        self.build(replaceNothingGroup + '        self.replace("nothing")\n',
                    'ReplaceNothingGroup')
-        self.build(replaceNothingGroup + '\tself.replace("nothing", groupName="group-replaceNothing")\n', 'ReplaceNothingGroup')
+        self.build(replaceNothingGroup + '        self.replace("nothing", groupName="group-replaceNothing")\n', 'ReplaceNothingGroup')
         self.logFilter.compare(['''\
 warning: Could not find troves to replace in any group:
     nothing
@@ -1582,10 +1582,10 @@ warning: Could not find troves to replace in group-replaceNothing:
     nothing
 '''])
 
-        self.build(replaceNothingGroup + '\tself.replace("nothing",\n'
+        self.build(replaceNothingGroup + '        self.replace("nothing",\n'
                                          '\t\t           allowNoMatch=True)\n', 
                    'ReplaceNothingGroup')
-        self.build(replaceNothingGroup + '\tself.replace("nothing",\n'
+        self.build(replaceNothingGroup + '        self.replace("nothing",\n'
                          '\t             allowNoMatch=True,\n'
                          '\t             groupName="group-replaceNothing")\n',
                    'ReplaceNothingGroup')
@@ -1597,14 +1597,14 @@ warning: Could not find troves to replace in group-replaceNothing:
         self.addComponent('nothing:runtime', '1')
         self.addCollection('nothing', '1', [':runtime'])
         self.logFilter.add()
-        self.build(replaceNothingGroup + '\tself.remove("nothing", "1.0", '
+        self.build(replaceNothingGroup + '        self.remove("nothing", "1.0", '
                                                         'flavor="foo")\n',
                    'ReplaceNothingGroup')
         self.logFilter.compare(['''\
 warning: Could not find troves to remove in group-replaceNothing:
     nothing=1.0[foo]
 '''])
-        self.build(replaceNothingGroup + '\tself.remove("nothing",\n'
+        self.build(replaceNothingGroup + '        self.remove("nothing",\n'
                                          '\t\t           allowNoMatch=True)\n', 
                    'ReplaceNothingGroup')
 
@@ -3154,7 +3154,7 @@ class basicGroup(GroupRecipe):
 
     def testGroupCookFlavorCheck(self):
         repos = self.openRepository()
-        myPkgGroup = pkgGroup + '\n\tUse.readline.setPlatform();Use.ssl.setPlatform()\n'
+        myPkgGroup = pkgGroup + '\n        Use.readline.setPlatform();Use.ssl.setPlatform()\n'
         self.addComponent('group-pkg:source', '1.0',
                           [('group-pkg.recipe', myPkgGroup)])
         self.addComponent('test:run', '1.0', 'readline,ssl')

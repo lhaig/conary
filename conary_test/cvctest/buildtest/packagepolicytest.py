@@ -72,7 +72,7 @@ class BadBinariesInBindirs(PackageRecipe):
     clearBuildReqs()
 
     def setup(self):
-        self.Create('%(bindir)s/blah', mode=0644)
+        self.Create('%(bindir)s/blah', mode=0o644)
 """
         self.assertRaises(policy.PolicyError, self.buildRecipe,
             recipestr1, "BadBinariesInBindirs")
@@ -102,7 +102,7 @@ cat > %(destdir)s/usr/bin/badwrapper <<EOF
 # metacharacters that are still active within double-quoted strings.
 EOF
         ''')
-        self.SetModes('%(bindir)s/badwrapper', 0755)
+        self.SetModes('%(bindir)s/badwrapper', 0o755)
 """
         self.assertRaises(policy.PolicyError, self.buildRecipe,
             recipestr2, "LtWrappersInBindirs")
@@ -119,8 +119,8 @@ class GoodBinariesInBindirs(PackageRecipe):
     def setup(self):
         self.addSource('smbumount')
         self.Create('blah', contents = 'test doc')
-        self.Install('smbumount', '%(bindir)s/smbumount', mode = 0755)
-        self.Install('blah', '%(thisdocdir)s/blah', mode=0644)
+        self.Install('smbumount', '%(bindir)s/smbumount', mode = 0o755)
+        self.Install('blah', '%(thisdocdir)s/blah', mode=0o644)
 """
         self.buildRecipe(recipestr1, "GoodBinariesInBindirs")
 
@@ -136,7 +136,7 @@ class TestBadInterpreterPaths(PackageRecipe):
     clearBuildReqs()
 
     def setup(self):
-        self.Create('%(bindir)s/blah', contents='#!./foo', mode=0755)
+        self.Create('%(bindir)s/blah', contents='#!./foo', mode=0o755)
 """
         self.reset()
         self.assertRaises(policy.PolicyError, self.buildRecipe,
@@ -148,7 +148,7 @@ class TestBadInterpreterPaths(PackageRecipe):
     clearBuildReqs()
 
     def setup(self):
-        self.Create('%(thisdocdir)s/blah', contents='#!./foo', mode=0755)
+        self.Create('%(thisdocdir)s/blah', contents='#!./foo', mode=0o755)
 """
         self.reset()
         self.buildRecipe(recipestr2, "TestBadInterpreterPaths")
@@ -162,7 +162,7 @@ class TestBadInterpreterPaths(PackageRecipe):
 
     def setup(self):
         self.Create('%(bindir)s/blah', contents='''#!
-        foo''', mode=0755)
+        foo''', mode=0o755)
 """
         self.reset()
         self.assertRaises(policy.PolicyError, self.buildRecipe,
@@ -185,9 +185,9 @@ class TestBadInterpreterPaths(PackageRecipe):
     clearBuildReqs()
 
     def setup(self):
-        self.Create('/bin/prog1', contents='#!%(workDir)s/dirlink1/bin1\\n', mode=0755)
-        self.Create('/bin/prog1b', contents='#!%(workDir)s/dirlink1/link1\\n', mode=0755)
-        self.Create('/bin/prog2', contents='#!%(workDir)s/link2\\n', mode=0755)
+        self.Create('/bin/prog1', contents='#!%(workDir)s/dirlink1/bin1\\n', mode=0o755)
+        self.Create('/bin/prog1b', contents='#!%(workDir)s/dirlink1/link1\\n', mode=0o755)
+        self.Create('/bin/prog2', contents='#!%(workDir)s/link2\\n', mode=0o755)
 """ % dict(workDir=self.workDir)
         self.buildRecipe(recipestr1, 'TestBadInterpreterPaths')
         self.updatePkg('test:runtime', depCheck=False)
@@ -298,8 +298,8 @@ class TestMakeDevices(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         r.MakeDevices('/dev/foo', 'b', 1, 2, 'root', 'root')
-        r.MakeDevices('/dev/bar', 'b', 1, 3, 'root', 'root', mode=0200)
-        r.MakeDevices('/dev/baz', 'b', 1, 4, 'root', 'root', 0222)
+        r.MakeDevices('/dev/bar', 'b', 1, 3, 'root', 'root', mode=0o200)
+        r.MakeDevices('/dev/baz', 'b', 1, 4, 'root', 'root', 0o222)
 """
         # just make sure it doesn't blow up
         self.build(recipestr1, "TestMakeDevices")
@@ -373,7 +373,7 @@ class TestDanglingSymlinks(PackageRecipe):
     version = '0'
     clearBuildReqs()
     def setup(r):
-        r.Create('/usr/lib/bar', mode=0755)
+        r.Create('/usr/lib/bar', mode=0o755)
         r.Symlink('/usr/lib/bar', '/usr/bin/bar')
 """
         self.logFilter.add()
@@ -591,7 +591,7 @@ class TestWarnWriteable(PackageRecipe):
         self.Run("mkdir %(destdir)s/bar; chmod 775 %(destdir)s/bar")
         self.Run("mkdir %(destdir)s/baz; chmod 775 %(destdir)s/baz")
         self.Run("mkdir %(destdir)s/blah")
-        self.SetModes("/blah", 0777)
+        self.SetModes("/blah", 0o777)
         self.ExcludeDirectories(exceptions='/bar')
 """
         self.reset()
@@ -628,8 +628,8 @@ class TestExcludeDirectories(PackageRecipe):
         r.Create('/ignoreme/foo')
         r.Ownership('asdf', 'asdf', '/ignoreme')
         r.MakeDirs('/includeme')
-        r.SetModes('/includeme', 0700)
-        r.MakeDirs('%(bam)s', mode=0770)
+        r.SetModes('/includeme', 0o700)
+        r.MakeDirs('%(bam)s', mode=0o770)
 """
         self.reset()
         self.logFilter.ignore(r'^\+ (Methods|Building test|changing mode|'
@@ -688,7 +688,7 @@ class TestWarnIgnoredSetuid(PackageRecipe):
     def setup(self):
         self.Run("touch %(destdir)s/foo; chmod 04755 %(destdir)s/foo")
         self.Run("touch %(destdir)s/blah")
-        self.SetModes("/blah", 04755)
+        self.SetModes("/blah", 0o4755)
 """
         self.reset()
         self.logFilter.add()
@@ -710,7 +710,7 @@ class BadFilesForDirectories(PackageRecipe):
     clearBuildReqs()
 
     def setup(self):
-        self.Create('%(bindir)s', mode=0755)
+        self.Create('%(bindir)s', mode=0o755)
 """
         self.assertRaises(policy.PolicyError, self.buildRecipe,
             recipestr1, "BadFilesForDirectories")
@@ -728,7 +728,7 @@ class BadObsoletePaths(PackageRecipe):
 
     def setup(self):
         # make the dir and actually put something into it per CNY-1195
-        self.MakeDirs('/usr/info', mode=0755)
+        self.MakeDirs('/usr/info', mode=0o755)
         self.Create('/usr/info/foo', contents='foo')
         self.Create('/usr/info/blah/bar', contents='bar')
         self.Create('/usr/share/info/test', contents='test')
@@ -748,7 +748,7 @@ class BadObsoletePaths(PackageRecipe):
         # these paths will be translated twice. once for renaming the obsolete
         # path /usr/info and once for compressing the info files.
         # if any of the translations fail, files will end up in "test:doc"
-        self.MakeDirs('/usr/info/blah', mode=0755)
+        self.MakeDirs('/usr/info/blah', mode=0o755)
         self.Run('touch %(destdir)s/usr/info/foo', package = 'foo')
         self.Run('touch %(destdir)s/usr/info/bar', package = 'foo')
         self.Run('touch %(destdir)s/usr/info/blah/foo', package = 'foo')
@@ -770,7 +770,7 @@ class BadObsoletePaths(PackageRecipe):
         # we're looking to prove that SetModes followed a PackageSpec through
         # the path translation process
         self.Create('/usr/doc/foo', package = 'foo')
-        self.SetModes('/usr/doc/foo', 0755)
+        self.SetModes('/usr/doc/foo', 0o755)
 """
         (built, d) = self.buildRecipe(recipestr1, "BadObsoletePaths")
 
@@ -837,7 +837,7 @@ class BadObsoletePaths(PackageRecipe):
         # the path translation process
         self.Create('foo')
         self.Install('foo', '/usr/info/foo', package = 'foo')
-        self.MakeDirs('/usr/info/blah', mode=0755)
+        self.MakeDirs('/usr/info/blah', mode=0o755)
 """
         (built, d) = self.buildRecipe(recipestr1, "BadObsoletePaths")
         self.assertEqual(len(built), 1)
@@ -978,7 +978,7 @@ class TestConfig(PackageRecipe):
     clearBuildReqs()
     def setup(self):
         self.Create('%(sysconfdir)s/foo')
-        self.Create('%(sysconfdir)s/bar', mode=0755)
+        self.Create('%(sysconfdir)s/bar', mode=0o755)
 """
         self.reset()
         (built, d) = self.buildRecipe(recipestr1, "TestConfig")
@@ -1233,7 +1233,7 @@ datasource      args
         self.Create('/blah/fdsa')
         self.TagSpec('fd-_sa', '/blah/fdsa')
         self.Create('%(tagdescriptiondir)s/blah')
-        self.Create('%(taghandlerdir)s/blah', mode=0755)
+        self.Create('%(taghandlerdir)s/blah', mode=0o755)
         self.Create('FONTPATH/asdf')
         self.TagDescription(exceptions='%(tagdescriptiondir)s/blah')
 """
@@ -1482,7 +1482,7 @@ class TestTransient(PackageRecipe):
         r.Create('/foo/foo.py', contents='''
 class foo:
     pass
-''', mode=0755)
+''', mode=0o755)
         r.CompilePython('%(homedir)s')
 """
         self.reset()
@@ -1599,7 +1599,7 @@ class TestLibrarySymlinks(PackageRecipe):
     version = '0'
     clearBuildReqs()
     def setup(r):
-        r.Create('/sbin/ldconfig', mode=0755, contents='\n'.join((
+        r.Create('/sbin/ldconfig', mode=0o755, contents='\n'.join((
             '#!/bin/sh',
             'mkdir -p %(destdir)s/opt',
             'echo "$@" > %(destdir)s/opt/args',
@@ -1650,17 +1650,17 @@ class TestInitscriptContents(PackageRecipe):
     version = '0'
     clearBuildReqs()
     def setup(r):
-        r.Create('%(initdir)s/foo', mode=0755, contents='\n'.join((
+        r.Create('%(initdir)s/foo', mode=0o755, contents='\n'.join((
             "# chkconfig: 2345 60 40",
             ". /etc/rc.d/init.d/functions",
             "",
         )))
-        r.Create('%(bindir)s/foo1', mode=0755, contents='\n'.join((
+        r.Create('%(bindir)s/foo1', mode=0o755, contents='\n'.join((
             "# chkconfig: 2345 60 40",
             ". /etc/rc.d/init.d/functions",
             "",
         )))
-        r.Create('/bin/sh', mode=0755, contents='\n'.join((
+        r.Create('/bin/sh', mode=0o755, contents='\n'.join((
             "# chkconfig: 2345 60 40",
             ". /etc/rc.d/init.d/functions",
             "",
@@ -1707,7 +1707,7 @@ class TestRequireChkconfig(PackageRecipe):
     clearBuildReqs()
     def setup(self):
         self.Create('%(initdir)s/foo', contents='# chkconfig: 2345 60 40',
-                    mode=0755)
+                    mode=0o755)
 """
         (built, d) = self.buildRecipe(recipestr1, "TestRequireChkconfig")
 
@@ -1718,7 +1718,7 @@ class BadRequireChkconfig(PackageRecipe):
     clearBuildReqs()
     def setup(self):
         self.Create('%(initdir)s/foo', contents='# foo',
-                    mode=0755)
+                    mode=0o755)
 """
         self.logFilter.add()
         self.buildRecipe(recipestr2, "BadRequireChkconfig")
@@ -1743,7 +1743,7 @@ class TestRequireChkconfig(PackageRecipe):
                                          '# Description: Does something,',
                                          '# or maybe something else.',
                                          '### END INIT INFO')),
-                mode=0755)
+                mode=0o755)
 """
         self.logFilter.add()
         (built, d) = self.buildRecipe(recipestr1, "TestRequireChkconfig")
@@ -1758,7 +1758,7 @@ class NewLinesInChkconfigHeader(PackageRecipe):
     version = '0'
     clearBuildReqs()
     def setup(self):
-        self.Create('%(initdir)s/foo', mode=0755, contents = '''
+        self.Create('%(initdir)s/foo', mode=0o755, contents = '''
 # Blah
 
 # More blah
@@ -1859,8 +1859,8 @@ class TestComponent(PackageRecipe):
         # test overriding :config CNY-1107
         r.Create('%(sysconfdir)s/configfiledatacomponent')
         # test no executable bits in :config by default (CNY-1260)
-        r.Create('%(sysconfdir)s/fdsa2', mode=0700)
-        r.Create('%(sysconfdir)s/fdsa3', mode=0445)
+        r.Create('%(sysconfdir)s/fdsa2', mode=0o700)
+        r.Create('%(sysconfdir)s/fdsa3', mode=0o445)
         r.Create('/asdf/blah')
         r.Config('/asdf/blah')
         r.ComponentSpec('blah', '/asdf/blah',
@@ -1869,7 +1869,7 @@ class TestComponent(PackageRecipe):
         r.Create('/usr/lib/mono/CNY-1821')
         r.Create('%(prefix)s/lib/gtk-sharp-2.0/CNY-2032.exe')
         r.Create('%(tagdescriptiondir)s/tagdescription')
-        r.Create('%(taghandlerdir)s/taghandler', mode=0755)
+        r.Create('%(taghandlerdir)s/taghandler', mode=0o755)
         r.Create('%(datadir)s/conary/baseclasses/foo.recipe')
         r.Create('/usr/lib/CNY-3143.la')
         r.Create('%(datadir)s/conary/cml/foo.cml')
@@ -1967,7 +1967,7 @@ class TestWorldWriteableExecutables(PackageRecipe):
     version = '0'
     clearBuildReqs()
     def setup(self):
-        self.Create('%(bindir)s/foo', mode=0777)
+        self.Create('%(bindir)s/foo', mode=0o777)
 """
         self.reset()
         self.assertRaises(policy.PolicyError, self.buildRecipe,
@@ -2077,8 +2077,8 @@ class TestRequires(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
-        r.Create('%(datadir)s/bar', mode=0644)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
+        r.Create('%(datadir)s/bar', mode=0o644)
 """
         self.resetRepository()
         built, d = self.buildRecipe(recipestr1, "TestRequires")
@@ -2096,8 +2096,8 @@ class TestRequires(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
-        r.Create('%(datadir)s/bar', mode=0644)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
+        r.Create('%(datadir)s/bar', mode=0o644)
         r.ComponentRequires({'data': frozenset(('lib',))})
 """
         self.resetRepository()
@@ -2116,8 +2116,8 @@ class TestRequires(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
-        r.Create('%(datadir)s/bar', mode=0644)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
+        r.Create('%(datadir)s/bar', mode=0o644)
         r.ComponentRequires({'foo': {'data': frozenset(('lib',))}})
 """
         self.resetRepository()
@@ -2181,7 +2181,7 @@ class TestProvides(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
         r.ComponentProvides(('ASDF', 'FD:SA'))
 """
         self.resetRepository()
@@ -2200,7 +2200,7 @@ class TestProvides(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         r.macros.asdf = 'ASDF'
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
         r.ComponentProvides('foo', '%(asdf)s')
 """
         built, d = self.buildRecipe(recipestr2, "TestProvides")
@@ -2217,7 +2217,7 @@ class TestProvides(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
 """
         built, d = self.buildRecipe(recipestr3, "TestProvides")
         name, version, flavor = [x for x in built if x[0] == 'foo:runtime'][0]
@@ -2329,18 +2329,18 @@ class TestRequires(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         r.macros.asdf = 'ASDF'
-        r.Create('/bin/foo', contents='#!/bin/bash', mode=0755)
+        r.Create('/bin/foo', contents='#!/bin/bash', mode=0o755)
         r.Symlink('/bin/foo', '/bin/blah')
         r.Requires('foo:bar', '/bin/')
         r.Requires('asdf:runtime(FDSA %(asdf)s FDSA)', '/bin/blah')
         r.Requires('/a/path', '/bin/blah')
         r.Requires('file: /b/path', '/bin/blah')
         r.Requires('file:runtime', '/bin/blah')
-        r.Create('/blah/bar', contents='#!/bin/bash', mode=0644)
-        r.Create('/bin/ignoreme', contents='#!/usr/bin/ignored', mode=0755)
+        r.Create('/blah/bar', contents='#!/bin/bash', mode=0o644)
+        r.Create('/bin/ignoreme', contents='#!/usr/bin/ignored', mode=0o755)
         r.Requires(exceptDeps=('%(essentialbindir)s/ignoreme',
                                'file: %(bindir)s/ignored'))
-        r.Create('/bin/relativedep', contents='#!no', mode=0755)
+        r.Create('/bin/relativedep', contents='#!no', mode=0o755)
         r.BadInterpreterPaths(exceptions='/bin/relativedep')
 """
         self.resetRepository()
@@ -2563,8 +2563,8 @@ class TestRequires(PackageRecipe):
     version = '1'
     clearBuildReqs()
     def setup(r):
-        r.Create('/asdf/foo', mode=0755)
-        r.Create('/bin/bar', mode=0755, contents='#!/asdf/foo')
+        r.Create('/asdf/foo', mode=0o755)
+        r.Create('/bin/bar', mode=0o755, contents='#!/asdf/foo')
 """
         self.assertRaises(policy.PolicyError, self.buildRecipe,
             recipestr, "TestRequires")
@@ -2846,7 +2846,7 @@ class TestRequires(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         r.addSource('servlet-api.jar', dest='/foo/')
-        r.Requires(exceptDeps='java: java\..*')
+        r.Requires(exceptDeps=r'java: java\..*')
 """
         self.resetRepository()
         trv = self.build(recipestr, "TestRequires")
@@ -2953,7 +2953,7 @@ class TestRequires(PackageRecipe):
             "require 'spam'",
             "require 'eggs'",
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('/usr/lib64/ruby/site_ruby/1.8/foo/bar.rb',
                  contents="require 'blah/baz'")
         r.Create('/usr/lib/ruby/site_ruby/blah/baz.rb')
@@ -2981,7 +2981,7 @@ class TestRequires(PackageRecipe):
             '  ;;',
             'esac',
             'exit 0',
-            )), mode=0755)
+            )), mode=0o755)
         del r.NonMultilibDirectories
 """
         trv = self.build(recipestr, "TestRequires", macros={'lib':'lib64'})
@@ -3132,7 +3132,7 @@ class TestRequires(PackageRecipe):
             'from logging import handlers',
             'import xml.sax',
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('/usr/bin/python', contents='\n'.join((
             '#!/bin/sh',
             #'exec 2>>/tmp/asdf',
@@ -3145,7 +3145,7 @@ class TestRequires(PackageRecipe):
             '  ;;',
             'esac',
             'exec python "$@"',
-            )), mode=0755)
+            )), mode=0o755)
         r.Requires(bootstrapPythonFlags=['%(pyver)s', 'lib'])
         r.Create('%(libdir)s/python%(pyver)s/os/path.py')
         r.Create('%(libdir)s/python%(pyver)s/site-packages/xml/sax.py')
@@ -3177,7 +3177,7 @@ class TestRequires(PackageRecipe):
             'import logging',
             'import xml.sax',
             '',
-        )), mode=0755)
+        )), mode=0o755)
 """
 
         def mockedITBP(real, pythonFlags, localDB, *args ,**kwargs):
@@ -3289,7 +3289,7 @@ class TestRequires(PackageRecipe):
             'from logging import handlers',
             'import xml.sax',
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('/usr/bin/python', contents='\n'.join((
             '#!/bin/sh',
             'case "$@" in *sys.path*)',
@@ -3298,7 +3298,7 @@ class TestRequires(PackageRecipe):
             '  ;;',
             'esac',
             'exec python "$@"',
-            )), mode=0755)
+            )), mode=0o755)
         r.Create('%(libdir)s/python%(pyver)s/logging/__init__.py')
         r.Create('%(libdir)s/python%(pyver)s/logging/handlers.py')
         r.Create('%(libdir)s/python%(pyver)s/site-packages/xml/__init__.py')
@@ -3336,7 +3336,7 @@ class TestRequires(PackageRecipe):
             'from logging import handlers',
             'import xml.sax',
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('/usr/conary/bin/python%(pyver)s', contents='\n'.join((
             '#!/bin/sh',
             #'exec 2>>/tmp/asdf',
@@ -3349,7 +3349,7 @@ class TestRequires(PackageRecipe):
             'esac',
             #'unset LD_LIBRARY_PATH',
             'exec /usr/bin/python "$@"',
-            )), mode=0755)
+            )), mode=0o755)
         r.Requires(bootstrapSysPath=[
             '%(prefix)s/conary/lib/python%(pyver)s',
             '%(prefix)s/conary/lib/python%(pyver)s/site-packages'])
@@ -3425,7 +3425,7 @@ class TestRequires(PackageRecipe):
             '# mess things up.',
             'import fdsjklf.blah',
             'import blah'
-        )), mode=0755)
+        )), mode=0o755)
 """
         trv = self.build(recipestr, "TestRequires",
             macros = dict(pyver = pythonVer))
@@ -3763,13 +3763,13 @@ class TestRequires(PackageRecipe):
             '',
             'package CGI::Util;',
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('%(bindir)s/foo', contents='\n'.join((
             '#!/usr/bin/perl',
             '',
             'use CGI::Util;',
             '',
-        )), mode=0755)
+        )), mode=0o755)
 """.replace('VENDOR_PERL', _findVendorPerl())
         self.resetRepository()
         self.logFilter.add()
@@ -3800,7 +3800,7 @@ class TestRequires(PackageRecipe):
             '',
             'package CGI::Util;',
             '',
-        )), mode=0755)
+        )), mode=0o755)
 """.replace('VENDOR_PERL', _findVendorPerl())
         realAccess = os.access
         def access_perl(*args):
@@ -3824,7 +3824,7 @@ class TestRequires(PackageRecipe):
             '',
             'package CGI::Util;',
             '',
-        )), mode=0755)
+        )), mode=0o755)
 
         r.Create('%(bindir)s/foo', contents='\n'.join((
             '#!/usr/bin/perl',
@@ -3832,7 +3832,7 @@ class TestRequires(PackageRecipe):
             'use CGI::Util;',
             'use DFSJFSD::FDSJFK;',
             '',
-        )), mode=0755)
+        )), mode=0o755)
 """.replace('VENDOR_PERL', _findVendorPerl())
         repos = self.openRepository()
         trv = self.build(recipestr, "TestRequires")
@@ -3868,12 +3868,12 @@ class TestRequires(PackageRecipe):
             '',
             'exit 0',
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('%(bindir)s/foo.pl', contents='\n'.join((
             '',
             'use CGI::Util;',
             '',
-        )), mode=0755)
+        )), mode=0o755)
 """
         db = self.openDatabase()
         self.addDbComponent(db, name = 'cgi-apache',
@@ -3912,8 +3912,8 @@ class TestProvides(PackageRecipe):
     def setup(r):
         # CNY-2949 - symlinks in @INC
         r.Symlink('/opt/perl/5.8.8', '/opt/perl/5.8')
-        r.Create('/opt/perl/5.8.8/foo.pm', mode=0755)
-        r.Create('/opt/perl/other/bar.pm', mode=0755)
+        r.Create('/opt/perl/5.8.8/foo.pm', mode=0o755)
+        r.Create('/opt/perl/other/bar.pm', mode=0o755)
         r.Requires(bootstrapPerlIncPath=['/opt/perl/5.8', '/opt/perl/other'])
 """
         realGetPerlIncPath = packagepolicy._dependency._getperlincpath
@@ -3964,11 +3964,11 @@ class TestProvides(PackageRecipe):
                 '',
                 'exit 0',
                 '',
-                )), mode=0755)
+                )), mode=0o755)
         # CNY-2949 - symlinks in @INC
         r.Symlink('/opt/perl/5.8.8', '/opt/perl/5.8')
-        r.Create('/opt/perl/5.8.8/foo.pm', mode=0755)
-        r.Create('/opt/perl/other/bar.pm', mode=0755)
+        r.Create('/opt/perl/5.8.8/foo.pm', mode=0o755)
+        r.Create('/opt/perl/other/bar.pm', mode=0o755)
 """
         trv = self.build(recipestr, "TestProvides")
         repos = self.openRepository()
@@ -4008,15 +4008,15 @@ class TestRequires(PackageRecipe):
             '',
             'exit 0',
             '',
-        )), mode=0755)
+        )), mode=0o755)
         r.Create('%(bindir)s/foo.pl', contents='\n'.join((
             '',
             "require 'deptest.pm'",
             "require foo::deptest",
             'use CGI::Util;',
             '',
-        )), mode=0755)
-        r.Create('/perlbase/foo/deptest.pm', contents = "#!/usr/bin/perl\n\npackage foo::deptest;", mode = 0755)
+        )), mode=0o755)
+        r.Create('/perlbase/foo/deptest.pm', contents = "#!/usr/bin/perl\n\npackage foo::deptest;", mode = 0o755)
 """
         self.resetRepository()
         repos = self.openRepository()
@@ -4094,7 +4094,7 @@ int main() {
 EOF
         ''')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('runtime', '.*')
 """
 
@@ -4582,7 +4582,7 @@ class TestProvides(PackageRecipe):
         r.Run('gcc -o findnot -Wl,-soname,findnot findnot.o -L. -lnotfound')
         r.Install('findnot', '%(bindir)s/')
 
-        r.Create('/usr/libexec/conary/tags/blah', mode=0755)
+        r.Create('/usr/libexec/conary/tags/blah', mode=0o755)
 
         # make sure that libraries in non-library paths provide if requested
         r.Create('found.c', contents='void foo(void) { return ; }')
@@ -4600,7 +4600,7 @@ class TestProvides(PackageRecipe):
 
         # make sure that PIE executables do not provide their paths
         # when in bindirs (CNY-1128)
-        r.addSource('smbumount', dir='%(bindir)s/', mode=0755)
+        r.addSource('smbumount', dir='%(bindir)s/', mode=0o755)
         # nor tests (CNY-1138)
         r.Install('libfoo.so.0.0', '%(thistestdir)s/')
 
@@ -4613,7 +4613,7 @@ int main() {
 EOF
         ''')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('runtime', '.*')
 """
         self.resetRepository()
@@ -4810,7 +4810,7 @@ class TestProvides(PackageRecipe):
             '  ;;',
             'esac',
             'exec python "$@"',
-            )), mode=0755)
+            )), mode=0o755)
         r.Create('/usr/bin/python2.5', contents='\n'.join((
             '#!/bin/sh',
             'case "$@" in *sys.path*)',
@@ -4819,7 +4819,7 @@ class TestProvides(PackageRecipe):
             '  ;;',
             'esac',
             'exec python "$@"',
-            )), mode=0755)
+            )), mode=0o755)
         r.Create('%(libdir)s/python%(pyver)s/site-packages/foo/four.py')
         r.Create('%(libdir)s/python%(pyver)s/site-packages/foo/both.py')
         r.Create('%(libdir)s/python2.5/site-packages/foo/both.py')
@@ -4828,7 +4828,7 @@ class TestProvides(PackageRecipe):
         # Test CNY-2050
         r.Create('%(libdir)s/python%(pyver)s/site-packages/badpython.py',
                  contents='#!/blah/bin/python',
-                 mode=0755)
+                 mode=0o755)
         # Test PEP 3149 interpreter so files
         r.Create('%(libdir)s/python%(pyver)s/site-packages/foo/ext.cpython-34m.so')
         # Test PEP 3147 interpreter pyc files
@@ -4868,14 +4868,14 @@ class TestProvides(PackageRecipe):
             # match the architecture or library set:
             'echo sh: /usr/bin/python%(pyver)s: No such file or directory >&2'
             'exit 127',
-            )), mode=0755)
+            )), mode=0o755)
         r.Create('/usr/lib/python%(pyver)s/site-packages/foo.py', contents='\n'.join((
             '#!/usr/bin/python%(pyver)s',
-            )), mode=0755)
+            )), mode=0o755)
         r.Create('/usr/lib/python%(pyver)s/asdf/bar.py', contents='\n'.join((
             '#!/usr/bin/python%(pyver)s',
-            )), mode=0755)
-        r.ComponentSpec('runtime', '.*\.py')
+            )), mode=0o755)
+        r.ComponentSpec('runtime', r'.*\.py')
         r.Requires(bootstrapPythonFlags=('lib', '%(pyver)s'))
         r.Requires(bootstrapSysPath=['/usr/lib/python%(pyver)s/asdf'])
 """
@@ -4909,11 +4909,11 @@ class TestProvides(PackageRecipe):
     def setup(r):
         r.Create('/usr/lib/python%(pyver)s/site-packages/foo.py', contents='\n'.join((
             '#!/usr/bin/python%(pyver)s',
-            )), mode=0755)
+            )), mode=0o755)
         r.Create('/usr/lib/python%(pyver)s/asdf/bar.py', contents='\n'.join((
             '#!/usr/bin/python%(pyver)s',
-            )), mode=0755)
-        r.ComponentSpec('runtime', '.*\.py')
+            )), mode=0o755)
+        r.ComponentSpec('runtime', r'.*\.py')
         r.Requires(bootstrapPythonFlags=('lib', '%(pyver)s'))
         r.Requires(bootstrapSysPath=['/usr/lib/python%(pyver)s/asdf'])
 """
@@ -5043,7 +5043,7 @@ class TestProvides(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         # Make sure that bindirs still get provided
-        r.Create('/usr/bin/foo', mode=0755)
+        r.Create('/usr/bin/foo', mode=0o755)
         # ensure that providing directories works
         r.MakeDirs('/etc/ld.so.conf.d')
         r.ExcludeDirectories(exceptions='/etc/ld.so.conf.d')
@@ -5080,17 +5080,17 @@ class TestProvides(PackageRecipe):
                     'pam.d/(remote|system-auth)|redhat-release|termcap)|'
              '/lib.*/security/.*|'
              '/usr/(lib.*/(eclipse/(configuration/config.ini|'
-                                   'plugins/org\.eclipse\.swt\..*\.jar)|'
-                          'gcc/.*/libgcj\.spec|'
-                          'gcj-.*/libjvm.so|libgcj\.so\.7rh|'
-                          'libstdc\+\+\.so\.6|libz\.so|'
+                                   r'plugins/org\.eclipse\.swt\..*\.jar)|'
+                          r'gcc/.*/libgcj\.spec|'
+                          r'gcj-.*/libjvm.so|libgcj\.so\.7rh|'
+                          r'libstdc\+\+\.so\.6|libz\.so|'
                           'lsb/install_initd|lsb/remove_initd|'
-                          'news/lib/innshellvars\.pl|'
+                          r'news/lib/innshellvars\.pl|'
                           'perl5/vendor_perl/.*/i386-linux-thread-multi|'
-                          'python2\.4|python2\.4/site-packages)|'
-                   'share/(desktop-menu-patches/gnome-gdmsetup\.desktop|'
-                          'gnome-screensaver/lock-dialog-system\.glade|'
-                          'magic\.mime|openldap/migration/migrate_common\.ph|'
+                          r'python2\.4|python2\.4/site-packages)|'
+                   r'share/(desktop-menu-patches/gnome-gdmsetup\.desktop|'
+                          r'gnome-screensaver/lock-dialog-system\.glade|'
+                          r'magic\.mime|openldap/migration/migrate_common\.ph|'
                           'X11/XKeysymDB)))')
         r.ComponentSpec('runtime', '.*')
 
@@ -5179,7 +5179,7 @@ class TestUtilize(PackageRecipe):
 
     def setup(r):
         r.macros.userMacro = 'nobody'
-        r.Create('%(bindir)s/foo', contents='foo', mode=0755)
+        r.Create('%(bindir)s/foo', contents='foo', mode=0o755)
         r.UtilizeUser('%(userMacro)s', '%(bindir)s/foo')
         r.UtilizeUser('%(userMacro)s', '.*')
         r.UtilizeUser('nobody2', '%(bindir)s/foo')
@@ -5321,7 +5321,7 @@ class TestProv(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('/usr/bin/ar', mode=0755)
+        r.Create('/usr/bin/ar', mode=0o755)
         # Create :devel, :lib, :devellib for CNP-105
         r.Create('foo.c', contents='void foo(void) { return ; }')
         r.Run('make CFLAGS="-g -fPIC" foo.o')
@@ -5339,7 +5339,7 @@ class TestReq(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('/bin/blah', mode=0755)
+        r.Create('/bin/blah', mode=0o755)
         r.addSource('CMakeCache.txt')
 """
         self.resetRoot()
@@ -5369,7 +5369,7 @@ class TestReq(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('/bin/blah', mode=0755)
+        r.Create('/bin/blah', mode=0o755)
         r.Create('config.log', contents='''configure:1234: found /bin/foo
 configure:1235: found /usr/bin/g77''')
 """
@@ -5380,7 +5380,7 @@ class TestReq(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('/bin/blah', mode=0755)
+        r.Create('/bin/blah', mode=0o755)
         r.Create('config.log', contents='''configure:1234: found /bin/foo
 configure:1235: found /usr/bin/g77
 configure:1236: found /bin/blah''')
@@ -5562,7 +5562,7 @@ class TestRPATH(PackageRecipe):
         r.Run('gcc -o foo2 foo.c -Wl,-rpath,/bar:/tmp/foo')
         r.Run('gcc -o foo3 foo.c -Wl,-rpath,/bar -Wl,-rpath,/var/tmp/foo')
         r.Run('gcc -o foo4 foo.c -Wl,-rpath,/bar')
-        r.Install('foo', 'foo2', 'foo3', 'foo4', '%(bindir)s/', mode=0755)
+        r.Install('foo', 'foo2', 'foo3', 'foo4', '%(bindir)s/', mode=0o755)
 """
         try:
             self.buildRecipe(recipeRPATH, "TestRPATH")
@@ -5605,7 +5605,7 @@ class TestRPATH(PackageRecipe):
         r.Create('foo.c', contents='int main(void) { return 0; }\n')
         r.Run('gcc -o foo foo.c -L. -laltfound -Wl,-rpath,//double/slash')
         r.Install('libaltfound*', '/double/slash/')
-        r.Install('foo', '%(bindir)s/', mode=0755)
+        r.Install('foo', '%(bindir)s/', mode=0o755)
 """
         trv = self.build(recipeRPATH, "TestRPATH")
         repos = self.openRepository()
@@ -5628,7 +5628,7 @@ class Test(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('foo/POTFILES.in', mode=0644)
+        r.Create('foo/POTFILES.in', mode=0o644)
         r.Create('/opt/ignoreme')
 """
         self.resetRoot()
@@ -5649,7 +5649,7 @@ class TestProv(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('/usr/bin/perl', mode=0755,
+        r.Create('/usr/bin/perl', mode=0o755,
                  contents='echo %(libdir)s/perl5/5.8.7/i386-linux-thread-multi')
         r.Create('%(libdir)s/perl5/5.8.7/i386-linux-thread-multi/POSIX.pm',
                  contents='package POSIX;')
@@ -5664,7 +5664,7 @@ class testperl(PackageRecipe):
 
     def setup(r):
         r.Create('/usr/bin/foo',
-                 mode=0755,
+                 mode=0o755,
                  contents='#!/usr/bin/perl\nuse POSIX;')
 """
 
@@ -5701,7 +5701,7 @@ class test(PackageRecipe):
         if Use.ifeelused:
             pass
         r.Create('/usr/bin/foo',
-                 mode=0755)
+                 mode=0o755)
 """
 
         self.resetRoot()
@@ -5742,7 +5742,7 @@ int main() {
 EOF
         ''')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.Create('%(prefix)s/include/shlib.h')
 """
 
@@ -5865,7 +5865,7 @@ int main() {
 EOF
         ''')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.Create('/usr/include/shlib.h')
 """
 
@@ -5888,7 +5888,7 @@ class TestReq(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(cc)s', contents='#!/bin/sh\nexit 0', mode=0755)
+        r.Create('%(cc)s', contents='#!/bin/sh\nexit 0', mode=0o755)
         r.Environment('PATH', '.:/bin:/usr/bin')
         r.Run('%(cc)s -lasdf')
         r.Create('/opt/ignoreme')
@@ -5961,7 +5961,7 @@ class TestReq(PackageRecipe):
         r.Make('useshlib.o')
         r.Run('%%(cc)s -o useshlib useshlib.o -L%s%%(libdir)s -lshlib' %r.cfg.root)
         r.Install('useshlib', '%(bindir)s/')
-        r.Create('make', contents='echo %(cxx)s -lshlib -lasdf -o blah\nexit 0', mode=0755)
+        r.Create('make', contents='echo %(cxx)s -lshlib -lasdf -o blah\nexit 0', mode=0o755)
         r.Run('./make')
         del r.EnforceSonameBuildRequirements
 """
@@ -6014,7 +6014,7 @@ class TestReq(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(cc)s', contents='#!/bin/sh\nexit 0', mode=0755)
+        r.Create('%(cc)s', contents='#!/bin/sh\nexit 0', mode=0o755)
         r.Environment('PATH', '.:/bin:/usr/bin')
         r.Run('%(cc)s -lfoo')
         r.Create('/opt/ignoreme')
@@ -6150,7 +6150,7 @@ class Test(PackageRecipe):
 int main(void) {return printf("Hello, world."); }
 ''')
         r.Run('gcc -c hello.c -o hello')
-        r.Install('hello', '%(bindir)s/', mode=0755)
+        r.Install('hello', '%(bindir)s/', mode=0o755)
         r.Requires('foo:runtime(foo)', '/asdf/foo')
         r.Requires('bar:runtime(target-%(target)s)', '/asdf/foo')
 """
@@ -6929,7 +6929,7 @@ class TestSupplementalGroup(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(bindir)s/foo', mode = 0755)
+        r.Create('%(bindir)s/foo', mode = 0o755)
         r.SupplementalGroup('user', 'group', 5)
 """
         built, d = self.buildRecipe(recipestr1, "TestSupplementalGroup")
@@ -6960,7 +6960,7 @@ class TestGroup(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(bindir)s/foo', mode = 0755)
+        r.Create('%(bindir)s/foo', mode = 0o755)
         r.Group('group', 5)
 """
         built, d = self.buildRecipe(recipestr1, "TestGroup")
@@ -6991,7 +6991,7 @@ class TestUser(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('%(bindir)s/foo', mode = 0755)
+        r.Create('%(bindir)s/foo', mode = 0o755)
         r.User(name = 'user', preferred_uid = 96, group = 'group',
                 groupid = 5, homedir = '/home/foo', comment = 'random comment')
 """
@@ -7790,11 +7790,11 @@ class TestNPIV(PackageRecipe):
     version = '0'
     clearBuildReqs()
     def setup(r):
-        r.Create('%(bindir)s/foo', mode=0755, contents='\n'.join((
+        r.Create('%(bindir)s/foo', mode=0o755, contents='\n'.join((
             "#!/usr/bin/python",
             "'docstring'",
         )))
-        r.Create('%(datadir)s/bar', mode=0644, contents='\n'.join((
+        r.Create('%(datadir)s/bar', mode=0o644, contents='\n'.join((
             "#!/usr/bin/python",
             "'docstring'",
         )))
@@ -7822,7 +7822,7 @@ class localTrove(PackageRecipe):
 
     def setup(self):
         self.addSource('smbumount')
-        self.Install('smbumount', '%(bindir)s/smbunmount', mode = 0755)
+        self.Install('smbumount', '%(bindir)s/smbunmount', mode = 0o755)
         self.Create('/usr/share/existInBoth', contents='file in localTrove', package=':runtime')
         self.Create('/usr/share/dontResolve1', contents='file in localTrove', package=':runtime')
 """
@@ -7834,7 +7834,7 @@ class repoTrove(PackageRecipe):
 
     def setup(self):
         self.addSource('monodis')
-        self.Install('monodis', '%(bindir)s/monodis', mode = 0755)
+        self.Install('monodis', '%(bindir)s/monodis', mode = 0o755)
         self.Create('/usr/share/existInBoth', contents='file in repoTrove', package=':runtime')
         self.Create('/usr/share/existOnlyInRepo', contents='file in repoTrove', package=':runtime')
         self.Create('/usr/share/dontResolve2', contents='file in repoTrove', package=':runtime')
@@ -7847,7 +7847,7 @@ class testTrove(PackageRecipe):
 
     def setup(self):
         self.addSource('tmpwatch')
-        self.Install('tmpwatch', '%(bindir)s/tmpwatch', mode = 0755)
+        self.Install('tmpwatch', '%(bindir)s/tmpwatch', mode = 0o755)
         self.Requires('file: %(bindir)s/monodis', '%(bindir)s/tmpwatch')
         self.Requires('file: %(bindir)s/smbunmount', '%(bindir)s/tmpwatch')
         self.Requires('file: /usr/share/existInBoth', '%(bindir)s/tmpwatch')

@@ -150,7 +150,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
 
         pkgTrv, runtimeTrv = self.buildDerivation('foo', srcVersion,
                                    "r.Remove('/bin/foo')",
-                                   "r.SetModes('/bin/blah', 0755)",
+                                   "r.SetModes('/bin/blah', 0o755)",
                                    "r.Replace('contents', 'new', '/bin/blah')",
                                    returnTrove = [ 'foo', ':runtime' ]
                                    )
@@ -264,7 +264,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
 
         # /bin/new follows default policy and shows up in :runtime
         runtimeTrv, libTrv = self.buildDerivation('foo', srcVersion,
-                "r.Create('/bin/new', mode=0755)",
+                "r.Create('/bin/new', mode=0o755)",
                 returnTrove = [ ':runtime', ':lib' ])
 
         assert(sorted([ x[1] for x in runtimeTrv.iterFileList() ]) ==
@@ -275,7 +275,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
         # create a new file and move it into :new. while we're at it, make
         # sure new is owned by root.root
         runtimeTrv, libTrv, newTrv = self.buildDerivation('foo', srcVersion,
-                "r.Create('/bin/new', mode=0755)",
+                "r.Create('/bin/new', mode=0o755)",
                 "r.ComponentSpec(':new', '/bin/new')",
                 returnTrove = [ ':runtime', ':lib', ':new' ])
 
@@ -294,7 +294,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
         # move both the new file and the old /bin/bar into :new, which causes
         # :runtime to disappear
         trv, libTrv, newTrv = self.buildDerivation('foo', srcVersion,
-                "r.Create('/bin/new', mode=0755)",
+                "r.Create('/bin/new', mode=0o755)",
                 "r.ComponentSpec(':new', '/bin/.*')",
                 returnTrove = [ 'foo', ':lib', ':new' ])
 
@@ -362,7 +362,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
                                      ])
 
         runtimeTrv = self.buildDerivation('foo:runtime', srcVersion,
-               "r.Create('/bin/new', mode=0755)",
+               "r.Create('/bin/new', mode=0o755)",
                "r.Ownership('newowner', 'newgroup', '/bin/new')",
                "r.Ownership('fooowner', 'foogroup', '/bin/foo')")
 
@@ -389,7 +389,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
         srcVersion  = self.addCompAndPackage('foo:runtime', '1.0-1-1',
               fileContents = [ ( '/dev/tty', rephelp.CharacterDevice(5, 0) ) ] )
         trv = self.buildDerivation('foo:runtime', srcVersion,
-               "r.MakeDevices('/dev/hda1', 'b', 3, 1, 'root', 'root', 0600)" )
+               "r.MakeDevices('/dev/hda1', 'b', 3, 1, 'root', 'root', 0o600)" )
 
         fileInfo = self.getFiles(trv)
 
@@ -580,8 +580,8 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
         self.assertEqual(fileInfo['/bin/new'].inode.perms(), 0o7555)
 
         runtimeTrv2 = self.buildDerivation('foo', srcVersion,
-               "r.SetModes('/bin/setuid', 0755)",
-               "r.SetModes('/bin/setgid', 0755)",
+               "r.SetModes('/bin/setuid', 0o755)",
+               "r.SetModes('/bin/setgid', 0o755)",
                returnTrove = ':runtime' )
         fileInfo2 = self.getFiles(runtimeTrv2)
         self.assertEqual(fileInfo2['/bin/setuid'].inode.perms(), 0o755)
@@ -663,9 +663,9 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
                       ])
 
         trv = self.buildDerivation('foo:runtime', srcVersion,
-            "r.Create('/bin/newuser', mode=0755)",
+            "r.Create('/bin/newuser', mode=0o755)",
             "r.UtilizeUser('newuser', '/bin/newuser')",
-            "r.Create('/bin/newgroup', mode=0755)",
+            "r.Create('/bin/newgroup', mode=0o755)",
             "r.UtilizeGroup('newgroup', '/bin/newgroup')",
         )
         self.assertEqual(
@@ -687,7 +687,7 @@ class DerivedPackageTest(rephelp.RepositoryHelper):
                       ])
 
         runtimeTrv = self.buildDerivation('foo:runtime', srcVersion,
-               "r.Create('/bin/new', mode=0755)",
+               "r.Create('/bin/new', mode=0o755)",
                "r.TagSpec('asdf', '/bin/new')",
                "r.TagSpec('asdf', '/bin/update')"
         )

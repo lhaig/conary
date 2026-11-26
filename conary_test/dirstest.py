@@ -26,7 +26,7 @@ class TestRecipe(PackageRecipe):
     version = '1.0'
     clearBuildReqs()
     def setup(r):
-        r.MakeDirs('/tmp', mode=01777)
+        r.MakeDirs('/tmp', mode=0o1777)
 """
 
 # XXX todo: ownership, removal tests

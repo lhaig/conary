@@ -1072,8 +1072,8 @@ testcase.recipe
         self.mkbranch(['test:source=' + label2.asString()], label1, shadow=True)
 
         # Noop change
-        newRecipe = simpleRecipe.replace("mode=0755",
-                                         "contents='foobar\\n', mode=0755")
+        newRecipe = simpleRecipe.replace("mode=0o755",
+                                         "contents='foobar\\n', mode=0o755")
         self.updateSourceTrove('test', newRecipe, versionStr = label1.asString())
         # And build in the repo
         built = self.cookFromRepository('test', buildLabel = label1)
@@ -1124,8 +1124,8 @@ testcase.recipe
         self.mkbranch(['test:source=' + label2.asString()], label1, shadow=True)
 
         # Noop change
-        newRecipe = simpleRecipe.replace("mode=0755",
-                                         "contents='foobar\\n', mode=0755")
+        newRecipe = simpleRecipe.replace("mode=0o755",
+                                         "contents='foobar\\n', mode=0o755")
         self.updateSourceTrove('test', newRecipe, versionStr = label1.asString())
         # And build in the repo
         built = self.cookFromRepository('test', buildLabel = label1)
@@ -1149,7 +1149,7 @@ class SimpleRecipe(PackageRecipe):
     version = '1.0'
     clearBuildReqs()
     def setup(r):
-        r.Create('/usr/bin/foo', mode=0755)
+        r.Create('/usr/bin/foo', mode=0o755)
 '''
 
 simpleRecipe2 = '''
@@ -1158,8 +1158,8 @@ class SimpleRecipe(PackageRecipe):
     version = '2.0'
     clearBuildReqs()
     def setup(r):
-        r.Create('/usr/bin/foo', mode=0755)
-        r.Create('/usr/bin/bar', mode=0755)
+        r.Create('/usr/bin/foo', mode=0o755)
+        r.Create('/usr/bin/bar', mode=0o755)
 '''
 
 simpleRecipe3 = '''
@@ -1168,9 +1168,9 @@ class SimpleRecipe(PackageRecipe):
     version = '3.0'
     clearBuildReqs()
     def setup(r):
-        r.Create('/usr/bin/foo', mode=0755)
-        r.Create('/usr/bin/bar', mode=0755)
-        r.Create('/usr/bin/baz', mode=0755)
+        r.Create('/usr/bin/foo', mode=0o755)
+        r.Create('/usr/bin/bar', mode=0o755)
+        r.Create('/usr/bin/baz', mode=0o755)
 '''
 
 simpleRedirectRecipe = r"""\

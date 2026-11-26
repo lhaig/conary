@@ -629,6 +629,6 @@ include         /etc/test%s
 ''' % (i, i))
             import time
             r.Create('/etc/test%s' % i, contents=str(time.time()) + '\\n')
-            r.Create('%%(taghandlerdir)s/tag%s' % i, mode=0755)
+            r.Create('%%(taghandlerdir)s/tag%s' % i, mode=0o755)
             r.TagSpec('tag%s' % i, '/etc/test%s' % i)
 """

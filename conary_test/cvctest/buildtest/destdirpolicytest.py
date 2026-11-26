@@ -58,7 +58,7 @@ class TestFixDirModes(PackageRecipe):
         # as an owned directory
         self.Run('mkdir %(destdir)s/foo; chmod 0111 %(destdir)s/foo')
         # this should be an owned directory with mode 011
-        self.MakeDirs('/bar', mode=0111)
+        self.MakeDirs('/bar', mode=0o111)
 """
         self.reset()
         (built, d) = self.buildRecipe(recipestr1, "TestFixDirModes")
@@ -100,7 +100,7 @@ class TestAutoDoc(PackageRecipe):
         r.Create('LICENSE/LICENSE')
         r.Create('asdf/fdsa')
         r.Symlink('asdf', 'READMEs')
-        r.Install('README', '%(thisdocdir)s/', mode=0400)
+        r.Install('README', '%(thisdocdir)s/', mode=0o400)
 """
         self.reset()
         (built, d) = self.buildRecipe(recipestr0, "TestAutoDoc")
@@ -145,7 +145,7 @@ class TestRemoveNonPackageFiles(PackageRecipe):
         self.Create('%(servicedir)s/www/tmp/somefile.xml')
         self.Create('%(libdir)s/ruby/1.2.3/gems/cache/foo.gem')
         self.RemoveNonPackageFiles(exceptions='/bar~')
-        self.RemoveNonPackageFiles(exceptions='/bar\..*')
+        self.RemoveNonPackageFiles(exceptions=r'/bar\..*')
 """
         self.reset()
         m = macros.Macros()
@@ -204,7 +204,7 @@ class TestFixupMultilibPaths(PackageRecipe):
         # and don't make ldconfig noises
         r.Create('true.c', contents='int main() { return 0; }')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('lib', '.*')
 
         r.Create('/usr/lib/foo.a')
@@ -285,7 +285,7 @@ class TestFixupMultilibPaths(PackageRecipe):
         # and don't make ldconfig noises
         r.Create('true.c', contents='int main() { return 0; }')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
 """
         self.reset()
         self.logFilter.add()
@@ -376,7 +376,7 @@ class TestExecutableLibraries(PackageRecipe):
         self.Run('make CFLAGS="-g -fPIC" foo.o')
         self.Run('ar r libfoo.a foo.o')
         self.Run('gcc -g -shared -Wl,-soname,libfoo.so.0 -o libfoo.so.0.0 foo.o')
-        self.Install('libfoo.so*', '/usr/foo/', mode=0644)
+        self.Install('libfoo.so*', '/usr/foo/', mode=0o644)
         self.SharedLibrary(subtrees='/usr/foo')
 """
         self.reset()
@@ -411,7 +411,7 @@ class TestExecutableLibraries(PackageRecipe):
         self.Run('make CFLAGS="-g -fPIC" foo.o')
         self.Run('ar r libfoo.a foo.o')
         self.Run('gcc -g -shared -Wl,-soname,libfoo.so.0 -o libfoo.so.0.0 foo.o')
-        self.Install('libfoo.so*', '/usr/foo/', mode=0644)
+        self.Install('libfoo.so*', '/usr/foo/', mode=0o644)
         self.Create('/etc/ld.so.conf.d/foo.conf', contents = '/usr/foo')
 """
         self.reset()
@@ -446,7 +446,7 @@ class TestExecutableLibraries(PackageRecipe):
         self.Run('make CFLAGS="-g -fPIC" foo.o')
         self.Run('ar r libfoo.a foo.o')
         self.Run('gcc -g -shared -Wl,-soname,libfoo.so.0 -o libfoo.so.0.0 foo.o')
-        self.Install('libfoo.so*', '/usr/foo/', mode=0644)
+        self.Install('libfoo.so*', '/usr/foo/', mode=0o644)
 """
         self.reset()
         ldConfPath = os.path.join(os.path.sep, 'etc', 'ld.so.conf.d',
@@ -486,7 +486,7 @@ class TestExecutableLibraries(PackageRecipe):
         self.Run('make CFLAGS="-g -fPIC" foo.o')
         self.Run('ar r libfoo.a foo.o')
         self.Run('gcc -g -shared -Wl,-soname,libfoo.so.0 -o libfoo.so.0.0 foo.o')
-        self.Install('libfoo.so*', '/usr/foo/', mode=0644)
+        self.Install('libfoo.so*', '/usr/foo/', mode=0o644)
 """
         self.reset()
         ldConfPath = os.path.join(self.cfg.root, 'etc', 'ld.so.conf.d',
@@ -513,8 +513,8 @@ class TestReadableDocs(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('%(thisdocdir)s/README', mode=0600)
-        r.Create('%(thisdocdir)s/executable', mode=0700)
+        r.Create('%(thisdocdir)s/README', mode=0o600)
+        r.Create('%(thisdocdir)s/executable', mode=0o700)
 """
         self.reset()
         self.logFilter.add()
@@ -561,8 +561,8 @@ class TestStrip(PackageRecipe):
         r.Run('%(cc)s -g -shared -Wl,-soname,libblah.so.0 -o libblah.so.0 libblah.o')
         r.Install('libblah.so.0', '%(libdir)s/')
         r.Install('libblah.so.0', '%(prefix)s/lib/')
-        r.Install('foo2', '%(bindir)s/', mode=0555)
-        r.Install('foo', '%(bindir)s/', mode=0555)
+        r.Install('foo2', '%(bindir)s/', mode=0o555)
+        r.Install('foo', '%(bindir)s/', mode=0o555)
         r.Install('foo', '%(bindir)s/foo.unstripped')
         r.Install('bar', '%(bindir)s/')
         r.Symlink('bar', '%(bindir)s/baz')
@@ -574,7 +574,7 @@ class TestStrip(PackageRecipe):
         # and don't make ldconfig noises
         r.Create('true.c', contents='int main() { return 0; }')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('lib', '.*')
 """
         self.reset()
@@ -621,7 +621,7 @@ class TestStrip(PackageRecipe):
         r.macros.strip_archive = 'strip-missing'
         r.Create('foo.c', contents="int main(void) { return 0 ; }")
         r.Make('CFLAGS="-g -static" LDFLAGS="-g -static" foo')
-        r.Install('foo', '%(bindir)s/', mode=0755)
+        r.Install('foo', '%(bindir)s/', mode=0o755)
 
         r.Create('libblah.c', contents="int foo(void) { return 1 ; }")
         r.Make('libblah.o')
@@ -633,7 +633,7 @@ class TestStrip(PackageRecipe):
         # don't make ldconfig noises
         r.Create('true.c', contents='int main() { return 0; }')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('lib', '.*')
 """
         self.reset()
@@ -695,7 +695,7 @@ int main() {
 }
 ''')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('lib', '.*')
 """
         self.logFilter.ignore('warning: EnforceSonameBuildRequirements: The following dependencies are not resolved within the package or in the system database:.*')
@@ -748,7 +748,7 @@ class TestNormalizeLibrarySymlinks(PackageRecipe):
         # and don't make ldconfig noises
         r.Create('true.c', contents='int main() { return 0; }')
         r.Run('%(cc)s %(ldflags)s -static -o true true.c')
-        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0755)
+        r.Install('true', '%(essentialsbindir)s/ldconfig', mode=0o755)
         r.ComponentSpec('lib', '.*')
 """
         self.logFilter.ignore('warning: EnforceSonameBuildRequirements:.*')
@@ -775,9 +775,9 @@ class TestNormalizeCompression(PackageRecipe):
         r.Install('a', '%(datadir)s/foo')
         r.Install('a', '%(datadir)s/')
         r.Run('cp a b; bzip2 -1 a; bzip2 -9 b')
-        r.Install('foo.gz', '%(datadir)s/', mode=0444)
+        r.Install('foo.gz', '%(datadir)s/', mode=0o444)
         r.Install('bar.gz', '%(datadir)s/')
-        r.Install('a.bz2', '%(datadir)s/', mode=0440)
+        r.Install('a.bz2', '%(datadir)s/', mode=0o440)
         r.Install('b.bz2', '%(datadir)s/')
 """
         self.reset()
@@ -988,23 +988,23 @@ class TestNormalizeInterpreterPaths(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/env perl', mode=0755)
-        r.Create('/bin/foo2', contents='#!/bin/env /usr/bin/perl', mode=0755)
+        r.Create('/bin/foo', contents='#!/bin/env perl', mode=0o755)
+        r.Create('/bin/foo2', contents='#!/bin/env /usr/bin/perl', mode=0o755)
         # test writing to read-only files
-        r.Create('/bin/bar', contents='#!/usr/bin/env perl', mode=0555)
+        r.Create('/bin/bar', contents='#!/usr/bin/env perl', mode=0o555)
         # test writing to execute-only files
-        r.Create('/bin/blah', contents='#!/bin/bash', mode=0111)
+        r.Create('/bin/blah', contents='#!/bin/bash', mode=0o111)
         # test writing to files w/ normal permissions
-        r.Create('/bin/asdf', contents='#!/usr/bin/env blah', mode=0755)
-        r.Create('/bin/asdf1', contents='#!/usr/local/bin/env blah', mode=0755)
-        r.Create('/foo/bla', contents='#!/usr/local/bin/perl -w', mode=0755)
-        r.Create('/foo/bla1', contents='#!/usr/local/bin/foo', mode=0755)
-        r.Create('/foo/bla2', contents='#!/usr/local/sbin/sh', mode=0755)
+        r.Create('/bin/asdf', contents='#!/usr/bin/env blah', mode=0o755)
+        r.Create('/bin/asdf1', contents='#!/usr/local/bin/env blah', mode=0o755)
+        r.Create('/foo/bla', contents='#!/usr/local/bin/perl -w', mode=0o755)
+        r.Create('/foo/bla1', contents='#!/usr/local/bin/foo', mode=0o755)
+        r.Create('/foo/bla2', contents='#!/usr/local/sbin/sh', mode=0o755)
         # test non-execute files
-        r.Create('/foo/blah', contents='#!/bin/env perl', mode=0644)
-        r.Create('/foo/bar', contents='#!./bin/env perl', mode=0644)
+        r.Create('/foo/blah', contents='#!/bin/env perl', mode=0o644)
+        r.Create('/foo/bar', contents='#!./bin/env perl', mode=0o644)
         # errors in thisdocdir should not be noted
-        r.Create('%(thisdocdir)s/asdf', contents='#!/bin/env /nonesuch', mode=0755)
+        r.Create('%(thisdocdir)s/asdf', contents='#!/bin/env /nonesuch', mode=0o755)
         r.Requires('%(essentialbindir)s/bash', exceptions='.*')
         r.Requires('%(essentialbindir)s/blah', exceptions='.*')
         r.Requires('%(bindir)s/perl', exceptions='.*')
@@ -1062,7 +1062,7 @@ class TestNormalizeInterpreterPaths(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/bin/foo', contents='#!/bin/env nosuchfile', mode=0755)
+        r.Create('/bin/foo', contents='#!/bin/env nosuchfile', mode=0o755)
 """
         self.reset()
         self.assertRaises(policy.PolicyError, self.buildRecipe, 
@@ -1079,7 +1079,7 @@ class TestNormalizeInterpreterPaths(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/foo/bla', contents='#!/bin/env', mode=0755)
+        r.Create('/foo/bla', contents='#!/bin/env', mode=0o755)
 """
         self.reset()
         self.assertRaises(policy.PolicyError, self.buildRecipe, 
@@ -1097,10 +1097,10 @@ class TestNormalizePamConfig(PackageRecipe):
     
     def setup(r):
         r.Create('/%(sysconfdir)s/pam.d/foo', contents='/lib/security/$ISA/',
-                 mode=0400)
+                 mode=0o400)
         r.Symlink('foo', '%(sysconfdir)s/pam.d/bar')
         r.Create('/%(sysconfdir)s/pam.d/stack', contents='account    required pam_stack.so service=system-auth',
-                 mode=0400)
+                 mode=0o400)
 
 """
         self.reset()
@@ -1227,17 +1227,17 @@ class TestNormalizePythonInterpreterVersion(PackageRecipe):
         r.NormalizePythonInterpreterVersion(versionMap={
             '%%(bindir)s/python25': '%(longVersion)s'})
 
-        r.Create('/bin/foo0', contents=r'#!/usr/bin/python -o\\n', mode=0755)#not normalized interpriter path
-        r.Create('/bin/foo1', contents=r'#!%(longVersion)s -o\\n', mode=0755)#correct interpriter path
-        r.Create('/bin/foo2', contents=r'#!/usr/bin/python -o\\n', mode=0555)#test writing to read-only files
-        r.Create('/bin/foo3', contents=r'#!/usr/bin/python -o\\nimport time\\n', mode=0111)#test writing to execute-only files
-        r.Create('/bin/foo4', contents=r'#!%%(bindir)s/python25 -o\\n', mode=0755)#not normalized interpriter path
+        r.Create('/bin/foo0', contents=r'#!/usr/bin/python -o\\n', mode=0o755)#not normalized interpriter path
+        r.Create('/bin/foo1', contents=r'#!%(longVersion)s -o\\n', mode=0o755)#correct interpriter path
+        r.Create('/bin/foo2', contents=r'#!/usr/bin/python -o\\n', mode=0o555)#test writing to read-only files
+        r.Create('/bin/foo3', contents=r'#!/usr/bin/python -o\\nimport time\\n', mode=0o111)#test writing to execute-only files
+        r.Create('/bin/foo4', contents=r'#!%%(bindir)s/python25 -o\\n', mode=0o755)#not normalized interpriter path
 """
 
-        self.interpreter = "r.Create('/usr/bin/python', macros=False, contents=pyc, mode=0755)"
+        self.interpreter = "r.Create('/usr/bin/python', macros=False, contents=pyc, mode=0o755)"
         variants = (
             ("r.Link('%(longVersion)s', '/usr/bin/python')", self.interpreter),
-            ("r.Create('%(longVersion)s', macros=False, contents=pyc, mode=0755)", self.interpreter),
+            ("r.Create('%(longVersion)s', macros=False, contents=pyc, mode=0o755)", self.interpreter),
             ("", self.interpreter),
             ("", ""),
         )
@@ -1311,14 +1311,14 @@ class TestNormalizePythonInterpreterVersionMap(PackageRecipe):
             ['%(bindir)s/python25', '%(bindir)s/python2.5']
         ))
 
-        r.Create('/usr/bin/python', macros=False, contents=pyc, mode=0755)
+        r.Create('/usr/bin/python', macros=False, contents=pyc, mode=0o755)
         r.Link('python2.5', '/usr/bin/python')
-        r.Create('/bin/foo0', contents='#!/usr/bin/python', mode=0755)
-        r.Create('/bin/foo1', contents='#!/usr/bin/python25', mode=0755)
-        r.Create('/bin/foo2', contents='#!/usr/bin/python2.5', mode=0755)
+        r.Create('/bin/foo0', contents='#!/usr/bin/python', mode=0o755)
+        r.Create('/bin/foo1', contents='#!/usr/bin/python25', mode=0o755)
+        r.Create('/bin/foo2', contents='#!/usr/bin/python2.5', mode=0o755)
         # Make sure ordering with NormalizeInterpreterPaths is correct
-        r.Create('/bin/foo3', contents='#!/usr/bin/env python', mode=0755)
-        r.Create('/bin/foo4', contents='#!/usr/bin/env python2.5', mode=0755)
+        r.Create('/bin/foo3', contents='#!/usr/bin/env python', mode=0o755)
+        r.Create('/bin/foo4', contents='#!/usr/bin/env python2.5', mode=0o755)
 """
 
         built, d = self.buildRecipe(recipestr, 'TestNormalizePythonInterpreterVersionMap')
@@ -1516,7 +1516,7 @@ class PythonEggsTest(rephelp.RepositoryHelper):
             # create a file so that the build can complete ensure everything
             # ends up in the same component
             r.Create('/opt/splat', package = 'egg-recipe:python')
-            r.RemoveNonPackageFiles('.*\.egg')
+            r.RemoveNonPackageFiles(r'.*\.egg')
             r.addSource('foo.egg',
                     dir = '%(libdir)s/python2.5/site-packages/')"""
 
@@ -1824,7 +1824,7 @@ class InitTest(PackageRecipe):
         self.Create('%(initdir)s/bar', contents = chr(10).join((
             '# chkconfig: - 10 99',
             '# description: junk',
-            '/etc/rc.d/init.d/bar')), mode = 0755)
+            '/etc/rc.d/init.d/bar')), mode = 0o755)
 """
         built, d = self.buildRecipe(recipeStr, 'InitTest')
         self.updatePkg('test:runtime')
@@ -1842,7 +1842,7 @@ class Functions(PackageRecipe):
     version = '1.0'
     clearBuildReqs()
     def setup(r):
-        r.Create('%(initdir)s/functions', mode=0755)
+        r.Create('%(initdir)s/functions', mode=0o755)
 """
         self.build(funcRecipe, 'Functions')
 
@@ -1857,7 +1857,7 @@ class InitTest(PackageRecipe):
         r.Create('%(initdir)s/foo', contents='\n'.join((
             '# chkconfig: - 10 99',
             '# description: junk',
-            '. %(initdir)s/functions')), mode=0755)
+            '. %(initdir)s/functions')), mode=0o755)
 """
         trove = self.build(initRecipe, 'InitTest')
         # dep on file is file dep
@@ -1885,7 +1885,7 @@ class InitTest(PackageRecipe):
         self.Create('/opt/bar', contents = chr(10).join((
             '# chkconfig: - 10 99',
             '# description: junk',
-            '/etc/rc.d/init.d/bar')), mode = 0755)
+            '/etc/rc.d/init.d/bar')), mode = 0o755)
         self.Symlink('/opt/bar', '%(initdir)s/bar')
 """
         built, d = self.buildRecipe(recipeStr, 'InitTest')
@@ -1928,7 +1928,7 @@ class InitTest(PackageRecipe):
         self.Create('%(initdir)s/foo', contents = chr(10).join((
             '# chkconfig: - 10 99',
             '# description: junk',
-            '/etc/rc.d/init.d/bar')), mode = 0755)
+            '/etc/rc.d/init.d/bar')), mode = 0o755)
         self.Symlink('%(initdir)s/foo', '%(initdir)s/bar')
 """
         built, d = self.buildRecipe(recipeStr, 'InitTest')
@@ -1951,7 +1951,7 @@ class InitTest(PackageRecipe):
         self.Create('/opt/foo', contents = chr(10).join((
             '# chkconfig: - 10 99',
             '# description: junk',
-            '/etc/rc.d/init.d/bar')), mode = 0755)
+            '/etc/rc.d/init.d/bar')), mode = 0o755)
         self.Symlink('/opt', '%(initdir)s')
 """
         built, d = self.buildRecipe(recipeStr, 'InitTest')
@@ -1974,7 +1974,7 @@ class InitTest(PackageRecipe):
         self.Create('/opt/init.d/foo', contents = chr(10).join((
             '# chkconfig: - 10 99',
             '# description: junk',
-            '/etc/rc.d/init.d/bar')), mode = 0755)
+            '/etc/rc.d/init.d/bar')), mode = 0o755)
         self.Symlink('/opt', '/etc')
 """
         built, d = self.buildRecipe(recipeStr, 'InitTest')

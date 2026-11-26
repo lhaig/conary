@@ -30,7 +30,7 @@ class testRecipe(PackageRecipe):
     def setup(self):
         self.Create("/bin/ls")
         self.Create("/bin/cat")
-        self.SetModes("/bin/{ls,cat}", 0755)
+        self.SetModes("/bin/{ls,cat}", 0o755)
         self.Create("/bin/dd")
         self.NonBinariesInBindirs(exceptions='/bin/dd')
         self.Create("/usr/bin/vi")

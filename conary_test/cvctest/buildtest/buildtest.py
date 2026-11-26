@@ -319,7 +319,7 @@ class TestPutFiles(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('/file', contents = 'old', mode = 0444)
+        r.Create('/file', contents = 'old', mode = 0o444)
         r.Run('echo new > new')
         r.Install('new', '/file')
 """
@@ -335,7 +335,7 @@ class TestPutFiles(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/dir1/foo1', contents='abc', mode=0755)
+        r.Create('/dir1/foo1', contents='abc', mode=0o755)
         # Link to an existing file
         r.Symlink('foo1', '/dir1/foo5')
         # Dangling symlink
@@ -345,7 +345,7 @@ class TestPutFiles(PackageRecipe):
         # This should simply copy the file
         r.Install('/dir1/foo5', '/dir5/foo5')
         # This is just to test modes for Install
-        r.Install('/dir1/foo1', '/dir1/foo600', mode=0600)
+        r.Install('/dir1/foo1', '/dir1/foo600', mode=0o600)
 """
         self.reset()
         (built, d) = self.buildRecipe(recipestr, "TestPutFiles")
@@ -618,7 +618,7 @@ class TestSugid(PackageRecipe):
     clearBuildReqs()
     
     def setup(self):
-        self.Create('%(essentialbindir)s/a', mode=06755)
+        self.Create('%(essentialbindir)s/a', mode=0o6755)
 """
         self.reset()
         (built, d) = self.buildRecipe(recipestr1, "TestSugid")
@@ -650,7 +650,7 @@ class TestCreate(PackageRecipe):
         self.Create('/c', '/d', contents='ABCDEFGABCDEFGABCDEFGABCDEFG')
         self.Create('/e', contents='%(essentialbindir)s')
         self.Create('/f', contents='%(essentialbindir)s', macros=False)
-        self.Create('%(essentialbindir)s/{g,h}', mode=0755)
+        self.Create('%(essentialbindir)s/{g,h}', mode=0o755)
 """
         self.reset()
         (built, d) = self.buildRecipe(recipestr1, "TestCreate")
@@ -757,7 +757,7 @@ class TestConfigure(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.addSource('configure', mode=0755, contents='''#!/bin/sh
+        r.addSource('configure', mode=0o755, contents='''#!/bin/sh
 exit 0
 ''')
         r.Configure()
@@ -776,7 +776,7 @@ class TestConfigure(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.addSource('configure', mode=0755, contents='''#!/bin/sh
+        r.addSource('configure', mode=0o755, contents='''#!/bin/sh
 touch mustNotExist
 exit 0
 ''')
@@ -794,7 +794,7 @@ class TestConfigure(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.addSource('configure', mode=0755, contents='''#!/bin/sh
+        r.addSource('configure', mode=0o755, contents='''#!/bin/sh
 exit 0
 ''')
         r.Configure(subDir='missing')
@@ -812,7 +812,7 @@ class TestConfigure(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.addSource('configure', mode=0755, contents='''#!/bin/sh -x
+        r.addSource('configure', mode=0o755, contents='''#!/bin/sh -x
 echo "$CONFIG_SITE" > $1
 ''')
         r.MakeDirs('/make', '/conf')
@@ -844,7 +844,7 @@ class TestConfigure(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.addSource('configure', mode=0755, contents='''#!/bin/sh
+        r.addSource('configure', mode=0o755, contents='''#!/bin/sh
 echo "$0: line 2000: foo: command not found"
 # exit 1
 ''')
@@ -933,7 +933,7 @@ class TestConfigure(PackageRecipe):
     clearBuildReqs()
 
     def setup(r):
-        r.Create('configure', mode=0755, contents='''#!/bin/sh
+        r.Create('configure', mode=0o755, contents='''#!/bin/sh
 echo "/random/path/configure: line 2000: foo: command not found"
 ''')
         r.ManualConfigure('')
@@ -1113,15 +1113,15 @@ class TestConsoleHelper(PackageRecipe):
     clearBuildReqs()
     def setup(r):
         # test default values
-        r.Create('%(sbindir)s/foo', mode=0755)
+        r.Create('%(sbindir)s/foo', mode=0o755)
         r.ConsoleHelper('%(bindir)s/foo', '%(sbindir)s/foo')
         # test non-default values
-        r.Create('%(sbindir)s/bar', mode=0755)
+        r.Create('%(sbindir)s/bar', mode=0o755)
         r.ConsoleHelper('%(bindir)s/bar', '%(sbindir)s/bar',
             consoleuser=True, timestamp=True, targetuser='<user>',
             session=False, fallback=True, noxoption='--haha',
             otherlines=['ONE=one', 'TWO=two'])
-        r.Create('%(sbindir)s/blah', mode=0755)
+        r.Create('%(sbindir)s/blah', mode=0o755)
         r.Create('blah.pam', contents='TESTING')
         r.ConsoleHelper('%(bindir)s/blah', '%(sbindir)s/blah',
             pamfile='blah.pam')
@@ -1285,12 +1285,12 @@ class Foo(PackageRecipe):
     clearBuildReqs()
     
     def setup(r):
-        r.Create('/asdf/foo', mode=0700)
-        r.Create('asdf/foo', mode=0777)
+        r.Create('/asdf/foo', mode=0o700)
+        r.Create('asdf/foo', mode=0o777)
         r.Run('ls foo', dir='/asdf')
         r.Run('ls foo', dir='asdf')
         r.Move('/asdf/foo', 'asdf/bar')
-        r.Create('/asdf/foo', mode=0700, component=':comp1')
+        r.Create('/asdf/foo', mode=0o700, component=':comp1')
         r.Run('ls bar', dir='asdf')
         r.Copy('asdf/bar', '/asdf/bar')
         r.Run('ls bar', dir='/asdf')
@@ -1302,7 +1302,7 @@ class Foo(PackageRecipe):
         r.Move('asdf/foo', '/asdf/bar')
         r.Remove('/asdf/bar')
         r.MakeDirs('/asdf/destsubdir', 'asdf/buildsubdir')
-        r.MakeDirs('/asdf/destsubdir2', component=':comp3', mode=0700)
+        r.MakeDirs('/asdf/destsubdir2', component=':comp3', mode=0o700)
         r.Run('ls destsubdir', dir='/asdf')
         r.Run('ls buildsubdir', dir='asdf')
         r.Symlink('destsubdir', '/asdf/symlink', component=':comp4')
@@ -1311,7 +1311,7 @@ class Foo(PackageRecipe):
         r.Run('ls symlink', dir='asdf')
         r.Symlink('%(builddir)s/asdf/bar2', 'asdf/buildsubdir')
         r.Run('ls buildsubdir/bar2', dir='asdf')
-        r.SetModes('asdf/bar2', '/asdf/destsubdir', 0700)
+        r.SetModes('asdf/bar2', '/asdf/destsubdir', 0o700)
         r.Run('''
 mkdir %(destdir)s/builddir
 cat > %(destdir)s/builddir/hello.c <<'EOF'
@@ -1334,13 +1334,13 @@ int main(void) {
 EOF
                         ''')
         r.Make('hello', preMake='LDFLAGS="-static"', subDir='builddir')
-        r.Create('/builddir/configure', mode=0755, contents='''\
+        r.Create('/builddir/configure', mode=0o755, contents='''\
 #!/bin/sh
 echo hello > config.out
 ''')
         r.Configure(subDir='/builddir')
         r.Run('ls config.out', dir='/builddir')
-        r.Create('builddir/configure', mode=0755, contents='''\
+        r.Create('builddir/configure', mode=0o755, contents='''\
 #!/bin/sh
 echo hello > config.out
 ''')
@@ -1355,7 +1355,7 @@ echo hello > config.out
         r.Run('ls config.out3', dir='/builddir')
         r.Install('/builddir/config.out', 'builddir/config.out3')
         r.Run('ls config.out3', dir='builddir')
-        r.MakeDirs('/usr/share/%%bar', mode=0700)
+        r.MakeDirs('/usr/share/%%bar', mode=0o700)
         r.Run('ls %(destdir)s/usr/share/%%bar')
         r.Doc('/builddir/config.*', component='package2:comp2')
         r.Run('ls config.out', dir='%(thisdocdir)s')
@@ -1381,7 +1381,7 @@ class TestDirSyntax(PackageRecipe):
         r.Create('/asdf/foo', contents='abc\n')
         r.Create('asdf/foo', contents='abc\n')
         """
-        recipe2 = emptyRecipe + 'r.Create("asdf/bar", mode=02755)'
+        recipe2 = emptyRecipe + 'r.Create("asdf/bar", mode=0o2755)'
         self.assertRaises(RuntimeError, self.buildRecipe, 
                             recipe2, "TestDirSyntax")
         recipe2 = emptyRecipe + 'r.Create("asdf/bar", component=":lib")'
@@ -1719,10 +1719,10 @@ class TestSetModes(PackageRecipe):
     
     def setup(r):
         r.Create('/usr/bin/foo')
-        r.SetModes('/usr/bin/foo', 04751)
+        r.SetModes('/usr/bin/foo', 0o4751)
         r.Create('/foo/bar')
-        r.SetModes('/foo/bar', 07755)
-        r.SetModes('/foo/bar', 0755)
+        r.SetModes('/foo/bar', 0o7755)
+        r.SetModes('/foo/bar', 0o755)
 """
         built, d = self.buildRecipe(recipestr, "TestSetModes")
         permMap = { '/usr/bin/foo': 0o4751,
