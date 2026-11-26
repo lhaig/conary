@@ -301,3 +301,23 @@ PATTERN: environment - Build outputs (.so) are arch specific in the shared check
 PATTERN: environment - Arches come from arch data files (config/arch, conary_test/archive/arch), not from use.py.
 PATTERN: testing - Hardcoded x86 expectations in conary_test hide behind sqlharness skips; expect an arch-specific class to grow after 3.14.
 PATTERN: tooling - devenv/conary_test_baseline.sh overwrites its outdir; use a dated outdir per run.
+
+## 2026-11-26 - tasks 3.4 and 3.5 DONE
+
+- 3.4 hashing: the rule lives in the sha1helper docstring and in sha1helper.toBytes: str becomes utf-8/surrogateescape bytes, bytes-like passes through, and
+  anything else raises TypeError. Most text callers hash persisted identities (pathIds from md5String(path), fingerprints), so
+  encoding at the helper boundary reproduces Py2 digests. Fixed getId (str in both branches), filetypes devnull 'wb' and RegularFile
+  bytes, FromString (stores bytes, BytesIO), fingerprints (bytes join, decodebytes of str or bytes), build.sha1sum, proxy
+  memcache keys, and netauth keys and passwords. copyfileobj is unchanged: the openers used the wrong mode.
+  'Strings must be encoded' went to 0 in the measured modules (cmdlinetest 29 failed/28 passed -> 6 failed/51 passed). Most of the remaining
+  failures there are streams class (files.py:419 str + bytes) or file I/O (util.py:908).
+- 3.5: requireChroot uses typed ctypes and frees its pointers; _hasChrootCap parses bytes. files.UserGroupIdCache restores
+  the chroot and cwd in nested finally blocks (_chrootTo), which was the real cause of the "deleted cwd" crash. All 91 not-run ids now report.
+- Review MINOR on both. Orchestrator fixed: FromString encoding str (production trovecache passes str), fingerprint blocks
+  arriving as str, a known vector for nonstandardSha256String, a memoryview case, printf in place of echo -n, and a public toBytes.
+- py3tests 763 passed, 3 xfailed; compile gate clean; pyflakes clean on the touched files.
+
+PATTERN: bytes/str - One encode rule, one helper: sha1helper.toBytes (utf-8, surrogateescape). Reuse it instead of local copies.
+PATTERN: bytes/str - When a shared helper changes its return type (FromString.get to BytesIO), audit every caller, production and test.
+PATTERN: harness - ctypes pointers that must be freed need restype c_void_p, never c_char_p; check for NULL before string_at.
+PATTERN: harness - A "deleted cwd" crash can come from production code that chroots or chdirs without try/finally (files.UserGroupIdCache).
