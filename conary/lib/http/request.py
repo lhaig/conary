@@ -20,6 +20,7 @@ import urllib.parse
 import zlib
 
 from conary.lib import networking
+from conary.lib import sha1helper
 from conary.lib import util
 from conary.lib.compat import namedtuple
 
@@ -99,6 +100,12 @@ class URL(namedtuple('URL', 'scheme userpass hostport path')):
         return rv
 
 
+def basicAuth(userpass):
+    """Return the value of a Basic Authorization header for (user, pass)."""
+    raw = sha1helper.toBytes(":".join(userpass))
+    return "Basic " + base64.b64encode(raw).decode('ascii')
+
+
 class HTTPHeaders(object):
     __slots__ = ('_headers',)
 
@@ -133,6 +140,9 @@ class HTTPHeaders(object):
     def get(self, key, default=None):
         key = self.canonical(key)
         return self._headers.get(key)
+
+    def items(self):
+        return self._headers.items()
 
     def iteritems(self):
         return iter(self._headers.items())
@@ -205,8 +215,7 @@ class Request(object):
                 host = host.encode('idna')
             conn.putheader("Host", host)
         if 'Authorization' not in self.headers and self.url.userpass[0]:
-            conn.putheader("Authorization",
-                    "Basic " + base64.b64encode(":".join(self.url.userpass)))
+            conn.putheader("Authorization", basicAuth(self.url.userpass))
         conn.endheaders()
         self._sendData(conn)
 

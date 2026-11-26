@@ -321,7 +321,7 @@ class ResponseWrapper(object):
     def __init__(self, fp, response):
         self.fp = fp
         self.response = response
-        self._linebuf = ''
+        self._linebuf = b''
 
         self.status = response.status
         self.reason = response.reason
@@ -335,17 +335,17 @@ class ResponseWrapper(object):
         self.response.close()
 
     def readline(self):
-        while '\n' not in self._linebuf:
+        while b'\n' not in self._linebuf:
             d = self.fp.read(1024)
             if not d:
                 break
             self._linebuf += d
-        idx = self._linebuf.find('\n')
+        idx = self._linebuf.find(b'\n')
         if idx >= 0:
             idx += 1
             ret, self._linebuf = self._linebuf[:idx], self._linebuf[idx:]
         else:
-            ret, self._linebuf = self._linebuf, ''
+            ret, self._linebuf = self._linebuf, b''
         return ret
 
     def __iter__(self):

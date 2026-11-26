@@ -28,7 +28,7 @@ import textwrap
 import urllib.request, urllib.error, urllib.parse
 from . import urlparse
 
-from conary.lib import util, api
+from conary.lib import util, api, sha1helper
 from conary.lib.http import proxy_map
 from conary.repository import transport
 from conary import constants, errors
@@ -590,6 +590,19 @@ class _Config(object, metaclass=_ConfigMeta):
             for key in self._cfg_def.options)
 
 
+class _TextLines(object):
+    """Present a bytes file-like object (a URL response) as str lines."""
+
+    def __init__(self, fp):
+        self._fp = fp
+
+    def readline(self):
+        return sha1helper.toStr(self._fp.readline())
+
+    def close(self):
+        return self._fp.close()
+
+
 class ConfigFile(_Config):
     """ _Config class + ability to read in files """
 
@@ -692,7 +705,7 @@ class ConfigFile(_Config):
         if self._ignoreUrlIncludes:
             return
         try:
-            f = self._openUrl(url)
+            f = _TextLines(self._openUrl(url))
             self.readObject(url, f)
         except CfgEnvironmentError:
             if not self._ignoreErrors:

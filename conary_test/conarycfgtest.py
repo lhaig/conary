@@ -1078,7 +1078,7 @@ class QueuedRequestHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.send_response(200)
-        response = "proxy http://foo:123\n"
+        response = b"proxy http://foo:123\n"
         self.send_header('Content-Type', 'text/plain')
         self.send_header('Content-Length', str(len(response)))
         self.end_headers()

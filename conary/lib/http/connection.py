@@ -15,7 +15,6 @@
 #
 
 
-import base64
 import errno
 import glob
 import http.client
@@ -28,6 +27,7 @@ import warnings
 from conary import constants
 from conary.lib import util
 from conary.lib.http import http_error
+from conary.lib.http.request import basicAuth
 
 
 try:
@@ -117,7 +117,7 @@ class Connection(object):
         sock.settimeout(socket.getdefaulttimeout())
 
         host, port = self.endpoint.hostport
-        conn = http.client.HTTPConnection(host, port, strict=True)
+        conn = http.client.HTTPConnection(str(host), port)
         conn.sock = wrapped
         conn.auto_open = False
         return conn
@@ -143,13 +143,13 @@ class Connection(object):
                 "User-Agent: %s" % (self.userAgent,),
                 ]
         if self.proxy.userpass[0]:
-            lines.append("Proxy-Authorization: Basic " +
-                    base64.b64encode(":".join(self.proxy.userpass)))
+            lines.append("Proxy-Authorization: " +
+                    basicAuth(self.proxy.userpass))
         lines.extend(['', ''])
-        sock.sendall('\r\n'.join(lines))
+        sock.sendall('\r\n'.join(lines).encode('latin-1'))
 
         # Parse response to make sure the tunnel was opened successfully.
-        resp = http.client.HTTPResponse(sock, strict=True)
+        resp = http.client.HTTPResponse(sock)
         try:
             resp.begin()
         except http.client.BadStatusLine:
@@ -186,8 +186,8 @@ class Connection(object):
 
     def requestOnce(self, conn, req):
         if self.proxy and self.proxy.userpass[0] and not self.doTunnel:
-            req.headers['Proxy-Authorization'] = ('Basic ' +
-                    base64.b64encode(":".join(self.proxy.userpass)))
+            req.headers['Proxy-Authorization'] = basicAuth(
+                    self.proxy.userpass)
         try:
             req.sendRequest(conn, isProxied=(self.proxy is not None))
         except (KeyboardInterrupt, SystemExit):

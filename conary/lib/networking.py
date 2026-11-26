@@ -255,7 +255,7 @@ class BaseIPAddress(namedtuple('BaseIPAddress', 'address mask'), BaseAddress):
             bin_parts.append(struct.pack('>I', addr_long & 0xFFFFFFFF))
             addr_long >>= 32
         bin_parts.reverse()
-        addr_bin = ''.join(bin_parts)
+        addr_bin = b''.join(bin_parts)
 
         out = socket.inet_ntop(self.family, addr_bin)
         if useMask or (useMask is None and self.mask != self.bits):
