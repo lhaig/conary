@@ -49,6 +49,12 @@ def _toBytes(x):
         return x.encode('utf-8', 'surrogateescape')
     return x
 
+def _thawFlavor(frz):
+    """ThawFlavor that accepts a NULL column (no flags) as the empty flavor."""
+    if frz is None:
+        frz = ''
+    return deps.ThawFlavor(frz)
+
 class UserAuthorization:
 
     pwCache = {}
@@ -65,7 +71,7 @@ class UserAuthorization:
         try:
             cu.execute("INSERT INTO Users (userName, salt, password) "
                        "VALUES (?, ?, ?)",
-                       (user, salt.encode('hex'), password))
+                       (user, salt.hex(), password))
             uid = cu.lastrowid
         except sqlerrors.ColumnNotUnique:
             raise errors.UserAlreadyExists('user: %s' % user)
@@ -85,7 +91,7 @@ class UserAuthorization:
             raise errors.CannotChangePassword
 
         cu.execute("UPDATE Users SET password=?, salt=? WHERE userName=?",
-                   password, salt.encode('hex'), user)
+                   password, salt.hex(), user)
 
     def _checkPassword(self, user, salt, password, challenge, remoteIp = None):
         if challenge is ValidPasswordToken:
@@ -165,7 +171,7 @@ class UserAuthorization:
         query = ("SELECT userGroupId, accept_flags FROM UserGroups"
                 " WHERE %s" % where)
         cu.execute(query, args)
-        return dict((x[0], deps.ThawFlavor(x[1])) for x in cu)
+        return dict((x[0], _thawFlavor(x[1])) for x in cu)
 
     def getAuthorizedRoles(self, cu, user, password, allowAnonymous = True,
                            remoteIp = None):
@@ -208,11 +214,11 @@ class UserAuthorization:
             result = userPasswords
         if userPasswords and not self._checkPassword(
                                         user,
-                                        userPasswords[0][0].decode('hex'),
+                                        bytes.fromhex(_text(userPasswords[0][0])),
                                         userPasswords[0][1],
                                         password, remoteIp):
             result = [ x for x in result if x[3] == 'anonymous' ]
-        return dict((x[2], deps.ThawFlavor(x[5])) for x in result)
+        return dict((x[2], _thawFlavor(x[5])) for x in result)
 
     def getRolesByUser(self, user):
         cu = self.db.cursor()
@@ -313,7 +319,7 @@ class EntitlementAuthorization:
         WHERE entitlement=?
         """, entitlement)
 
-        roleIds = dict((x[0], deps.ThawFlavor(x[1])) for x in cu)
+        roleIds = dict((x[0], _thawFlavor(x[1])) for x in cu)
         if self.entCheckUrl:
             # cacheEntry is still set from the cache check above
             self.cache[cacheEntry] = (roleIds,
@@ -543,7 +549,7 @@ class NetworkAuthorization:
         if not len(rows):
             return False
         salt, challenge = rows[0]
-        salt = salt.decode('hex')
+        salt = bytes.fromhex(_text(salt))
         return self.userAuth._checkPassword(user, salt, challenge, password)
 
     # a simple call to auth.check(authToken) checks that the role
@@ -1302,7 +1308,7 @@ class NetworkAuthorization:
         query = ("""SELECT userGroup, accept_flags, filter_flags
                 FROM UserGroups WHERE userGroup in (%s)""" % placeholders)
         cu.execute(query, list(roles))
-        return dict((x[0], (deps.ThawFlavor(x[1]), deps.ThawFlavor(x[2])))
+        return dict((x[0], (_thawFlavor(x[1]), _thawFlavor(x[2])))
                 for x in cu)
 
     def setRoleFilters(self, roleFiltersMap):

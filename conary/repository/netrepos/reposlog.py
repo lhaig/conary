@@ -65,6 +65,15 @@ class RepositoryCallLogger(calllog.AbstractCallLogger):
         self.serverNameList = serverNameList
         calllog.AbstractCallLogger.__init__(self, logPath, readOnly = readOnly)
 
+    def reopen(self):
+        # The log is a binary pickle stream: AbstractCallLogger opens it in
+        # text mode ('a+'), which cannot take the bytes written below.
+        oldInode = self.inode
+        calllog.AbstractCallLogger.reopen(self)
+        if self.inode != oldInode and not self.readOnly:
+            self.fobj.close()
+            self.fobj = open(self.path, 'ab+')
+
     def log(self, remoteIp, authToken, methodName, args, kwArgs = {},
             exception = None, latency = None, systemId = None):
         # lazy re-open the log file in case it was rotated from underneath us

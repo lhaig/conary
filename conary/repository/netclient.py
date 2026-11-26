@@ -149,10 +149,17 @@ class ServerProxy(util.ServerProxy):
             self._transport.setEntitlements(newEntList)
             return self._marshalCall(method, request)
 
+    def _dumpRequest(self, method, params):
+        """XML-RPC request body as bytes, as the HTTP transport needs."""
+        text = util.xmlrpcDump(params, method, encoding=self._encoding,
+                allow_none=self._allow_none)
+        return text.encode(self._encoding or 'utf-8')
+
     def _marshalCall(self, method, request):
         start = time.time()
         rawRequest = request.toWire()
-        rawResponse = util.ServerProxy._request(self, method, rawRequest)
+        rawResponse = self._transport.request(self._url, self._dumpRequest(
+            method, rawRequest))
         # XMLRPC responses are a 1-tuple
         rawResponse, = rawResponse
         response = self._responseFilter.fromWire(request.version, rawResponse,

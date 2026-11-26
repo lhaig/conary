@@ -286,7 +286,9 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
                 # Commit if someone left a transaction open (or the
                 # DB doesn't have a way to tell)
                 self.db.commit()
-        except Exception as e:
+        except Exception as err:
+            # py3 unbinds the name bound by 'except ... as' on exit
+            e = err
             # on exceptions we rollback the database
             if self.db.inTransaction(default=True):
                 self.db.rollback()
@@ -319,7 +321,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         if exceptionOverride:
             raise exceptionOverride
 
-        raise
+        raise e
 
     def urlBase(self, urlName = True):
         if urlName and self._baseUrlOverride:
@@ -1815,6 +1817,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
                                             statusPath=statusPath)
             except sqlerrors.DatabaseLocked as e:
                 # deadlock occurred; we rollback and try again
+                err = e
                 log.error("Deadlock id %d: %s", attempt, str(e.args))
                 self.log(1, "Deadlock id %d: %s" %(attempt, str(e.args)))
                 if attempt < self.deadlockRetry:
@@ -1823,6 +1826,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
                     continue
                 break
             except Exception as e:
+                err = e
                 break
             else: # all went well
                 util.removeIfExists(path)
@@ -1831,10 +1835,10 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         # we only reach here if we could not handle the exception above
         util.removeIfExists(path)
         # Figure out what to return back
-        if isinstance(e, sqlerrors.DatabaseLocked):
+        if isinstance(err, sqlerrors.DatabaseLocked):
             # too many retries
             raise errors.RepositoryLocked()
-        raise
+        raise err
 
     def _commitChangeSet(self, authToken, cs, mirror = False,
                          hidden = False, statusPath = None):

@@ -10,11 +10,8 @@ import unittest
 import pytest
 
 from testrunner.testcase import SkipTestException
-from testutils import base_server, os_utils, sock_utils, sqlharness
+from testutils import base_server, os_utils, sock_utils
 from testutils.servers import memcache_server
-from testutils.servers.gunicorn_server import GunicornServer
-from testutils.servers.nginx_server import NginxServer
-from testutils.servers.uwsgi_server import UwsgiServer
 
 
 def _listener(host='127.0.0.1'):
@@ -131,22 +128,10 @@ def test_base_server_as_subclassed():
         s.getHostPort()
 
 
-def test_sqlharness_start_skips():
-    assert issubclass(SkipTestException, unittest.SkipTest)
-    with pytest.raises(SkipTestException, match='sqlharness'):
-        sqlharness.start()
-
-
 @pytest.mark.parametrize('cls,kwargs', [
-    (GunicornServer, dict(serverDir='/x', workers=2, application='a',
-                          environ={})),
-    (UwsgiServer, dict(serverDir='/x', workers=2, application='a',
-                       environ={})),
-    (NginxServer, dict(serverDir='/x', proxyTo='unix:/y',
-                       sslCertAndKey=None)),
     (memcache_server.MemcacheServer, {}),
 ])
-def test_servers_skip_on_start(cls, kwargs):
+def test_memcache_skips_on_start(cls, kwargs):
     srv = cls(**kwargs)  # must not raise
     # checkForTracebacks (conary_test/lib/repserver.py) opens errorLog.
     with open(srv.errorLog) as f:

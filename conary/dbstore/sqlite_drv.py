@@ -392,6 +392,17 @@ class Database(BaseDatabase):
     # safest way to affect a column change is to grab the old table
     # definition from the sqlite_master and whish for the best...
     def renameColumn(self, table, oldName, newName):
+        # SQLite 3.26+ rewrites views that mention a renamed table and fails
+        # while the temporary rename leaves them dangling; the legacy mode
+        # keeps the behaviour this copy-and-swap relies on.
+        assert(self.dbh)
+        self.dbh.execute("PRAGMA legacy_alter_table=ON")
+        try:
+            return self._renameColumn(table, oldName, newName)
+        finally:
+            self.dbh.execute("PRAGMA legacy_alter_table=OFF")
+
+    def _renameColumn(self, table, oldName, newName):
         # avoid busywork
         if oldName.lower() == newName.lower():
             return True

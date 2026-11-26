@@ -15,6 +15,7 @@
 #
 
 
+import base64
 import errno
 import itertools
 import logging
@@ -31,6 +32,7 @@ from email.mime import text as mimetext
 from webob import exc as web_exc
 
 from conary.lib import log as cny_log
+from conary.lib import sha1helper
 from conary.lib import util
 from conary.lib.formattrace import formatTrace
 from conary.lib.http.request import URL
@@ -335,7 +337,7 @@ class ConaryHandler(object):
         if not info or len(info) != 2 or info[0] != 'Basic':
             return
         try:
-            info = info[1].decode('base64')
+            info = sha1helper.toStr(base64.b64decode(info[1]))
         except:
             return
         if ':' in info:
@@ -487,7 +489,8 @@ class ConaryHandler(object):
         response.content_type = 'text/xml'
 
         # Output phase -- serialize and write the response
-        body = util.xmlrpcDump((rawResponse,), methodresponse=1)
+        body = sha1helper.toBytes(
+                util.xmlrpcDump((rawResponse,), methodresponse=1))
         accept = self.request.accept_encoding
         if len(body) > 200 and 'deflate' in accept:
             response.content_encoding = 'deflate'
@@ -532,7 +535,7 @@ class ConaryHandler(object):
             return csResponse
 
         # Build a multipart MIME response from the two responses
-        boundary = os.urandom(24).encode('hex')
+        boundary = os.urandom(24).hex()
         totalSize = 0
         iterables = []
         for response in [rpcResponse, csResponse]:
@@ -541,10 +544,11 @@ class ConaryHandler(object):
                 if name in response.headers:
                     leader += "%s: %s\r\n" % (name, response.headers[name])
             leader += "\r\n"
-            trailer = "\r\n"
+            leader = leader.encode('ascii')
+            trailer = b"\r\n"
             totalSize += len(leader) + response.content_length + len(trailer)
             iterables.extend([[leader], response.app_iter, [trailer]])
-        final = "--%s--\r\n" % boundary
+        final = ("--%s--\r\n" % boundary).encode('ascii')
         totalSize += len(final)
         iterables.append([final])
 

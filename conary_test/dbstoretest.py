@@ -261,11 +261,11 @@ class DBStoreTest(DBStoreTestBase):
 
         cu.execute("CREATE TABLE Testing (value %(BLOB)s)" % db.keywords)
         cu.execute("INSERT INTO Testing VALUES (?)",
-                   (cu.binary('\x0b\x00\x0b'),))
+                   (cu.binary(b'\x0b\x00\x0b'),))
 
         cu.execute("SELECT * FROM Testing")
         row = cu.fetchone()
-        self.assertEqual(cu.frombinary(row[0]), '\x0b\x00\x0b')
+        self.assertEqual(cu.frombinary(row[0]), b'\x0b\x00\x0b')
 
     def testReturnTypesBinary(self):
         db = self.getDB()
@@ -273,11 +273,11 @@ class DBStoreTest(DBStoreTestBase):
 
         cu.execute("CREATE TABLE Testing (value %(BINARY4)s)" % db.keywords)
         cu.execute("INSERT INTO Testing VALUES (?)",
-                   (cu.binary('\x0b\x00\x0b\x0a'),))
+                   (cu.binary(b'\x0b\x00\x0b\x0a'),))
 
         cu.execute("SELECT * FROM Testing")
         row = cu.fetchone()
-        self.assertEqual(cu.frombinary(row[0]), '\x0b\x00\x0b\x0a')
+        self.assertEqual(cu.frombinary(row[0]), b'\x0b\x00\x0b\x0a')
 
     def testPrimaryKey(self):
         db = self.getDB()
@@ -399,7 +399,7 @@ class DBStoreTest(DBStoreTestBase):
         ret = cu.execute("SELECT id, name FROM Testing")
         # execute should return the cursor back
         assert (hasattr(ret, "fetchone"))
-        assert (hasattr(ret, "next"))
+        assert (hasattr(ret, "__next__"))
         row = cu.fetchone()
         assert(len(row) == 2)
         assert(row == (1, "1"))
@@ -792,7 +792,9 @@ class DBStoreSchemaTest(DBStoreTestBase):
         cu.execute("select * from foo")
         ret = [ (x[0],x[1]) for x in cu.fetchall()]
         for actual, expected in zip(ret, [('1','2'), ('01','2'), ('001','02')]):
-            actual = actual[0], cu.frombinary(actual[1])
+            if isinstance(actual[1], (bytes, bytearray, memoryview)):
+                # PATHTYPE is binary on PostgreSQL, TEXT on SQLite
+                actual = actual[0], cu.frombinary(actual[1]).decode()
             self.assertEqual(actual, expected)
 
 

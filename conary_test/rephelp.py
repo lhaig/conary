@@ -1413,7 +1413,7 @@ class RepositoryHelper(testhelp.TestCase):
                     filePrimer = '\0'
                 filePrimer = str(filePrimer)
                 # Pad it on the left with zeros, up to 16 chars long
-                pathId = filePrimer.rjust(16, '\1')
+                pathId = sha1helper.toBytes(filePrimer).rjust(16, b'\1')
                 pathId = pathId[0:16]
 
                 contents = RegularFile(contents = contents, pathId = pathId,
@@ -1459,7 +1459,8 @@ class RepositoryHelper(testhelp.TestCase):
                 if pathId is None:
                     pathId = sha1helper.md5String(pathIdSalt + fileName)
                 else:
-                    pathId += '0' * (16 - len(pathId))
+                    pathId = sha1helper.toBytes(pathId)
+                    pathId += b'0' * (16 - len(pathId))
                 f = contents.get(pathId)
 
                 f.flags.isSource(isSource)

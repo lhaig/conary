@@ -1,5 +1,5 @@
-from testutils.servers import SkippedServer
+from testutils.servers.wsgi_server import StdlibWsgiServer
 
 
-class GunicornServer(SkippedServer):
+class GunicornServer(StdlibWsgiServer):
     name = 'gunicorn_server'

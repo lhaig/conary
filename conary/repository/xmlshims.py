@@ -20,6 +20,7 @@ import base64
 from conary import deps, files, versions
 from conary import trovetup
 from conary.lib import compat
+from conary.lib import sha1helper
 
 
 class NetworkConvertors(object):
@@ -117,10 +118,10 @@ class NetworkConvertors(object):
         return deps.deps.ThawDependencySet(ds)
 
     def fromEntitlement(self, ent):
-        return base64.encodestring(ent)
+        return sha1helper.toStr(base64.encodebytes(sha1helper.toBytes(ent)))
 
     def toEntitlement(self, ent):
-        return base64.decodestring(ent)
+        return sha1helper.toStr(base64.decodebytes(sha1helper.toBytes(ent)))
 
     def fromTroveTup(self, tuple, withTime=False):
         if withTime:
