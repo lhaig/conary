@@ -346,3 +346,16 @@ PATTERN: harness - A "deleted cwd" crash can come from production code that chro
 PATTERN: testing - A lock or transaction test that uses a statement exempt from the code path (SELECT) passes vacuously; assert the SQL actually sent with set_trace_callback.
 PATTERN: py3-port - 2to3 turned attribute reads `self.next` into `self.__next__` and `items()` bodies into `list(self.items())` (infinite recursion); grep for both.
 PATTERN: tooling - Parallel tasks in one tree must own disjoint files in practice, not just on paper: shared helpers (util.py) get touched by both.
+
+## 2026-11-26 - tasks 3.9 and 3.6 DONE
+
+- 3.9: Mechanism is a TextStream subclass of StringStream, so the wire format is unchanged and the str API is decided once per field.
+  The rule table is in the conary/streams.py docstring. One decode helper: sha1helper.toStr (utf-8, surrogateescape), the inverse of toBytes.
+  Files use bytes type tags with slice comparisons (bytes[0] is an int). trove.py had py2 '/' division and ord/chr in its
+  freeze/thaw code. The ten target modules went from 100 failures to 43.
+- 3.6: About 45 conary_test modules converted, with a pyflakes and AST guard in py3tests. 88 assertRaises-return uses are left for the harness.
+- py3tests 880 passed; compile gate clean.
+
+PATTERN: bytes/str - Decide str vs bytes per stream field with a TextStream subclass, not per call site; the wire bytes stay identical.
+PATTERN: bytes/str - Indexing bytes gives an int, so compare single-byte tags with a slice (frz[0:1] == b'd'); an index comparison silently fails.
+PATTERN: review - Run pyflakes on new py3tests files too, and compute "before" counts from the checkpoint junit.
