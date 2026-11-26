@@ -366,3 +366,14 @@ PATTERN: review - Run pyflakes on new py3tests files too, and compute "before" c
 - Classes: py3 semantics other 83 (74 of them are IsADirectoryError in util.loadSourceModule = 3.10), unknown 61, file I/O 41,
   bytes/str other 41, streams/trove 25, removed stdlib 16, harness gap 11, sort/compare 10 (cml.iterFormat 8), py2 in tests 0.
 - Skips: sqlharness 1719, rpm/chroot 91 (no cap_sys_chroot in the container), other 61.
+
+## 2026-11-26 - tasks 3.10 and 3.12 DONE
+
+- 3.10: Py2 behaviour reconstructed from imp.c: fopen of a directory succeeds, the read fails as EOF, and the result is an empty module, so no
+  macros and no error. loadMacros now skips directories; loadSourceModule keeps raising for explicit files. The 74
+  IsADirectoryError failures moved on to recipe.py:197 `__func__` (76 tests), which went to the front of 3.11.
+- 3.12: openpgptest has 0 failures, from test-side bytes fixes only. Harness captureOutput gained _returnException and logLevel.
+- py3tests 921 passed; compile gate clean.
+
+PATTERN: py3-port - To reproduce Py2 behaviour, trace the C implementation (imp.c, fopen) and confirm with garnet history when python2 is unavailable.
+PATTERN: tooling - Never git stash in a tree shared with a concurrent task; compare against `git show HEAD:<file>`.
