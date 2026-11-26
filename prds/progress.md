@@ -155,3 +155,19 @@ PATTERN: harness - conary_test/__init__.py imports testrunner itself, so running
 PATTERN: environment - Workflow worktrees are cut from garnet, not py3: reset the scratch branch to py3 first and copy the gitignored build outputs (conary/constants.py, conary/**/*.so) from the main checkout. Tell workers this up front.
 PATTERN: testing - Scan `<expr>._mock.<attr>` with ast to find the harness API a module-attribute scan cannot see; assert known names are found so the scan cannot pass vacuously.
 PATTERN: harness - testutils.mock must not import testrunner; testrunner.testhelp imports testutils.mock.
+
+## 2026-11-26 - task 2.3 DONE: rest of testutils
+
+- testharness/testutils/: sock_utils.tryConnect(host, port, count=100, interval=0.1) retries create_connection and raises
+  ConnectionRefusedError; os_utils.effectiveUser/effectiveGroup are strings (rephelp formats them into the squid config);
+  base_server.BaseServer; sqlharness.start() and servers/ (SkippedServer base for Nginx, Gunicorn, Uwsgi, Memcache) raise
+  SkipTestException on start/getUrl/getHostPort.
+- Advisor plan PROCEED; review MINOR. Orchestrator follow-ups: SkippedServer.errorLog is os.devnull (None crashed
+  ConaryServer.checkForTracebacks with TypeError), the resolve test now covers testutils.mock, the fd-count helper falls back
+  to /dev/fd off Linux, and a task number was dropped from a comment in test_testutils_mock.py.
+- Applied after 2.2 from a worktree patch, excluding the shared empty testutils/__init__.py.
+- Gates: py3tests 468 passed; compile_check 475 files, 0 failures; pyflakes clean.
+- For 2.7: sqlharness.start() skipping means every repository-backed and dbstore test skips (rephelp.openRepository,
+  DBStoreTestBase.setUp). A SQLite-only sqlharness is likely the biggest unlock in Phase 3.
+
+PATTERN: harness - Stand-ins that skip must still satisfy the teardown paths that touch them (errorLog is opened by checkForTracebacks); grep the callers of every attribute a stand-in sets.

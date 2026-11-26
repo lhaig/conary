@@ -21,7 +21,7 @@ def _clean():
     mock.unmockAll()
 
 
-# -- resolve scans (2.3 widens these to the other testutils modules) --------
+# -- resolve scans ---------------------------------------------------------
 
 def _conary_test_sources():
     for dp, dns, fns in os.walk(os.path.join(ROOT, 'conary_test')):
