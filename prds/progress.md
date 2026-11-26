@@ -266,3 +266,18 @@ PATTERN: harness - util.rmtree still calls os.path.walk; rephelp tearDown raises
 PATTERN: harness - conary_test requireChroot segfaults (ctypes libcap without restype/argtypes) and kills the pytest process; run per file and fall back to per id.
 PATTERN: harness - rephelp.openRepository retries SkipTestException 4 times with sleeps, about 3 s per repository-backed test.
 PATTERN: bytes/str - hashlib callers (util.getId, util.copyfileobj, sha1helper.sha1String/md5String) still pass str.
+
+## 2026-11-26 - tasks 3.1 and 3.2 DONE
+
+- 3.1: os.path.walk replaced by os.walk in util.rmtree, util.copytree and Policy.do (the only three sites). Topdown walking
+  chmods children before os.walk lists them; followlinks stays False. py3tests/test_util_rmtree.py (11 cases). utiltest.py:
+  31 failed/18 passed/2 errors -> 24 failed/25 passed, os.path.walk errors 501 -> 0. Review MINOR. The orchestrator changed the
+  policy test so it runs Policy.do itself, and a mutation check now fails it. The permission cases skip as root (devenv on macOS); the reviewer
+  ran them as uid 65534 and they passed.
+- 3.2: rephelp.openRepository re-raises unittest.SkipTest before the bare except, so a skip costs no retries. acltest.py
+  on amd64: 103 s -> 5.6 s, with identical per-id outcomes. Review PASS.
+- py3tests 686 passed, 3 skipped, 3 xfailed; compile gate 476 files, 0 failures. Full re-baseline deferred to after 3.3.
+
+PATTERN: testing - A test that copies the production loop into its own body does not guard the change; call the changed function.
+PATTERN: testing - Permission-mode tests skip as root; until the container runs non-root, verify by dropping privileges (os.setuid in a wrapper).
+PATTERN: harness - Put a narrow `except unittest.SkipTest: raise` in front of a bare except so retry behaviour stays otherwise unchanged.
