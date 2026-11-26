@@ -555,3 +555,72 @@ Deferred (not tied to a measured count yet):
 Suggested order of work: 1, 3, 2 (environment and one-liners, about 2000 errors cleared and the
 loop shrinks to minutes), then 5, 4, 8, 9, 7, 6 (about 330 tests), then 10, 11, 14, 15, then
 12 and 13 together as the repository milestone.
+
+## Re-baseline after 3.1-3.3 (2026-11-26)
+
+Tooling: `devenv/conary_test_baseline.sh`, committed state plus the 3.3 working tree
+(HEAD b609b1f78). Two runs, each in its own outdir, as uid 501 (non-root):
+
+- **native**: `devenv/conary_test_baseline.sh tmp/baseline-aarch64` (aarch64 image
+  `conary-devenv:fde2af09a6c3`).
+- **amd64** (canonical baseline): `DEVENV_PLATFORM=linux/amd64 devenv/conary_test_baseline.sh tmp/baseline-amd64`
+  (image `conary-devenv:fde2af09a6c3-amd64`, emulated). This overwrote the old Run B outdir
+  of the same name; Run B numbers above are unchanged and come from the earlier run.
+
+`env.txt` in each outdir records host and container git HEAD, platform, `uname -m` and uid.
+
+| | Run B (amd64, root, before 3.1-3.3) | native aarch64 | amd64 (canonical) |
+|---|---|---|---|
+| collected (ids) | 2810 | 2810 | 2812 |
+| ids reported | 2716 | 2719 | 2719 |
+| passed | 242 | 450 | 450 |
+| failed | 821 | 514 | 513 |
+| skipped | 1653 | 1755 | 1756 |
+| not run (crashed.txt) | 94 | 91 | 91 |
+| wall time | 81 min | 6 min 59 s | 11 min 40 s |
+| 'No Such Arch' occurrences | 0 | 0 (Run A: 2303) | 0 |
+
+The not-run ids are the same 91 in both runs (`capsuletest` 34, `cookrpmcapsuletest` 23,
+`capsulepolicytest` 21, `derivedcapsuletest` 4, and singles): the `requireChroot` libcap ctypes
+segfault (Phase 3 task 4). No outer timeout fired. Per-test timeout: 1 (`testLazyFileCache`).
+
+Top classes from `devenv/triage.py` (native; amd64 is within one test of every count, with
+unknown 58 instead of 59):
+
+| class | native | amd64 |
+|---|---|---|
+| py3 semantics: other | 111 | 111 |
+| bytes/str: streams/trove | 70 | 70 |
+| bytes/str: hashing | 68 | 68 |
+| bytes/str: file I/O | 64 | 64 |
+| py2 code in tests | 60 | 60 |
+| unknown | 59 | 58 |
+
+Run B's top class (`rmtree` removed stdlib, 2325 elements) is gone; `removed stdlib module/API`
+is now 15. `unsupported arch` is 0 natively: the aarch64 arch data file (`config/arch/aarch64`,
+`conary_test/archive/arch/aarch64`) fixes Run A's 2303 `No Such Arch aarch64` failures.
+
+New triage class `arch-specific expectation` (a test hardcodes x86/x86_64 or an arch key):
+native 1 (`CrossCompileTest.testCrossToolProvidesRequires`, `KeyError: 'aarch64'`), amd64 0.
+This is far below the roughly 204 hardcoded x86 sites in conary_test because 1690 of the
+1755 skips are `sqlharness` skips that hide those tests; expect the class to grow on aarch64
+once task 12 lets repository tests run. **The amd64 run stays the canonical baseline**; native
+aarch64 results are comparable only for tests that do not assert an x86 flavor.
+
+Non-root (uid 501, compared with Run B as root): the container no longer runs as root, so root-only
+tests now fail instead of passing: `filestest.FilesTest.testBlock` and `testChar` (mknod of device
+files, `PermissionError: Operation not permitted`) and the teardown of
+`cooktest.MultipleMainPackageTest.testCookRemoveBadPermissions` (`Permission denied` removing a
+read-only dir). These are the only root-needing results in the logs; use `DEVENV_ROOT=1` to
+reproduce root behaviour. The three permission tests in `py3tests/test_util_rmtree.py` now run.
+Building `conary/lib`, `conary/lib/ext` and `conary_test` and writing `tmp/` work as non-root.
+
+Other measured facts:
+
+- The build outputs (`conary/lib/elf.so`, `filename_wrapper.so`, `conary/lib/ext/*.so`,
+  `conary_test/*.so`) live in the shared checkout and are architecture specific.
+  Switching `DEVENV_PLATFORM` requires `make -C conary/lib clean`, `make -C conary/lib/ext clean`
+  and `make -C conary_test clean` first. A first amd64 baseline taken with a stale aarch64
+  `elf.so` and `norpmlock.so` was discarded and re-run.
+- py3tests: native 702 passed, 3 xfailed, 0 skipped; amd64 702 passed, 3 xfailed.
+- `python` (python-unversioned-command) is needed: `cmdlinetest.testCvcImportNoSysArgv` execs it.

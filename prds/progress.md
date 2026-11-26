@@ -281,3 +281,23 @@ PATTERN: bytes/str - hashlib callers (util.getId, util.copyfileobj, sha1helper.s
 PATTERN: testing - A test that copies the production loop into its own body does not guard the change; call the changed function.
 PATTERN: testing - Permission-mode tests skip as root; until the container runs non-root, verify by dropping privileges (os.setuid in a wrapper).
 PATTERN: harness - Put a narrow `except unittest.SkipTest: raise` in front of a bare except so retry behaviour stays otherwise unchanged.
+
+## 2026-11-26 - task 3.3 DONE: platform switch, toolset, non-root, aarch64 arch
+
+- devenv/run: DEVENV_PLATFORM (for example linux/amd64) gives a separate image tag per platform. It always passes --user uid:gid with HOME=/tmp;
+  DEVENV_ROOT=1 opts out. Dockerfile: cpio, rpm-build, patch, unzip, xz-lzma-compat, python-unversioned-command (cmdlinetest
+  execs a bare python). check.sh verifies them.
+- aarch64: the arch is defined by data, not by use.py. Added config/arch/aarch64 and conary_test/archive/arch/aarch64 (LE, bits64, lib64)
+  and the Makefile entry. py3tests/test_use_arch.py includes a negative case: without the file, 'No Such Arch aarch64' comes back.
+- Re-baseline at HEAD b609b1f78 as uid 501:
+  - native aarch64: 450 pass, 514 fail, 1755 skip, 91 not run, 7 min
+  - amd64: 450 pass, 513 fail, 1756 skip, 91 not run, 12 min
+  - Run B was 242 pass, 821 fail, 1653 skip, 94 not run, 81 min
+  - Top classes: py3 semantics other 111, bytes/str streams 70, hashing 68, file I/O 64, py2 in tests 60.
+- Review MINOR. Follow-up logged under Later: guard against stale .so files from the other arch.
+- py3tests 702 passed, 3 xfailed as uid 501 (the rmtree permission tests now run); compile gate clean.
+
+PATTERN: environment - Build outputs (.so) are arch specific in the shared checkout; after switching DEVENV_PLATFORM run make clean in conary/lib, conary/lib/ext and conary_test. A stale foreign-arch .so fails import with 'cannot open shared object file' although the file exists.
+PATTERN: environment - Arches come from arch data files (config/arch, conary_test/archive/arch), not from use.py.
+PATTERN: testing - Hardcoded x86 expectations in conary_test hide behind sqlharness skips; expect an arch-specific class to grow after 3.14.
+PATTERN: tooling - devenv/conary_test_baseline.sh overwrites its outdir; use a dated outdir per run.
