@@ -159,6 +159,46 @@ def test_capture_output_restores_on_error(tc):
     assert s == 'again\n'
 
 
+def test_capture_output_return_exception(tc):
+    err = ValueError('bad')
+
+    def boom(a, b=0):
+        print('before')
+        raise err
+    ret, s = tc.captureOutput(boom, 1, b=2, _returnException=True)
+    assert ret is err
+    assert s == 'before\n'
+
+
+def test_capture_output_return_exception_not_raised(tc):
+    # the flag is consumed, not passed to fn, and a normal result is
+    # returned untouched
+    def fn(**kw):
+        return kw
+    ret, s = tc.captureOutput(fn, x=1, _returnException=True)
+    assert ret == {'x': 1}
+
+
+def test_capture_output_exception_propagates_by_default(tc):
+    def boom():
+        raise ValueError('bad')
+    with pytest.raises(ValueError):
+        tc.captureOutput(boom)
+    with pytest.raises(ValueError):
+        tc.captureOutput(boom, _returnException=False)
+
+
+def test_capture_output_log_level(tc):
+    from conary.lib import log
+    old = log.getVerbosity()
+    seen = []
+    new = log.DEBUG if old != log.DEBUG else log.INFO
+    ret, s = tc.captureOutput(lambda: seen.append(log.getVerbosity()),
+                              logLevel=new)
+    assert seen == [new]
+    assert log.getVerbosity() == old
+
+
 def test_discard_output(tc, capfd):
     def fn():
         print('hidden')

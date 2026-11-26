@@ -1,12 +1,12 @@
 """
 Port of the relevant cases of conary_test/libtest/openpgptest.py to pytest.
 
-Not ported (need the rephelp repository harness, or exercise paths that are
-separate work): testDiskKeyCache, testKeyringKeyCache, testSetPaths,
-testKeyCacheCallback*, testTrustLevels and the OpenPGPTrustTest class (trust
-graph needs a repository), testMerge* (merge logic is bytes-agnostic and is
-covered indirectly by the keyring add test below), testAddKey/testExportKey
-(rephelp).
+Cases that need the rephelp repository harness (the trust graph in
+OpenPGPTrustTest, ServerInteractionTest) are covered by 3.14.  Key caches,
+S2K variants, CAST5/gnu-dummy secret keys and v3 keys and signatures are in
+test_openpgp_paths.py, which also lists the paths that stay untested for
+lack of archive keys.  testMerge* is covered indirectly by the keyring add
+test below.
 """
 
 import ast
@@ -37,8 +37,9 @@ def archive(name):
 
 
 def _load_legacy_constants():
-    # pubkey4/seckey4/pubkeya4 live in the old test module as Python 2 style
-    # literals. Read them without importing it (it needs testrunner).
+    # pubkey4/seckey4 (bytes) and pubkeya4 (armor text) live in the
+    # conary_test module. Read them without importing it (it needs
+    # testrunner).
     path = os.path.join(ROOT, 'conary_test', 'libtest', 'openpgptest.py')
     tree = ast.parse(open(path).read())
     out = {}
@@ -50,8 +51,8 @@ def _load_legacy_constants():
     return out
 
 _legacy = _load_legacy_constants()
-PUBKEY4 = _legacy['pubkey4'].encode('latin-1')
-SECKEY4 = _legacy['seckey4'].encode('latin-1')
+PUBKEY4 = _legacy['pubkey4']
+SECKEY4 = _legacy['seckey4']
 PUBKEYA4 = _legacy['pubkeya4']
 
 

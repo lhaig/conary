@@ -86,7 +86,16 @@ class TestCase(unittest.TestCase):
         """Call fn(*args, **kw); return (result, stdout text).  Captures fd 1
         (C code, subprocesses) and sys.stdout (print under pytest, where
         sys.stdout is not fd 1).  Seen as `rc, s = self.captureOutput(...)`
-        (rephelp.py:778)."""
+        (rephelp.py:778).
+
+        _returnException=True returns the exception fn raised as the result
+        instead of raising it (openpgptest.py, buildtest/sourcetest.py);
+        logLevel=N sets the conary log verbosity for the call.  Both are
+        consumed here and not passed to fn."""
+        from conary.lib import log
+        returnException = kw.pop('_returnException', False)
+        logLevel = kw.pop('logLevel', None)
+        oldLevel = log.getVerbosity()
         sys.stdout.flush()
         saved_stdout = sys.stdout
         saved_fd = os.dup(1)
@@ -96,8 +105,17 @@ class TestCase(unittest.TestCase):
                 io.FileIO(os.dup(1), 'w'), encoding='utf-8',
                 errors='replace', write_through=True)
             try:
-                result = fn(*args, **kw)
+                try:
+                    # set inside the try so the finally always restores it
+                    if logLevel is not None:
+                        log.setVerbosity(logLevel)
+                    result = fn(*args, **kw)
+                except Exception as err:
+                    if not returnException:
+                        raise
+                    result = err
             finally:
+                log.setVerbosity(oldLevel)
                 try:
                     sys.stdout.flush()
                     sys.stdout.close()

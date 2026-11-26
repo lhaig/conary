@@ -19,7 +19,9 @@ from testrunner import testhelp
 
 import base64
 import fcntl
+import io
 import os
+import sys
 import time
 
 try:
@@ -46,6 +48,10 @@ from conary.lib.openpgpfile import TRUST_UNTRUSTED, TRUST_MARGINAL, \
 from random import randrange
 
 
+def bchr(i):
+    return bytes([i])
+
+
 class BaseTestHelper(rephelp.RepositoryHelper):
     def getKeyring(self, keyring):
         return os.path.join(resources.get_archive(), 'pgp-keys', keyring)
@@ -60,10 +66,7 @@ class BaseTestHelper(rephelp.RepositoryHelper):
         return resources.get_archive()+'/trustdb.gpg'
 
     def getRandomString(self, numOctets):
-        r=''
-        for i in range(0,numOctets):
-            r+=chr(randrange(0,256))
-        return r
+        return bytes(randrange(0,256) for i in range(numOctets))
 
 class OpenPGPTest(BaseTestHelper):
     # deliberately seek for keys known to be in the test rings.
@@ -81,7 +84,7 @@ class OpenPGPTest(BaseTestHelper):
             getFingerprint('017111F7', keyFile)
 
     def testSeekMissingKey(self):
-        keyRing = open(self.getPublicFile())
+        keyRing = open(self.getPublicFile(), 'rb')
         keyRing.seek(0, SEEK_END)
         limit = keyRing.tell()
         keyRing.seek(0, SEEK_SET)
@@ -94,7 +97,7 @@ class OpenPGPTest(BaseTestHelper):
 
     def testKeyEndOfLife(self):
         #grab a couple of keys and check that their timestamps work correctly
-        keyRing = open(self.getPublicFile())
+        keyRing = open(self.getPublicFile(), 'rb')
         keyCache = openpgpkey.getKeyCache()
         keyCache.setPublicPath(self.getPublicFile())
         # test a key expiration
@@ -167,9 +170,9 @@ class OpenPGPTest(BaseTestHelper):
         intKeyId = openpgpfile.fingerprintToInternalKeyId(fingerprint)
         if len(intKeyId) != 8:
             self.fail("fingerprintToInternalKeyId didn't return 8 octets")
-        if intKeyId != '\x00\xee\xff\x11"3DU':
+        if intKeyId != b'\x00\xee\xff\x11"3DU':
             self.fail('fingerprint lost in translation')
-        self.assertEqual(openpgpfile.fingerprintToInternalKeyId(''), '')
+        self.assertEqual(openpgpfile.fingerprintToInternalKeyId(''), b'')
 
     def testS2K(self):
         data = [
@@ -206,7 +209,7 @@ class OpenPGPTest(BaseTestHelper):
 
     def test_hashSet(self):
         sioc = util.ExtendedStringIO
-        items = [ sioc(''), sioc('a'), sioc('aa'), sioc('abcde') ]
+        items = [ sioc(b''), sioc(b'a'), sioc(b'aa'), sioc(b'abcde') ]
         expItems = [ '03DE6C570BFE24BFC328CCD7CA46B76EADAF4334',
                      'DA39A3EE5E6B4B0D3255BFEF95601890AFD80709',
                      'E0C9035898DD52FC65C41454CEC9C4D2611BFB37',
@@ -214,38 +217,40 @@ class OpenPGPTest(BaseTestHelper):
                     ]
         func = openpgpfile.PGP_Packet._hashSet
         s2a = openpgpfile.stringToAscii
-        for ret, exp in zip(func(items), expItems):
-            self.assertEqual(s2a(ret), exp)
+        # _hashSet returns a set; the order of a set of bytes is not
+        # stable under Python 3 hash randomisation
+        ret = func(items)
+        self.assertEqual(sorted(s2a(x) for x in ret), sorted(expItems))
 
     def testGetSigId(self):
-        sigTest = util.ExtendedStringIO("GARBAGE")
+        sigTest = util.ExtendedStringIO(b"GARBAGE")
         sig = PGP_Message.newPacket(openpgpfile.PKT_SIG, sigTest)
         self.assertRaises(openpgpfile.InvalidBodyError, sig.getSigId)
 
-        stream = util.ExtendedStringIO('')
+        stream = util.ExtendedStringIO(b'')
         mkey = PGP_Message.newPacket(openpgpfile.PKT_PUBLIC_KEY,
                 util.SeekableNestedFile(stream, len(stream.getvalue())))
 
         # V3 sigs...
         sigTest = util.ExtendedStringIO()
         # Signature version
-        sigTest.write(chr(3))
+        sigTest.write(bchr(3))
         # Length of hashed material
-        sigTest.write(chr(5))
+        sigTest.write(bchr(5))
         # Sig type, creation
-        sigTest.write(chr(openpgpfile.SIG_TYPE_SUBKEY_REVOC) + '1234' )
+        sigTest.write(bchr(openpgpfile.SIG_TYPE_SUBKEY_REVOC) + b'1234' )
         # Signer key ID
-        sigTest.write('8bytegbg')
+        sigTest.write(b'8bytegbg')
         # PK alg, hash alg, sig0, sig1
-        sigTest.write(chr(0) * 4)
+        sigTest.write(bchr(0) * 4)
         sigTest.seek(0)
 
         sig = PGP_Message.newPacket(openpgpfile.PKT_SIG, sigTest)
         sig.setParentPacket(mkey)
         # We know how to read even V3 sigs
-        self.assertEqual(sig.getSigId(), '8bytegbg')
+        self.assertEqual(sig.getSigId(), b'8bytegbg')
         self.assertEqual(sig.getSignerKeyId(),
-                             openpgpfile.stringToAscii('8bytegbg'))
+                             openpgpfile.stringToAscii(b'8bytegbg'))
         # (but we won't verify them)
         self.assertRaises(openpgpfile.UnsupportedHashAlgorithm,
             sig.getSignatureHash)
@@ -256,24 +261,24 @@ class OpenPGPTest(BaseTestHelper):
 
         # Use md5
         sig.hashAlg = 1
-        sig.setShortSigHash('\x08,')
+        sig.setShortSigHash(b'\x08,')
         sig._sigDigest = None
         self.assertEqual(sig.getSignatureHash(),
-            '\x08,!\xb10\x07\xf5C\xcb\xe1\x0e\x0cOZx\xf7')
+            b'\x08,!\xb10\x07\xf5C\xcb\xe1\x0e\x0cOZx\xf7')
         # Use sha1
         sig.hashAlg = 2
-        sig.setShortSigHash('\x95z')
+        sig.setShortSigHash(b'\x95z')
         sig._sigDigest = None
         self.assertEqual(sig.getSignatureHash(),
-            '\x95z\x07-3~\xdb\x1c\x8e?\xa7\x86-.\xdd\xf1\xc3\xabe;')
+            b'\x95z\x07-3~\xdb\x1c\x8e?\xa7\x86-.\xdd\xf1\xc3\xabe;')
 
         sigTest = util.ExtendedStringIO()
         # Signature version
-        sigTest.write(chr(3))
+        sigTest.write(bchr(3))
         # Length of hashed material (bogus)
-        sigTest.write(chr(4))
+        sigTest.write(bchr(4))
         # Signature type
-        sigTest.write(chr(1))
+        sigTest.write(bchr(1))
 
         sigTest.seek(0)
         sig = PGP_Message.newPacket(openpgpfile.PKT_SIG, sigTest)
@@ -288,16 +293,16 @@ class OpenPGPTest(BaseTestHelper):
 
         # bogus V4 sig packet forces test of all remaining code paths
         # KeyID longer than 8 bytes
-        spkt = chr(11) + chr(openpgpfile.SIG_SUBPKT_ISSUER_KEYID) + \
-               chr(0xBE) * 10
-        sigTest = util.ExtendedStringIO(chr(4) + chr(0) * 3
+        spkt = bchr(11) + bchr(openpgpfile.SIG_SUBPKT_ISSUER_KEYID) + \
+               bchr(0xBE) * 10
+        sigTest = util.ExtendedStringIO(bchr(4) + bchr(0) * 3
                                        # hashed data length, hashed data
-                                       + chr(0) * 2
+                                       + bchr(0) * 2
                                        # unhashed data length, unhashed data
-                                       + chr(0) + chr(len(spkt))
+                                       + bchr(0) + bchr(len(spkt))
                                        + spkt
                                        # 2-octet hash sig
-                                       + '  '
+                                       + b'  '
                                        )
 
         sig = PGP_Message.newPacket(openpgpfile.PKT_SIG, sigTest)
@@ -313,7 +318,7 @@ class OpenPGPTest(BaseTestHelper):
         subkeyFingerprint = "1C9CF8632DDA8DD5F1FC7CC76AC04A81017111F7"
 
         # read the key data for the main key and the subkey
-        keyRing = open(self.getPublicFile())
+        keyRing = open(self.getPublicFile(), 'rb')
         pkt = seekKeyById(fingerprint, keyRing)
         subpkt = next(pkt.iterSubKeys())
 
@@ -327,7 +332,7 @@ class OpenPGPTest(BaseTestHelper):
         # surgically replace a single octet in the hashed key data and repeat
         # only bytes 515-519, 521 and 522 can be changed for proper effect.
         sio.seek(516)
-        sio.write('Q')
+        sio.write(b'Q')
         sio.seek(0)
 
         pkt = seekKeyById(fingerprint, sio)
@@ -370,7 +375,7 @@ class OpenPGPTest(BaseTestHelper):
 
         # user Id packet starts at offset 141, so just whack a random octet
         sio.seek(145)
-        sio.write('Q')
+        sio.write(b'Q')
         sio.seek(0)
 
         pkt = seekKeyById(fingerprint, sio)
@@ -440,7 +445,7 @@ class OpenPGPTest(BaseTestHelper):
 
     def testKeyringKeyCache(self):
         keyring = os.path.join(self.workDir, "temp-keyring")
-        keyringf = open(keyring, "w+")
+        keyringf = open(keyring, "w+b")
 
         # Well-known key
         keyFile = resources.get_archive('key.asc')
@@ -461,7 +466,7 @@ class OpenPGPTest(BaseTestHelper):
             'dummy')
         self.logFilter.remove()
 
-        keyringf = open(keyring, "a")
+        keyringf = open(keyring, "ab")
         # Add the key
         for armkey in [open(keyFile).read()]:
             # Un-armor
@@ -573,28 +578,28 @@ fbH4kC2IUkRcZsGlxXTU5neClrO5MB82nno3yjeaOaIFFZNBA4/VOxPm
 
 class OpenPGPMessageTest(BaseTestHelper):
     def testNewPacket(self):
-        sio = util.ExtendedStringIO("foo")
+        sio = util.ExtendedStringIO(b"foo")
 
         sioDest = util.ExtendedStringIO()
         pkt = PGP_Message.newPacket(14, sio)
 
         pkt.write(sioDest)
         data = sioDest.getvalue()
-        self.assertEqual(data, '\xb8\x03foo')
+        self.assertEqual(data, b'\xb8\x03foo')
 
         # Forcing 2-byte length body
         sioDest = util.ExtendedStringIO()
         pkt = PGP_Message.newPacket(11, sio, minHeaderLen = 3)
         pkt.write(sioDest)
         data = sioDest.getvalue()
-        self.assertEqual(data, '\xad\x00\x03foo')
+        self.assertEqual(data, b'\xad\x00\x03foo')
 
         # Forcing 4-byte length
         sioDest = util.ExtendedStringIO()
         pkt = PGP_Message.newPacket(11, sio, minHeaderLen = 4)
         pkt.write(sioDest)
         data = sioDest.getvalue()
-        self.assertEqual(data, '\xae\x00\x00\x00\x03foo')
+        self.assertEqual(data, b'\xae\x00\x00\x00\x03foo')
 
         # Create message, verify everything is readable
         sioDest.seek(0)
@@ -604,27 +609,27 @@ class OpenPGPMessageTest(BaseTestHelper):
         self.assertEqual(pkt.bodyLength, 3)
 
         first = (openpgpfile.PKT_PUBLIC_KEY << 2) | 0x03
-        sioDest = util.ExtendedStringIO(chr(first))
+        sioDest = util.ExtendedStringIO(bchr(first))
         self.assertRaises(openpgpfile.InvalidPacketError,
                                PGP_Message.newPacketFromStream, sioDest)
 
         # Indeterminate length not supported
         first = 0x80 | (openpgpfile.PKT_PUBLIC_KEY << 2) | 0x03
-        sioDest = util.ExtendedStringIO(chr(first))
+        sioDest = util.ExtendedStringIO(bchr(first))
         self.assertRaises(NotImplementedError,
                               PGP_Message.newPacketFromStream, sioDest)
 
         # Short read
         for bll in [0x00, 0x01, 0x02]:
             first = 0x80 | (openpgpfile.PKT_PUBLIC_KEY << 2) | bll
-            sioDest = util.ExtendedStringIO(chr(first))
+            sioDest = util.ExtendedStringIO(bchr(first))
             self.assertRaises(openpgpfile.ShortReadError,
                                   PGP_Message.newPacketFromStream, sioDest)
 
         # New-style packets
         # 1-byte body length lengths
         first = 0x80 | 0x40 | openpgpfile.PKT_PUBLIC_KEY
-        sioDest = util.ExtendedStringIO(chr(first) + chr(0))
+        sioDest = util.ExtendedStringIO(bchr(first) + bchr(0))
         pkt = PGP_Message.newPacketFromStream(sioDest)
         self.assertTrue(pkt._newStyle)
         self.assertEqual(pkt.tag, openpgpfile.PKT_PUBLIC_KEY)
@@ -640,7 +645,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         pkt.headerLength = 1
         self.assertRaises(openpgpfile.InvalidPacketError, pkt.write, nsio)
 
-        sioDest = util.ExtendedStringIO(chr(first))
+        sioDest = util.ExtendedStringIO(bchr(first))
         self.assertRaises(openpgpfile.ShortReadError,
                               PGP_Message.newPacketFromStream, sioDest)
 
@@ -648,8 +653,8 @@ class OpenPGPMessageTest(BaseTestHelper):
         bodyLen = 8000
         h1 = ((bodyLen - 192) >> 8) + 192
         h2 = (bodyLen - 192) % 256
-        sioDest = util.ExtendedStringIO(chr(first) + chr(h1) + chr(h2)
-            + ' ' * bodyLen )
+        sioDest = util.ExtendedStringIO(bchr(first) + bchr(h1) + bchr(h2)
+            + b' ' * bodyLen )
         pkt = PGP_Message.newPacketFromStream(sioDest)
         self.assertEqual(pkt.headerLength, 3)
         self.assertEqual(pkt.bodyLength, bodyLen)
@@ -668,7 +673,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         self.assertRaises(openpgpfile.ShortReadError,
                               PGP_Message.newPacketFromStream, sioDest)
 
-        sioDest = util.ExtendedStringIO(chr(first))
+        sioDest = util.ExtendedStringIO(bchr(first))
         self.assertRaises(openpgpfile.ShortReadError,
                               PGP_Message.newPacketFromStream, sioDest)
 
@@ -679,8 +684,8 @@ class OpenPGPMessageTest(BaseTestHelper):
         h2 = bl % 256; bl >>= 8
         h1 = bl
         h0 = 255
-        sioDest = util.ExtendedStringIO(chr(first) + chr(h0) + chr(h1) +
-            chr(h2) + chr(h3) + chr(h4) + " " * bodyLen)
+        sioDest = util.ExtendedStringIO(bchr(first) + bchr(h0) + bchr(h1) +
+            bchr(h2) + bchr(h3) + bchr(h4) + b" " * bodyLen)
         pkt = PGP_Message.newPacketFromStream(sioDest)
         self.assertEqual(pkt.headerLength, 6)
         self.assertEqual(pkt.bodyLength, bodyLen)
@@ -694,17 +699,17 @@ class OpenPGPMessageTest(BaseTestHelper):
         self.assertRaises(openpgpfile.ShortReadError,
                               PGP_Message.newPacketFromStream, sioDest)
 
-        sioDest = util.ExtendedStringIO(chr(first) + chr(255))
+        sioDest = util.ExtendedStringIO(bchr(first) + bchr(255))
         self.assertRaises(openpgpfile.ShortReadError,
                               PGP_Message.newPacketFromStream, sioDest)
 
         # Indeterminate length
-        sioDest = util.ExtendedStringIO(chr(first) + chr(225))
+        sioDest = util.ExtendedStringIO(bchr(first) + bchr(225))
         self.assertRaises(NotImplementedError,
                               PGP_Message.newPacketFromStream, sioDest)
 
     def testNewPacketFromStream(self):
-        f = open(self.getPublicFile())
+        f = open(self.getPublicFile(), 'rb')
         pkt = PGP_Message.newPacketFromStream(f)
         self.assertEqual(pkt.tag, openpgpfile.PKT_PUBLIC_KEY)
 
@@ -712,11 +717,11 @@ class OpenPGPMessageTest(BaseTestHelper):
         sio = util.ExtendedStringIO()
         # One-octet length length (& 0xC0 == 0)
         pktlen = 145
-        sio.write(chr(pktlen))
+        sio.write(bchr(pktlen))
         # Type
-        sio.write(chr(16))
+        sio.write(bchr(16))
         # Data (short read expected)
-        sio.write(" " * 10)
+        sio.write(b" " * 10)
 
         # We need to wrap it into a SeekableNestedFile to avoid an IOError
         fobj = util.SeekableNestedFile(sio, sio.tell(), start = 0)
@@ -726,7 +731,7 @@ class OpenPGPMessageTest(BaseTestHelper):
             self.assertEqual(e.expected, pktlen + 1)
             self.assertEqual(e.actual, 12)
 
-        sio.write(" " * (pktlen - 10 - 1))
+        sio.write(b" " * (pktlen - 10 - 1))
         fobj = util.SeekableNestedFile(sio, sio.tell(), start = 0)
         pktt, dataf = openpgpfile.PGP_Signature._getNextSubpacket(fobj)
         self.assertEqual(pktt, 16)
@@ -734,11 +739,11 @@ class OpenPGPMessageTest(BaseTestHelper):
         sio.truncate(0)
         # Two-octet length
         pktlen = 203
-        sio.write(chr(((pktlen - 192) >> 8) + 192))
-        sio.write(chr((pktlen - 192)  & 0xFF))
-        sio.write(chr(16))
+        sio.write(bchr(((pktlen - 192) >> 8) + 192))
+        sio.write(bchr((pktlen - 192)  & 0xFF))
+        sio.write(bchr(16))
         # Data (short read expected)
-        sio.write(" " * 10)
+        sio.write(b" " * 10)
 
         fobj = util.SeekableNestedFile(sio, sio.tell(), start = 0)
         try:
@@ -747,7 +752,7 @@ class OpenPGPMessageTest(BaseTestHelper):
             self.assertEqual(e.expected, pktlen + 2)
             self.assertEqual(e.actual, 13)
 
-        sio.write(" " * (pktlen - 10 - 1))
+        sio.write(b" " * (pktlen - 10 - 1))
         fobj = util.SeekableNestedFile(sio, sio.tell(), start = 0)
         pktt, dataf = openpgpfile.PGP_Signature._getNextSubpacket(fobj)
         self.assertEqual(pktt, 16)
@@ -755,14 +760,14 @@ class OpenPGPMessageTest(BaseTestHelper):
         sio.truncate(0)
         # Five-octet length
         pktlen = 203
-        sio.write(chr(0xFF))
-        sio.write(chr(0))
-        sio.write(chr(0))
-        sio.write(chr(pktlen >> 8))
-        sio.write(chr(pktlen & 0xFF))
-        sio.write(chr(16))
+        sio.write(bchr(0xFF))
+        sio.write(bchr(0))
+        sio.write(bchr(0))
+        sio.write(bchr(pktlen >> 8))
+        sio.write(bchr(pktlen & 0xFF))
+        sio.write(bchr(16))
         # Data (short read expected)
-        sio.write(" " * 10)
+        sio.write(b" " * 10)
 
         fobj = util.SeekableNestedFile(sio, sio.tell(), start = 0)
         try:
@@ -771,7 +776,7 @@ class OpenPGPMessageTest(BaseTestHelper):
             self.assertEqual(e.expected, pktlen + 5)
             self.assertEqual(e.actual, 16)
 
-        sio.write(" " * (pktlen - 10 - 1))
+        sio.write(b" " * (pktlen - 10 - 1))
         fobj = util.SeekableNestedFile(sio, sio.tell(), start = 0)
         pktt, dataf = openpgpfile.PGP_Signature._getNextSubpacket(fobj)
         self.assertEqual(pktt, 16)
@@ -808,8 +813,8 @@ class OpenPGPMessageTest(BaseTestHelper):
         self.assertEqual(openpgpfile.countKeys(s), 3)
 
     def testXorStr(self):
-        s1 = 'abc'
-        s2 = '\0\0\0'
+        s1 = b'abc'
+        s2 = b'\0\0\0'
         self.assertEqual(openpgpfile.xorStr(s1, s2), s1)
         self.assertEqual(openpgpfile.xorStr(s1, s1), s2)
         self.assertEqual(openpgpfile.xorStr(s1 + s1, s2), s1)
@@ -839,7 +844,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         self.assertEqual(sio1.getvalue(), sio2.getvalue())
 
     def testNewKeyFromString(self):
-        self.assertEqual(openpgpfile.newKeyFromString(""), None)
+        self.assertEqual(openpgpfile.newKeyFromString(b""), None)
 
         pkt = openpgpfile.newKeyFromString(pubkey4)
         self.assertTrue(pkt is not None)
@@ -1080,7 +1085,7 @@ class OpenPGPMessageTest(BaseTestHelper):
                     # Mangle the binding sig to have an invalid short digest
                     if subpkt.bindingSig:
                         o = subpkt.bindingSig.hashSig
-                        subpkt.bindingSig.setShortSigHash('\0\0')
+                        subpkt.bindingSig.setShortSigHash(b'\0\0')
                         subpkt.bindingSig._sigDigest = None
                         self.assertRaises(BadSelfSignature,
                                               subpkt.verifySelfSignatures)
@@ -1144,7 +1149,7 @@ class OpenPGPMessageTest(BaseTestHelper):
 
         # Alter the short hash sig
         hashSig = sig.getShortSigHash()
-        sig.setShortSigHash('AA')
+        sig.setShortSigHash(b'AA')
         self.assertRaises(openpgpfile.SignatureError, sig.verifyDocument,
                               cryptoKey, doc)
         sig.setShortSigHash(hashSig)
@@ -1154,7 +1159,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         # Alter the signature
         x = util.ExtendedStringIO(sig.mpiFile.pread(sig.mpiFile.size, 0))
         x.seek(12)
-        x.write('\0')
+        x.write(b'\0')
         sig.mpiFile = x
 
         self.assertRaises(openpgpfile.SignatureError, sig.verifyDocument,
@@ -1221,7 +1226,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         sig = openpgpfile.readSignature(open(sigfile, 'rb'))
         sigfile = self.getKeyring('pk2.gpg.sig2')
         sig = openpgpfile.readSignature(open(sigfile, 'rb'))
-        sio = util.ExtendedStringIO("cadfadf")
+        sio = util.ExtendedStringIO(b"cadfadf")
         try:
             openpgpfile.readSignature(sio)
         except openpgpfile.InvalidPacketError as e:
@@ -1237,7 +1242,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         else:
             self.fail("Expected an InvalidPacketError")
 
-        sio.write('\x80adfadf')
+        sio.write(b'\x80adfadf')
         sio.seek(0)
         try:
             openpgpfile.readSignature(sio)
@@ -1247,7 +1252,7 @@ class OpenPGPMessageTest(BaseTestHelper):
             self.fail("Expected an InvalidPacketError")
 
         try:
-            openpgpfile.readSignature(open(self.getKeyring('pubringrev.gpg')))
+            openpgpfile.readSignature(open(self.getKeyring('pubringrev.gpg'), 'rb'))
         except openpgpfile.InvalidPacketError as e:
             self.assertEqual(str(e), "Not a signature packet")
         else:
@@ -1289,7 +1294,8 @@ class OpenPGPMessageTest(BaseTestHelper):
 
     def testParseAsciiArmor(self):
         sio = util.ExtendedStringIO()
-        ret = openpgpfile.parseAsciiArmor(util.ExtendedStringIO(pubkeya4), sio)
+        ret = openpgpfile.parseAsciiArmor(
+            util.ExtendedStringIO(pubkeya4.encode('ascii')), sio)
         sio.seek(0)
         self.assertEqual(sio.read(), pubkey4)
         # Binary key
@@ -1303,12 +1309,12 @@ class OpenPGPMessageTest(BaseTestHelper):
         key = openpgpfile.seekKeyById('29BF4FCA',
                                       self.getKeyring('pubringrev.gpg'))
         key.revsigs = []
-        key.writeAll(open("/tmp/npk", "w"))
+        key.writeAll(open(os.path.join(self.workDir, "npk"), "wb"))
 
         key = openpgpfile.seekKeyById('29BF4FCA',
                                       self.getKeyring('secringrev.gpg'))
         key.revsigs = []
-        key.writeAll(open("/tmp/nsk", "w"))
+        key.writeAll(open(os.path.join(self.workDir, "nsk"), "wb"))
 
     def testSigV3(self):
         msg = openpgpfile.PGP_Message(self.getKeyring('v3key.gpg'))
@@ -1417,8 +1423,17 @@ class OpenPGPMessageTest(BaseTestHelper):
         # CNY-2047
         msg = PGP_Message(self.getKeyring('sk4.gpg'))
         key = msg.getKeyByKeyId('05C54D73')
-        ret, txt = self.captureOutput(key.getCryptoKey, '',
-                           _returnException = True)
+        # the warning goes to sys.stderr, which captureOutput does not
+        # capture
+        errStream = io.StringIO()
+        oldStderr = sys.stderr
+        sys.stderr = errStream
+        try:
+            ret, txt = self.captureOutput(key.getCryptoKey, '',
+                               _returnException = True)
+        finally:
+            sys.stderr = oldStderr
+        txt += errStream.getvalue()
         if not isinstance(ret, openpgpfile.BadPassPhrase):
             raise Exception("BadPassPhrase not raised")
         substr = "self-signature on private key does not verify"
@@ -1434,11 +1449,11 @@ class OpenPGPMessageTest(BaseTestHelper):
         # The interesting values are < 192, < 16320, >= 16320
         packets = []
         # 1-octet length
-        packets.append((1, util.ExtendedStringIO(" " * 190)))
+        packets.append((1, util.ExtendedStringIO(b" " * 190)))
         # 2-octet length
-        packets.append((2, util.ExtendedStringIO(" " * 16318)))
+        packets.append((2, util.ExtendedStringIO(b" " * 16318)))
         # 5-octet length
-        packets.append((5, util.ExtendedStringIO(" " * 16319)))
+        packets.append((5, util.ExtendedStringIO(b" " * 16319)))
 
         for spktType, spktStream in packets:
             wr(stream, spktType, spktStream)
@@ -1662,14 +1677,14 @@ class OpenPGPMessageTest(BaseTestHelper):
         # Add a notation on the key
         stream = util.ExtendedStringIO()
         flags = [ 0x80, 0, 0, 0 ]
-        name = "notation@rpath.com"
-        value = "some value"
+        name = b"notation@rpath.com"
+        value = b"some value"
         for f in flags:
-            stream.write(chr(f))
+            stream.write(bchr(f))
         for v in [name, value]:
             l = len(v)
-            stream.write(chr((l >> 8) & 0xFF))
-            stream.write(chr(l & 0xFF))
+            stream.write(bchr((l >> 8) & 0xFF))
+            stream.write(bchr(l & 0xFF))
         for v in [name, value]:
             stream.write(v)
 
@@ -1745,7 +1760,7 @@ class OpenPGPMessageTest(BaseTestHelper):
             self.assertEqual(len(pkts), 1)
             pkts[0].seek(0)
             # Null-terminated
-            self.assertEqual(pkts[0].read(), trustRegex + '\0')
+            self.assertEqual(pkts[0].read(), trustRegex.encode('ascii') + b'\0')
 
             # Testing getTrust
             self.assertEqual(sig.getTrust(), (1, 40, trustRegex))
@@ -1863,10 +1878,10 @@ class OpenPGPMessageTest(BaseTestHelper):
         self.assertEqual(sig1.getParentPacket().getKeyId(), subk.getKeyId())
 
     def test_crc24(self):
-        data = [ ('',       '\xb7\x04\xce', 'twTO'),
-                 ('a',      '\xf2\x57\x13', '8lcT'),
-                 ('aa',     '\xad\x83\xdb', 'rYPb'),
-                 ('abc',    '\xba\x1c\x7b', 'uhx7'),
+        data = [ (b'',      b'\xb7\x04\xce', 'twTO'),
+                 (b'a',     b'\xf2\x57\x13', '8lcT'),
+                 (b'aa',    b'\xad\x83\xdb', 'rYPb'),
+                 (b'abc',   b'\xba\x1c\x7b', 'uhx7'),
                ]
         for src, expected, b64exp in data:
             self.assertEqual(openpgpfile.crc24(src), expected)
@@ -1882,7 +1897,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         b2s = openpgpfile.binSeqToString
 
         self.assertEqual(s2a(shash), 'B7719A5519EF8CFCDF91074A465CDAC4E0848FDC')
-        self.assertEqual(sig.hashSig, '\xB7\x71')
+        self.assertEqual(sig.hashSig, b'\xB7\x71')
 
         # Mangle the sig to have an invalid parent
         sig._sigDigest = None
@@ -1905,7 +1920,7 @@ class OpenPGPMessageTest(BaseTestHelper):
     def testIgnoreV2Keyses(self):
         # CNY-2155
         # Create a v2 key
-        sio = util.SeekableNestedFile(util.ExtendedStringIO("\02"), 1)
+        sio = util.SeekableNestedFile(util.ExtendedStringIO(b"\02"), 1)
         pkt = PGP_Message.newPacket(openpgpfile.PKT_PUBLIC_KEY, sio)
 
         # Write it
@@ -1945,7 +1960,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         except OSError:
             pass
 
-        stream = open(keyring, "w")
+        stream = open(keyring, "wb")
         tsks = k2.subkeys
         k2.subkeys = []
 
@@ -1963,11 +1978,11 @@ class OpenPGPMessageTest(BaseTestHelper):
             if pid == 0:
                 # In the child
                 os.close(pip[0])
-                stream = open(keyring, "r+")
+                stream = open(keyring, "r+b")
                 # Lock the stream
                 fcntl.lockf(stream.fileno(), fcntl.LOCK_EX)
                 # Unblock parent
-                os.write(pip[1], "1")
+                os.write(pip[1], b"1")
                 os.close(pip[1])
                 openpgpfile.addKeys([k1, k2], keyring)
                 os._exit(0)
@@ -2004,7 +2019,7 @@ class OpenPGPMessageTest(BaseTestHelper):
 
         # Finally, export as armored
         sio = openpgpfile.exportKey(kId2, keyring, armored = True)
-        self.assertEqual(sio.pread(5, 0), '-----')
+        self.assertEqual(sio.pread(5, 0), b'-----')
 
         self.assertRaises(openpgpfile.KeyNotFound,
                               openpgpfile.exportKey, 'aaa', '/no/such/file')
@@ -2022,7 +2037,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         sio = util.ExtendedStringIO(sig)
         msg = openpgpfile.PGP_Message(sio)
         sigpkt = next(msg.iterPackets())
-        self.assertEqual(sigpkt.getSigId(), '\xc8k\xa0jQ}\x0f\x0e')
+        self.assertEqual(sigpkt.getSigId(), b'\xc8k\xa0jQ}\x0f\x0e')
 
     def testKeyWithVersion2Sig(self):
         # CNY-2417
@@ -2344,11 +2359,11 @@ class OpenPGPTrustTest(BaseTestHelper):
             if isinstance(pkt, openpgpfile.PGP_Trust):
                 pass
         body = util.ExtendedStringIO()
-        body.write('\x01')
-        body.write('\x0a\x1b\x2c\x3d\x4e\x5f\x98\x76')
+        body.write(b'\x01')
+        body.write(b'\x0a\x1b\x2c\x3d\x4e\x5f\x98\x76')
         tm = 1196173781
         body.write(openpgpfile.binSeqToString(openpgpfile.int4ToBytes(tm)))
-        body.write("\0" * 25)
+        body.write(b"\0" * 25)
         body.seek(0)
         pkt = openpgpfile.KeyTimestampPacket(body)
         sio = util.ExtendedStringIO()
@@ -2450,7 +2465,7 @@ class OpenPGPTrustTest(BaseTestHelper):
 
         # This has a subkey too
         fp0 = '99F3EA61523474E5147938BA45AD480E0FD4B672'
-        pk8 = open(self.getKeyring('pk8.gpg')).read()
+        pk8 = open(self.getKeyring('pk8.gpg'), 'rb').read()
 
         ts = 145
 
@@ -2520,123 +2535,100 @@ class ServerInteractionTest(BaseTestHelper):
         self.logFilter.compare("error: While caching PGP key: Permission denied: /some")
 
 pubkey4 = (
-    '\x99\x01\xa2\x04F\x92\xbd\x99\x11\x04\x00\xd5\xbf\x19Ru\x9b\xfd\x07\xc0'
-    '\xa2tPC\xb1\x90\x8d\xd2\xc7\x8d\x90G\xdc\xfd\xfa\xff2\xaaTc\x7f\xd6\xaf'
-    '\xdf\xf1\xb1N\\\x81\x922\x9b\xd8R\x0f_\xe8\xa0[\xf8\xc6\xf7\\\xba\x82'
-    '\xdf}\xcc\x92\xa0\xcd\xfc\x11\x1d\xc94--m\xa0\x94:N\x19\xa7\x93OH\xf1'
-    '\xc8\x1b*\xca\xb8\xad\xf3\x00i"\x86"\xde2K\x90Q\x9a\xaaL\xd76\x15\x85'
-    '\xe9}\xdb\x80\xebi\xba\x00I\xc6\xf2\xb9\xdd\xf7\xb2V\xa49\x19\xe2\x97K'
-    '\x87\x02\x1c\xfb\x00\xa0\xec%\xe4zgx\xb2[$\xb7\xb2>\xa3\xc0>>z\xe8\xc8U'
-    '\x03\xffb \xfb\x9a\x90\\0\x8d\\\xb0>\n\x9f#\xf6\xc7_\xd7j+\xee-o\xd6\xd4'
-    '\xc7\xdd+M`\xf8\xdf\xe6\x10^\xea\x85\xado\x83p\xf2\xc0Li0t\xeb\x1d-\xdex'
-    '\xfa?\x01\xad\x93\xc1\x87c"\xb65?\xd7\xe6t\xcf]\xb6\x9d4D\n\x83\xedQu'
-    '\x85\x10\xfb\xe0qv\xb7_\xd0\x12\x95\xf3\x06%\xa3a\x07\xb8\xaf\x9bL\xa4'
-    '\xb1\xef\x84\xcf0;\x9b8\xeb4\xef\x9e\xf3\xc8\x99]\xf0\xe4\xd4\xdc\xf8'
-    '\xc0?U\r\x84X4\x03\xfe\'tv[:\x9d\x0cx\xb3?1\xdeJiS\xdb\x1d\xb49;s6\x88'
-    '\x0b\xfa\xe1$\xa5i\xb6\xb1\xb5\x94\xea,\xbc\x00w5\xefAX\x04)O\xe0\xbaR'
-    '\xa1\t\x96g$\xd8\x1e\x08s~.\x04\x01\x92\x15\x9b)\xff\xa2\rzr\xb0\xa6k'
-    '\xb14\t\x8bm\xcf\x83\x03\xcb\xb8TT\x85\xd3j9\x86\x8e\x94\xc9\xa9\xd5Pk'
-    '\x8cWG@Eb\xaag\x05\x97\xaf\xf6W$T\xeb\xa5%\x93>\x95\xdf\x19\x8dV\xf8\x97'
-    '\x98l\xe0\xc9\xb4&Key 32 (Key 32) <misa+key32@rpath.com>\x88`\x04\x13'
-    '\x11\x02\x00 \x05\x02F\x92\xbd\x99\x02\x1b\x03\x06\x0b\t\x08\x07\x03\x02'
-    '\x04\x15\x02\x08\x03\x04\x16\x02\x03\x01\x02\x1e\x01\x02\x17\x80\x00\n\t'
-    '\x10\xa8\xe7b\xbf\x91\xe3\xe6\xc5\x7f\x08\x00\xa0\xcc\x99\xff\x08\x0b'
-    '\x1eW\x01qC\xe3PD3\x0b5y~\x054\x00\x9fhc\xfc\xafo\x93\xcb\xc6dR\x13\xaf'
-    '\x11VU1oD\xc3\xb1\x88J\x04\x10\x11\x02\x00\n\x05\x02F\x92\xbei\x03\x05'
-    '\x01<\x00\n\t\x10\x19\x86\x1dDztk\xae\x80/\x00\xa0\x8f\xdb\x15\xdf1\x92'
-    '\x02\x95\xea\xeb\xa1\x14\x81\'\xa3A\x86\x08\x89O\x00\x9fr\x91\xd21[\x04F'
-    '\x1c\xe0\x86\xc2E\n\xe6\x891\x14\xe6\xbf\xdc\x88J\x04\x10\x11\x02\x00\n'
-    '\x05\x02F\x92\xbe\xe8\x03\x05\x01<\x00\n\t\x10\xc2\x99\xbc\xae\x93\x11'
-    '\xd2Km\x03\x00\x9d\x1f\xc5\x055\xd2\xbf6e&\xa0\xfc)\xd3\xef$X\xcd\xb3'
-    '\xdfu\x00\xa0\xbe\xbb\x95h\x9c\xc4\x16\xa6G2-\x131\xcd\xa6\xfd:\xc4\x03K'
-    '\x88J\x04\x10\x11\x02\x00\n\x05\x02F\x92\xbf\x14\x03\x05\x01<\x00\n\t'
-    '\x10A\xeaVz\x8f\xf8\x8b\x92\xbb>\x00\xa0\x8eP\xb2^\x90\xb5)c%\x88\xc6:S'
-    '\xa4\xcb\xbd\xe7\xfd\xf5\xba\x00\x9fF\x89;\x0bj\x07\xf1\x8fE\xe9\xbf>'
-    '\xba\xd1\xecY\x1aZ\x121\xb9\x02\r\x04F\x92\xbd\x99\x10\x08\x00\xe2\xdd'
-    '\xe0\xb7\xe3\x94\xd2\xaa2`\xec\x8d\xf3\xde\xdd)\xa4\xa2\x01\xca\x82,#'
-    '\xfa\x0c\x8e\x0bav]\xc7I\xe5\xbf>Y\xc3\xd9\xd7\x85\xdd\x1aN~\xb9\x9b\xa7'
-    '\x00o\x81\x81\xbcN\xc8TJ\x01\xc8}H\xbc`m\xd9\xe0\x07\x00\xea\xdc\xe5'
-    '\xc0za\x00\x08\x149v\x0b\xac\x7f\xccm\xb0\xc6\x06\x1f\xae9L\xf5\x95?8'
-    '\xde\x8f\xf9\x82\xe6TX\xce\x87Oe\x14X\x8dzP\x86d\xfe\xd50_^\xba\'vz'
-    '\x7fJ\xbf\xd3\x9e0\x9b\x1c\x07\x88\x04]\xec\xfc\x08\x0b\xb210k<\xb6\xe2 '
-    '\xd5\xfb\xc9rP+\r\xdc\x12\x9f\x0b/\xce\x16(>\xba[\x9e1(yZ\x0cib%\x7f,r'
-    '\x0c\x178\xc28#\x84\xc1\x95\xe8^x{jEYx[p\xca\x1c\xe5\xde\x92\xfb=\x123'
-    '\x7foRN\xd2\xec\xc0g\x82b\xd5\xc6H\x13H\x1f\x97O\x16g\xe4od\x1315\xa6V'
-    '\xdeW\xfd\xab\xa66\xbe\x18\x12\x90\xa4\x89\xdbvB\xa4O\xf3b\xa0\x8f\xf6y#'
-    '\xef\x00\x03\x05\x07\xffM\xa1#\xb0\xfbG\xb7\xde\x1e\x88~\xbf{\xda2\xf0'
-    '\x19i\xc5<zg\x98\xbdD\xdd\x8c,LR\x9f\x9b\xc5{5\xb6?Oi\xb7\xb25\x84:\x8b^'
-    '\x87r\xda\xbc\x0f\x14\xaeG\xb5\xa9r\xfc*\xcfP\xad\xb6=\x8d\xe4\xfb\x9d'
-    '\xa2\xc9\x80\xf1ne\xec\xed\x92nCm0\xd4\xa3\xb6$\xaa\xad\x1d\xf2\x17'
-    '\x0cyj\xfd\xc3H\xa9\xf6\x00\x84\xad\xe63\x0b`\xd2\xaa>\x18\x18\xb8_\x9e'
-    '\xb6\x91\x1b[\x1c\xaa\xe6-x\'5\x94\x17)\xddU\xc0\x84\xf4\xb0n\xc2\x07'
-    '\x89K\xa7<\xaf\xe1\x81\\\x1e\xeb\xe2t\xf8R\t\x88\x1b\xdfQ\xed!MB\xbf\x84'
-    '\x14\rf\xe5\xbd\x85\xd9\xd0\xaf\xca\x99\xcc\xe5\x01\xf8\xd6\xd0\xd4\x97'
-    '\x1c\xbd,\xb5X\xb7f\xb9P\x10\x04\xa2\xe1\x16\xb6\x04\x85_0\x02\xc0r\xd75'
-    '\x94T\xc0\x97Q\x9f\x96M\xffo\xf8\xecI\xe7\x02\xeb\x89$B\x99*t\xac\xf7Co'
-    '\xa7\xfe\xc0\xea\x02\x99\x96\x82RC\xba\xc9\xfb\x1b\x0bSf\x8b\x14\x85'
-    '\x11\xafX\xee\xfd\xdc\x88I\x04\x18\x11\x02\x00\t\x05\x02F\x92\xbd\x99'
-    '\x02\x1b\x0c\x00\n\t\x10\xa8\xe7b\xbf\x91\xe3\xe6\xc5c\xb5\x00\x99\x01a'
-    '\xc8CV\xc7s\xe1\xaf*v,3\x15\xceC\x03\xf4\xf8\xde\x00\xa0\xccP\xef\xd3N'
-    '\xf6\x80N\xf7@,}!\xe7\xab,y[\xc7\x1a'
+    b'\x99\x01\xa2\x04F\x92\xbd\x99\x11\x04\x00\xd5\xbf\x19Ru\x9b\xfd\x07\xc0\xa2tPC\xb1\x90\x8d\xd2\xc7\x8d'
+    b'\x90G\xdc\xfd\xfa\xff2\xaaTc\x7f\xd6\xaf\xdf\xf1\xb1N\\\x81\x922\x9b\xd8R\x0f_\xe8\xa0[\xf8'
+    b'\xc6\xf7\\\xba\x82\xdf}\xcc\x92\xa0\xcd\xfc\x11\x1d\xc94--m\xa0\x94:N\x19\xa7\x93OH\xf1\xc8'
+    b'\x1b*\xca\xb8\xad\xf3\x00i"\x86"\xde2K\x90Q\x9a\xaaL\xd76\x15\x85\xe9}\xdb\x80\xebi\xba'
+    b'\x00I\xc6\xf2\xb9\xdd\xf7\xb2V\xa49\x19\xe2\x97K\x87\x02\x1c\xfb\x00\xa0\xec%\xe4zgx\xb2[$'
+    b'\xb7\xb2>\xa3\xc0>>z\xe8\xc8U\x03\xffb \xfb\x9a\x90\\0\x8d\\\xb0>\n\x9f#\xf6\xc7_'
+    b'\xd7j+\xee-o\xd6\xd4\xc7\xdd+M`\xf8\xdf\xe6\x10^\xea\x85\xado\x83p\xf2\xc0Li0t'
+    b'\xeb\x1d-\xdex\xfa?\x01\xad\x93\xc1\x87c"\xb65?\xd7\xe6t\xcf]\xb6\x9d4D\n\x83\xedQ'
+    b'u\x85\x10\xfb\xe0qv\xb7_\xd0\x12\x95\xf3\x06%\xa3a\x07\xb8\xaf\x9bL\xa4\xb1\xef\x84\xcf0;\x9b'
+    b"8\xeb4\xef\x9e\xf3\xc8\x99]\xf0\xe4\xd4\xdc\xf8\xc0?U\r\x84X4\x03\xfe'tv[:\x9d\x0c"
+    b'x\xb3?1\xdeJiS\xdb\x1d\xb49;s6\x88\x0b\xfa\xe1$\xa5i\xb6\xb1\xb5\x94\xea,\xbc\x00'
+    b'w5\xefAX\x04)O\xe0\xbaR\xa1\t\x96g$\xd8\x1e\x08s~.\x04\x01\x92\x15\x9b)\xff\xa2'
+    b'\rzr\xb0\xa6k\xb14\t\x8bm\xcf\x83\x03\xcb\xb8TT\x85\xd3j9\x86\x8e\x94\xc9\xa9\xd5Pk'
+    b'\x8cWG@Eb\xaag\x05\x97\xaf\xf6W$T\xeb\xa5%\x93>\x95\xdf\x19\x8dV\xf8\x97\x98l\xe0'
+    b'\xc9\xb4&Key 32 (Key 32) <misa+key32'
+    b'@rpath.com>\x88`\x04\x13\x11\x02\x00 \x05\x02F\x92\xbd\x99\x02\x1b\x03\x06\x0b'
+    b'\t\x08\x07\x03\x02\x04\x15\x02\x08\x03\x04\x16\x02\x03\x01\x02\x1e\x01\x02\x17\x80\x00\n\t\x10\xa8\xe7b\xbf\x91'
+    b'\xe3\xe6\xc5\x7f\x08\x00\xa0\xcc\x99\xff\x08\x0b\x1eW\x01qC\xe3PD3\x0b5y~\x054\x00\x9fh'
+    b'c\xfc\xafo\x93\xcb\xc6dR\x13\xaf\x11VU1oD\xc3\xb1\x88J\x04\x10\x11\x02\x00\n\x05\x02F'
+    b'\x92\xbei\x03\x05\x01<\x00\n\t\x10\x19\x86\x1dDztk\xae\x80/\x00\xa0\x8f\xdb\x15\xdf1\x92\x02'
+    b"\x95\xea\xeb\xa1\x14\x81'\xa3A\x86\x08\x89O\x00\x9fr\x91\xd21[\x04F\x1c\xe0\x86\xc2E\n\xe6\x89"
+    b'1\x14\xe6\xbf\xdc\x88J\x04\x10\x11\x02\x00\n\x05\x02F\x92\xbe\xe8\x03\x05\x01<\x00\n\t\x10\xc2\x99\xbc'
+    b'\xae\x93\x11\xd2Km\x03\x00\x9d\x1f\xc5\x055\xd2\xbf6e&\xa0\xfc)\xd3\xef$X\xcd\xb3\xdfu\x00'
+    b'\xa0\xbe\xbb\x95h\x9c\xc4\x16\xa6G2-\x131\xcd\xa6\xfd:\xc4\x03K\x88J\x04\x10\x11\x02\x00\n\x05'
+    b'\x02F\x92\xbf\x14\x03\x05\x01<\x00\n\t\x10A\xeaVz\x8f\xf8\x8b\x92\xbb>\x00\xa0\x8eP\xb2^\x90'
+    b'\xb5)c%\x88\xc6:S\xa4\xcb\xbd\xe7\xfd\xf5\xba\x00\x9fF\x89;\x0bj\x07\xf1\x8fE\xe9\xbf>\xba'
+    b'\xd1\xecY\x1aZ\x121\xb9\x02\r\x04F\x92\xbd\x99\x10\x08\x00\xe2\xdd\xe0\xb7\xe3\x94\xd2\xaa2`\xec\x8d'
+    b'\xf3\xde\xdd)\xa4\xa2\x01\xca\x82,#\xfa\x0c\x8e\x0bav]\xc7I\xe5\xbf>Y\xc3\xd9\xd7\x85\xdd\x1a'
+    b'N~\xb9\x9b\xa7\x00o\x81\x81\xbcN\xc8TJ\x01\xc8}H\xbc`m\xd9\xe0\x07\x00\xea\xdc\xe5\xc0z'
+    b'a\x00\x08\x149v\x0b\xac\x7f\xccm\xb0\xc6\x06\x1f\xae9L\xf5\x95?8\xde\x8f\xf9\x82\xe6TX\xce'
+    b"\x87Oe\x14X\x8dzP\x86d\xfe\xd50_^\xba'vz\x7fJ\xbf\xd3\x9e0\x9b\x1c\x07\x88\x04"
+    b']\xec\xfc\x08\x0b\xb210k<\xb6\xe2 \xd5\xfb\xc9rP+\r\xdc\x12\x9f\x0b/\xce\x16(>\xba'
+    b'[\x9e1(yZ\x0cib%\x7f,r\x0c\x178\xc28#\x84\xc1\x95\xe8^x{jEYx'
+    b'[p\xca\x1c\xe5\xde\x92\xfb=\x123\x7foRN\xd2\xec\xc0g\x82b\xd5\xc6H\x13H\x1f\x97O\x16'
+    b'g\xe4od\x1315\xa6V\xdeW\xfd\xab\xa66\xbe\x18\x12\x90\xa4\x89\xdbvB\xa4O\xf3b\xa0\x8f'
+    b'\xf6y#\xef\x00\x03\x05\x07\xffM\xa1#\xb0\xfbG\xb7\xde\x1e\x88~\xbf{\xda2\xf0\x19i\xc5<z'
+    b'g\x98\xbdD\xdd\x8c,LR\x9f\x9b\xc5{5\xb6?Oi\xb7\xb25\x84:\x8b^\x87r\xda\xbc\x0f'
+    b'\x14\xaeG\xb5\xa9r\xfc*\xcfP\xad\xb6=\x8d\xe4\xfb\x9d\xa2\xc9\x80\xf1ne\xec\xed\x92nCm0'
+    b'\xd4\xa3\xb6$\xaa\xad\x1d\xf2\x17\x0cyj\xfd\xc3H\xa9\xf6\x00\x84\xad\xe63\x0b`\xd2\xaa>\x18\x18\xb8'
+    b"_\x9e\xb6\x91\x1b[\x1c\xaa\xe6-x'5\x94\x17)\xddU\xc0\x84\xf4\xb0n\xc2\x07\x89K\xa7<\xaf"
+    b'\xe1\x81\\\x1e\xeb\xe2t\xf8R\t\x88\x1b\xdfQ\xed!MB\xbf\x84\x14\rf\xe5\xbd\x85\xd9\xd0\xaf\xca'
+    b'\x99\xcc\xe5\x01\xf8\xd6\xd0\xd4\x97\x1c\xbd,\xb5X\xb7f\xb9P\x10\x04\xa2\xe1\x16\xb6\x04\x85_0\x02\xc0'
+    b'r\xd75\x94T\xc0\x97Q\x9f\x96M\xffo\xf8\xecI\xe7\x02\xeb\x89$B\x99*t\xac\xf7Co\xa7'
+    b'\xfe\xc0\xea\x02\x99\x96\x82RC\xba\xc9\xfb\x1b\x0bSf\x8b\x14\x85\x11\xafX\xee\xfd\xdc\x88I\x04\x18\x11'
+    b'\x02\x00\t\x05\x02F\x92\xbd\x99\x02\x1b\x0c\x00\n\t\x10\xa8\xe7b\xbf\x91\xe3\xe6\xc5c\xb5\x00\x99\x01a'
+    b'\xc8CV\xc7s\xe1\xaf*v,3\x15\xceC\x03\xf4\xf8\xde\x00\xa0\xccP\xef\xd3N\xf6\x80N\xf7@'
+    b',}!\xe7\xab,y[\xc7\x1a'
 )
 
 seckey4 = (
-    '\x95\x01\xe1\x04F\x92\xbd\x99\x11\x04\x00\xd5\xbf\x19Ru\x9b\xfd\x07'
-    '\xc0\xa2tPC\xb1\x90\x8d\xd2\xc7\x8d\x90G\xdc\xfd\xfa\xff2\xaaTc\x7f'
-    '\xd6\xaf\xdf\xf1\xb1N\\\x81\x922\x9b\xd8R\x0f_\xe8\xa0[\xf8\xc6\xf7\\'
-    '\xba\x82\xdf}\xcc\x92\xa0\xcd\xfc\x11\x1d\xc94--m\xa0\x94:N\x19\xa7'
-    '\x93OH\xf1\xc8\x1b*\xca\xb8\xad\xf3\x00i"\x86"\xde2K\x90Q\x9a\xaaL'
-    '\xd76\x15\x85\xe9}\xdb\x80\xebi\xba\x00I\xc6\xf2\xb9\xdd\xf7\xb2V\xa49'
-    '\x19\xe2\x97K\x87\x02\x1c\xfb\x00\xa0\xec%\xe4zgx\xb2[$\xb7\xb2>\xa3'
-    '\xc0>>z\xe8\xc8U\x03\xffb \xfb\x9a\x90\\0\x8d\\\xb0>\n\x9f#\xf6\xc7_'
-    '\xd7j+\xee-o\xd6\xd4\xc7\xdd+M`\xf8\xdf\xe6\x10^\xea\x85\xado\x83p\xf2'
-    '\xc0Li0t\xeb\x1d-\xdex\xfa?\x01\xad\x93\xc1\x87c"\xb65?\xd7\xe6t\xcf]'
-    '\xb6\x9d4D\n\x83\xedQu\x85\x10\xfb\xe0qv\xb7_\xd0\x12\x95\xf3\x06%'
-    '\xa3a\x07\xb8\xaf\x9bL\xa4\xb1\xef\x84\xcf0;\x9b8\xeb4\xef\x9e\xf3\xc8'
-    '\x99]\xf0\xe4\xd4\xdc\xf8\xc0?U\r\x84X4\x03\xfe\'tv[:\x9d\x0cx\xb3?1'
-    '\xdeJiS\xdb\x1d\xb49;s6\x88\x0b\xfa\xe1$\xa5i\xb6\xb1\xb5\x94\xea,\xbc'
-    '\x00w5\xefAX\x04)O\xe0\xbaR\xa1\t\x96g$\xd8\x1e\x08s~.\x04\x01\x92\x15'
-    '\x9b)\xff\xa2\rzr\xb0\xa6k\xb14\t\x8bm\xcf\x83\x03\xcb\xb8TT\x85\xd3j9'
-    '\x86\x8e\x94\xc9\xa9\xd5Pk\x8cWG@Eb\xaag\x05\x97\xaf\xf6W$T\xeb\xa5%'
-    '\x93>\x95\xdf\x19\x8dV\xf8\x97\x98l\xe0\xc9\xfe\x03\x03\x02)\xfa\xa2D'
-    '\xb9C|\x0e`l\xe8\xd2\x9b\x17,\xda\x16i\xffSn\xb0o\xfd)\xc3n\x1b\xe4#'
-    '\x07d\xf8\xa1\xa4\x8c-D\x9f\x11\x0cC\xf0\x07\x85\x8b\x97\x0bU 1YD\x99o'
-    '\xa3\x1dn\x87\xb4&Key 32 (Key 32) <misa+key32@rpath.com>\x88`\x04\x13'
-    '\x11\x02\x00 \x05\x02F\x92\xbd\x99\x02\x1b\x03\x06\x0b\t\x08\x07\x03'
-    '\x02\x04\x15\x02\x08\x03\x04\x16\x02\x03\x01\x02\x1e\x01\x02\x17\x80'
-    '\x00\n\t\x10\xa8\xe7b\xbf\x91\xe3\xe6\xc5\x7f\x08\x00\xa0\xcc\x99\xff'
-    '\x08\x0b\x1eW\x01qC\xe3PD3\x0b5y~\x054\x00\x9fhc\xfc\xafo\x93\xcb'
-    '\xc6dR\x13\xaf\x11VU1oD\xc3\xb1\x9d\x02c\x04F\x92\xbd\x99\x10\x08\x00'
-    '\xe2\xdd\xe0\xb7\xe3\x94\xd2\xaa2`\xec\x8d\xf3\xde\xdd)\xa4\xa2\x01'
-    '\xca\x82,#\xfa\x0c\x8e\x0bav]\xc7I\xe5\xbf>Y\xc3\xd9\xd7\x85\xdd\x1aN~'
-    '\xb9\x9b\xa7\x00o\x81\x81\xbcN\xc8TJ\x01\xc8}H\xbc`m\xd9\xe0\x07\x00'
-    '\xea\xdc\xe5\xc0za\x00\x08\x149v\x0b\xac\x7f\xccm\xb0\xc6\x06\x1f'
-    '\xae9L\xf5\x95?8\xde\x8f\xf9\x82\xe6TX\xce\x87Oe\x14X\x8dzP\x86d\xfe'
-    '\xd50_^\xba\'vz\x7fJ\xbf\xd3\x9e0\x9b\x1c\x07\x88\x04]\xec\xfc\x08\x0b'
-    '\xb210k<\xb6\xe2 \xd5\xfb\xc9rP+\r\xdc\x12\x9f\x0b/\xce\x16(>\xba['
-    '\x9e1(yZ\x0cib%\x7f,r\x0c\x178\xc28#\x84\xc1\x95\xe8^x{jEYx[p\xca\x1c'
-    '\xe5\xde\x92\xfb=\x123\x7foRN\xd2\xec\xc0g\x82b\xd5\xc6H\x13H\x1f\x97O'
-    '\x16g\xe4od\x1315\xa6V\xdeW\xfd\xab\xa66\xbe\x18\x12\x90\xa4\x89\xdbvB'
-    '\xa4O\xf3b\xa0\x8f\xf6y#\xef\x00\x03\x05\x07\xffM\xa1#\xb0\xfbG\xb7'
-    '\xde\x1e\x88~\xbf{\xda2\xf0\x19i\xc5<zg\x98\xbdD\xdd\x8c,LR\x9f\x9b'
-    '\xc5{5\xb6?Oi\xb7\xb25\x84:\x8b^\x87r\xda\xbc\x0f\x14\xaeG\xb5\xa9r'
-    '\xfc*\xcfP\xad\xb6=\x8d\xe4\xfb\x9d\xa2\xc9\x80\xf1ne\xec\xed\x92nCm0'
-    '\xd4\xa3\xb6$\xaa\xad\x1d\xf2\x17\x0cyj\xfd\xc3H\xa9\xf6\x00\x84\xad'
-    '\xe63\x0b`\xd2\xaa>\x18\x18\xb8_\x9e\xb6\x91\x1b[\x1c\xaa\xe6-x\'5\x94'
-    '\x17)\xddU\xc0\x84\xf4\xb0n\xc2\x07\x89K\xa7<\xaf\xe1\x81\\\x1e\xeb'
-    '\xe2t\xf8R\t\x88\x1b\xdfQ\xed!MB\xbf\x84\x14\rf\xe5\xbd\x85\xd9\xd0'
-    '\xaf\xca\x99\xcc\xe5\x01\xf8\xd6\xd0\xd4\x97\x1c\xbd,\xb5X\xb7f\xb9P'
-    '\x10\x04\xa2\xe1\x16\xb6\x04\x85_0\x02\xc0r\xd75\x94T\xc0\x97Q\x9f'
-    '\x96M\xffo\xf8\xecI\xe7\x02\xeb\x89$B\x99*t\xac\xf7Co\xa7\xfe\xc0\xea'
-    '\x02\x99\x96\x82RC\xba\xc9\xfb\x1b\x0bSf\x8b\x14\x85\x11\xafX\xee\xfd'
-    '\xdc\xfe\x03\x03\x02)\xfa\xa2D\xb9C|\x0e`\xf8\xb3\x89g\xda\xa9;\xf3'
-    '\xcf\x89\xb3)H\xfe\xa2\xf0 \x1cJ\xeb9j\x856TwcG\x06Uy\xaeq\xaa\x10;'
-    '\xcb\xa7\xee@k\xb3\xaf\x81\xc4_c\xdd\n\x11\x18\xea\xf8\x156}\xe4\xfc'
-    '\xe7\xe6\xd9\xf5kQ@H+A\x96\xdd\x86G\xb9\x88I\x04\x18\x11\x02\x00\t\x05'
-    '\x02F\x92\xbd\x99\x02\x1b\x0c\x00\n\t\x10\xa8\xe7b\xbf\x91\xe3\xe6'
-    '\xc5c\xb5\x00\xa0\xe7\xf3\x93\xb7 \xaf\x05\x04C\xf2\xbd\xf1\xb0TM\x96'
-    '\x94D\x0b\xec\x00\xa0\xb5\x94\xb6\xb1\xf4\xcf\xc8\x1b\xfe\xa2\x9b'
-    '\xa2qR\x02\x05\xd6{\xc4\xb8'
+    b'\x95\x01\xe1\x04F\x92\xbd\x99\x11\x04\x00\xd5\xbf\x19Ru\x9b\xfd\x07\xc0\xa2tPC\xb1\x90\x8d\xd2\xc7\x8d'
+    b'\x90G\xdc\xfd\xfa\xff2\xaaTc\x7f\xd6\xaf\xdf\xf1\xb1N\\\x81\x922\x9b\xd8R\x0f_\xe8\xa0[\xf8'
+    b'\xc6\xf7\\\xba\x82\xdf}\xcc\x92\xa0\xcd\xfc\x11\x1d\xc94--m\xa0\x94:N\x19\xa7\x93OH\xf1\xc8'
+    b'\x1b*\xca\xb8\xad\xf3\x00i"\x86"\xde2K\x90Q\x9a\xaaL\xd76\x15\x85\xe9}\xdb\x80\xebi\xba'
+    b'\x00I\xc6\xf2\xb9\xdd\xf7\xb2V\xa49\x19\xe2\x97K\x87\x02\x1c\xfb\x00\xa0\xec%\xe4zgx\xb2[$'
+    b'\xb7\xb2>\xa3\xc0>>z\xe8\xc8U\x03\xffb \xfb\x9a\x90\\0\x8d\\\xb0>\n\x9f#\xf6\xc7_'
+    b'\xd7j+\xee-o\xd6\xd4\xc7\xdd+M`\xf8\xdf\xe6\x10^\xea\x85\xado\x83p\xf2\xc0Li0t'
+    b'\xeb\x1d-\xdex\xfa?\x01\xad\x93\xc1\x87c"\xb65?\xd7\xe6t\xcf]\xb6\x9d4D\n\x83\xedQ'
+    b'u\x85\x10\xfb\xe0qv\xb7_\xd0\x12\x95\xf3\x06%\xa3a\x07\xb8\xaf\x9bL\xa4\xb1\xef\x84\xcf0;\x9b'
+    b"8\xeb4\xef\x9e\xf3\xc8\x99]\xf0\xe4\xd4\xdc\xf8\xc0?U\r\x84X4\x03\xfe'tv[:\x9d\x0c"
+    b'x\xb3?1\xdeJiS\xdb\x1d\xb49;s6\x88\x0b\xfa\xe1$\xa5i\xb6\xb1\xb5\x94\xea,\xbc\x00'
+    b'w5\xefAX\x04)O\xe0\xbaR\xa1\t\x96g$\xd8\x1e\x08s~.\x04\x01\x92\x15\x9b)\xff\xa2'
+    b'\rzr\xb0\xa6k\xb14\t\x8bm\xcf\x83\x03\xcb\xb8TT\x85\xd3j9\x86\x8e\x94\xc9\xa9\xd5Pk'
+    b'\x8cWG@Eb\xaag\x05\x97\xaf\xf6W$T\xeb\xa5%\x93>\x95\xdf\x19\x8dV\xf8\x97\x98l\xe0'
+    b'\xc9\xfe\x03\x03\x02)\xfa\xa2D\xb9C|\x0e`l\xe8\xd2\x9b\x17,\xda\x16i\xffSn\xb0o\xfd)'
+    b'\xc3n\x1b\xe4#\x07d\xf8\xa1\xa4\x8c-D\x9f\x11\x0cC\xf0\x07\x85\x8b\x97\x0bU 1YD\x99o'
+    b'\xa3\x1dn\x87\xb4&Key 32 (Key 32) <misa+ke'
+    b'y32@rpath.com>\x88`\x04\x13\x11\x02\x00 \x05\x02F\x92\xbd\x99\x02\x1b'
+    b'\x03\x06\x0b\t\x08\x07\x03\x02\x04\x15\x02\x08\x03\x04\x16\x02\x03\x01\x02\x1e\x01\x02\x17\x80\x00\n\t\x10\xa8\xe7'
+    b'b\xbf\x91\xe3\xe6\xc5\x7f\x08\x00\xa0\xcc\x99\xff\x08\x0b\x1eW\x01qC\xe3PD3\x0b5y~\x054'
+    b'\x00\x9fhc\xfc\xafo\x93\xcb\xc6dR\x13\xaf\x11VU1oD\xc3\xb1\x9d\x02c\x04F\x92\xbd\x99'
+    b'\x10\x08\x00\xe2\xdd\xe0\xb7\xe3\x94\xd2\xaa2`\xec\x8d\xf3\xde\xdd)\xa4\xa2\x01\xca\x82,#\xfa\x0c\x8e\x0b'
+    b'av]\xc7I\xe5\xbf>Y\xc3\xd9\xd7\x85\xdd\x1aN~\xb9\x9b\xa7\x00o\x81\x81\xbcN\xc8TJ\x01'
+    b'\xc8}H\xbc`m\xd9\xe0\x07\x00\xea\xdc\xe5\xc0za\x00\x08\x149v\x0b\xac\x7f\xccm\xb0\xc6\x06\x1f'
+    b'\xae9L\xf5\x95?8\xde\x8f\xf9\x82\xe6TX\xce\x87Oe\x14X\x8dzP\x86d\xfe\xd50_^'
+    b"\xba'vz\x7fJ\xbf\xd3\x9e0\x9b\x1c\x07\x88\x04]\xec\xfc\x08\x0b\xb210k<\xb6\xe2 \xd5\xfb"
+    b'\xc9rP+\r\xdc\x12\x9f\x0b/\xce\x16(>\xba[\x9e1(yZ\x0cib%\x7f,r\x0c\x17'
+    b'8\xc28#\x84\xc1\x95\xe8^x{jEYx[p\xca\x1c\xe5\xde\x92\xfb=\x123\x7foRN'
+    b'\xd2\xec\xc0g\x82b\xd5\xc6H\x13H\x1f\x97O\x16g\xe4od\x1315\xa6V\xdeW\xfd\xab\xa66'
+    b'\xbe\x18\x12\x90\xa4\x89\xdbvB\xa4O\xf3b\xa0\x8f\xf6y#\xef\x00\x03\x05\x07\xffM\xa1#\xb0\xfbG'
+    b'\xb7\xde\x1e\x88~\xbf{\xda2\xf0\x19i\xc5<zg\x98\xbdD\xdd\x8c,LR\x9f\x9b\xc5{5\xb6'
+    b'?Oi\xb7\xb25\x84:\x8b^\x87r\xda\xbc\x0f\x14\xaeG\xb5\xa9r\xfc*\xcfP\xad\xb6=\x8d\xe4'
+    b'\xfb\x9d\xa2\xc9\x80\xf1ne\xec\xed\x92nCm0\xd4\xa3\xb6$\xaa\xad\x1d\xf2\x17\x0cyj\xfd\xc3H'
+    b"\xa9\xf6\x00\x84\xad\xe63\x0b`\xd2\xaa>\x18\x18\xb8_\x9e\xb6\x91\x1b[\x1c\xaa\xe6-x'5\x94\x17"
+    b')\xddU\xc0\x84\xf4\xb0n\xc2\x07\x89K\xa7<\xaf\xe1\x81\\\x1e\xeb\xe2t\xf8R\t\x88\x1b\xdfQ\xed'
+    b'!MB\xbf\x84\x14\rf\xe5\xbd\x85\xd9\xd0\xaf\xca\x99\xcc\xe5\x01\xf8\xd6\xd0\xd4\x97\x1c\xbd,\xb5X\xb7'
+    b'f\xb9P\x10\x04\xa2\xe1\x16\xb6\x04\x85_0\x02\xc0r\xd75\x94T\xc0\x97Q\x9f\x96M\xffo\xf8\xec'
+    b'I\xe7\x02\xeb\x89$B\x99*t\xac\xf7Co\xa7\xfe\xc0\xea\x02\x99\x96\x82RC\xba\xc9\xfb\x1b\x0bS'
+    b'f\x8b\x14\x85\x11\xafX\xee\xfd\xdc\xfe\x03\x03\x02)\xfa\xa2D\xb9C|\x0e`\xf8\xb3\x89g\xda\xa9;'
+    b'\xf3\xcf\x89\xb3)H\xfe\xa2\xf0 \x1cJ\xeb9j\x856TwcG\x06Uy\xaeq\xaa\x10;\xcb'
+    b'\xa7\xee@k\xb3\xaf\x81\xc4_c\xdd\n\x11\x18\xea\xf8\x156}\xe4\xfc\xe7\xe6\xd9\xf5kQ@H+'
+    b'A\x96\xdd\x86G\xb9\x88I\x04\x18\x11\x02\x00\t\x05\x02F\x92\xbd\x99\x02\x1b\x0c\x00\n\t\x10\xa8\xe7b'
+    b'\xbf\x91\xe3\xe6\xc5c\xb5\x00\xa0\xe7\xf3\x93\xb7 \xaf\x05\x04C\xf2\xbd\xf1\xb0TM\x96\x94D\x0b\xec\x00'
+    b'\xa0\xb5\x94\xb6\xb1\xf4\xcf\xc8\x1b\xfe\xa2\x9b\xa2qR\x02\x05\xd6{\xc4\xb8'
 )
 
 pubkeya4 = """\
