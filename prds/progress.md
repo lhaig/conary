@@ -377,3 +377,14 @@ PATTERN: review - Run pyflakes on new py3tests files too, and compute "before" c
 
 PATTERN: py3-port - To reproduce Py2 behaviour, trace the C implementation (imp.c, fopen) and confirm with garnet history when python2 is unavailable.
 PATTERN: tooling - Never git stash in a tree shared with a concurrent task; compare against `git show HEAD:<file>`.
+
+## 2026-11-26 - tasks 3.11 and 3.13 DONE
+
+- 3.11: Recipe.__init__ compares plain functions (getattr(x, '__func__', x)); that cleared the 76-test signature, and expansiontest,
+  grouppolicytest, grouprecipetest, policytest, cmltest, xmllogtest and trovetuptest now pass fully. Harness assertRaises returns
+  the exception. XML-RPC send side uses toBytes; the receive side is open (Later).
+- 3.13: HTTP client bytes on the wire, with one basicAuth helper. The SSL tests were already skipping.
+- py3tests 1027 passed; compile gate clean.
+
+PATTERN: py3-port - Recipe-style method introspection: Py3 class attributes are plain functions; use getattr(x, '__func__', x).
+PATTERN: bytes/str - Text bound for the wire (XML-RPC base64, HTTP auth) goes through sha1helper.toBytes so surrogate-escaped input reproduces the Py2 bytes.
