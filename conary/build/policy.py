@@ -446,7 +446,8 @@ class Policy(BasePolicy):
             dirs = util.braceGlob(fullpath)
             for d in dirs:
                 if self.recursive:
-                    os.path.walk(d, self.walkDir, None)
+                    for dirpath, dirnames, filenames in os.walk(d):
+                        self.walkDir(None, dirpath, dirnames + filenames)
                 else:
                     # only one level
                     if os.path.isdir(d):

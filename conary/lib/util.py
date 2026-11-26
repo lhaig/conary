@@ -518,7 +518,8 @@ def rmtree(paths, ignore_errors=False, onerror=None):
                 (os.path.exists(path) and not os.path.isdir(path))):
             os.remove(path)
         else:
-            os.path.walk(path, _permsVisit, None)
+            for dirpath, dirnames, filenames in os.walk(path):
+                _permsVisit(None, dirpath, dirnames + filenames)
             shutil.rmtree(path, ignore_errors, onerror)
 
 def _permsVisit(arg, dirname, names):
@@ -654,8 +655,9 @@ def copytree(sources, dest, symlinks=False, filemode=None, dirmode=None):
             shutil.copytree(source, thisdest, symlinks)
             if dirmode:
                 os.chmod(thisdest, dirmode)
-            os.path.walk(source, _copyVisit,
-                         (sourcelist, len(source), thisdest, filemode, dirmode))
+            args = (sourcelist, len(source), thisdest, filemode, dirmode)
+            for dirpath, dirnames, filenames in os.walk(source):
+                _copyVisit(args, dirpath, dirnames + filenames)
         else:
             log.debug('copying [file] %s to %s', source, dest)
             shutil.copy2(source, dest)
