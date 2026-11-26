@@ -90,11 +90,17 @@ def loadMacros(paths):
         loadPaths.extend(globPaths)
 
     for path in loadPaths:
-        compiledPath = path+'c'
-        deleteCompiled = not util.exists(compiledPath)
+        # Py2 imp.load_source fopen()ed a directory without an S_ISDIR
+        # check; the first read failed with EISDIR, which the tokenizer
+        # treated as EOF, so a directory loaded as an empty module and
+        # added no macros (rephelp's defaultMacros lists archive/site, and
+        # a glob such as macros.d/* also matches __pycache__). Skip
+        # directories to get the same result. A missing entry never gets
+        # here: glob drops it, as in Py2. (Py3 writes no path+'c' file, so
+        # the old compiled-file cleanup is gone.)
+        if os.path.isdir(path):
+            continue
         macroModule = util.loadSourceModule('tmpmodule', path)
-        if deleteCompiled:
-            util.removeIfExists(compiledPath)
         baseMacros.update(x for x in macroModule.__dict__.items()
                           if not x[0].startswith('__'))
 

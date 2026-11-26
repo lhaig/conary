@@ -158,7 +158,6 @@ class Importer(object):
             newDict = {}
             for name, attr in recipeClass.__dict__.items():
                 if type(attr) in [ types.ModuleType, types.MethodType,
-                                   types.UnboundMethodType,
                                    types.FunctionType,
                                    staticmethod,
                                    # don't copy in flags, as they
