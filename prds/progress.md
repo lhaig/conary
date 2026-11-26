@@ -416,3 +416,18 @@ PATTERN: testing - A scan test that skips inputs it cannot parse must report the
 - Top signatures: filecontainer.py:__init__ text-mode write 977 (task 3.16), state.py CONARYFileMissing 432,
   sha1helper.sha1ToString str 149, PolicyError SharedLibrary 39, conarycfg append 16, versionops 12.
 - 5 duplicate ids across files (new with this run); check before the next checkpoint.
+
+## 2026-11-26 - task 3.16 DONE
+
+- The repository commit path works: rephelp.addComponent commits and getTrove reads it back. FileContainer is strict bytes and
+  changeset tags go through four helpers. filecontainer.py:__init__ 977 -> 0. Run tmp/baseline-20261126-07ef2067a-t316:
+  1037 pass / 1606 fail / 167 skip (was 856/1791/163).
+- CONARYFileMissing (596) is a case-insensitive macOS bind mount artifact, not downstream of commits: new task 3.17.
+- py3tests 1113 passed; compile gate clean; pyflakes no new warnings.
+
+PATTERN: bytes/str - Run new bytes tests under `python3 -bb`; a silent bytes == str comparison returns False and hides empty results.
+PATTERN: tooling - The macOS bind mount is case-insensitive: os.path.exists('CONARY') is true for the repo's conary/ directory.
+PATTERN: py3-port - tempfile.NamedTemporaryFile: setting `.delete = False` on the wrapper does nothing since 3.12; pass delete=False.
+PATTERN: bytes/str - Wire base64 goes through sha1helper.toBase64/fromBase64; base64.encodestring/decodestring are gone.
+PATTERN: testing - A driver hook used only by explicit callers (cu.encode) is not exercised by plain execute(); test it through the caller's path.
+PATTERN: tooling - Do not edit source while devenv/conary_test_baseline.sh runs; the container bind-mounts the live tree.
