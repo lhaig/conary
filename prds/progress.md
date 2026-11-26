@@ -321,3 +321,10 @@ PATTERN: bytes/str - One encode rule, one helper: sha1helper.toBytes (utf-8, sur
 PATTERN: bytes/str - When a shared helper changes its return type (FromString.get to BytesIO), audit every caller, production and test.
 PATTERN: harness - ctypes pointers that must be freed need restype c_void_p, never c_char_p; check for NULL before string_at.
 PATTERN: harness - A "deleted cwd" crash can come from production code that chroots or chdirs without try/finally (files.UserGroupIdCache).
+
+## 2026-11-26 - checkpoint baseline after 3.5 (native aarch64, uid 501, HEAD e39a4f7, tmp/baseline-20261126-e39a4f7)
+
+- 2808 ids: 488 pass, 467 fail, 1 error, 1852 skip, 0 not run (was 450/514/1755/91 after 3.3).
+- Classes (469): py3 semantics other 117, bytes/str streams/trove 83, file I/O 63, py2 code in tests 61, bytes/str other 43,
+  unknown 56, removed stdlib 16, iterator 10, harness gap 8, sort/compare 6, integer division 2, network 2, arch 1, timeout 1,
+  hashing 0.
