@@ -332,4 +332,4 @@ def getDeps(contents):
 
 if __name__ == '__main__':
     import sys
-    print(getDeps(file(sys.argv[1]).read()))
+    print(getDeps(open(sys.argv[1], 'rb').read()))

@@ -25,6 +25,7 @@ import types
 import tempfile
 import traceback
 
+from conary.lib.compat import cmp
 from conary.repository import errors
 from conary.build import recipe, use
 from conary.build import errors as builderrors

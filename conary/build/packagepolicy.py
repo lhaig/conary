@@ -320,14 +320,14 @@ class Config(policy.Policy):
 
     def _markConfig(self, filename, fullpath):
         self.info(filename)
-        f = file(fullpath)
+        f = open(fullpath, 'rb')
         f.seek(0, 2)
         if f.tell():
             # file has contents
             f.seek(-1, 2)
             lastchar = f.read(1)
             f.close()
-            if lastchar != '\n':
+            if lastchar != b'\n':
                 self._addTrailingNewline(filename, fullpath)
 
         f.close()
@@ -3532,11 +3532,11 @@ class Requires(_addInfo, _dependency):
         # but only look at paths, not (for example) "include" lines
         if os.path.exists('/etc/ld.so.conf'):
             self.systemLibPaths |= set(os.path.normpath(x.strip())
-                for x in file('/etc/ld.so.conf').readlines()
+                for x in open('/etc/ld.so.conf').readlines()
                 if x.startswith('/'))
         for fileName in fixedglob.glob('/etc/ld.so.conf.d/*.conf'):
             self.systemLibPaths |= set(os.path.normpath(x.strip())
-                for x in file(fileName).readlines()
+                for x in open(fileName).readlines()
                 if x.startswith('/'))
         self.rpathFixup = [(filter.Filter(x, macros), y % macros)
                            for x, y in self.rpathFixup]
@@ -4012,7 +4012,7 @@ class Requires(_addInfo, _dependency):
         # contain multiple ruby modules, getting 90% of the ruby
         # dependencies will find most of the required packages in
         # practice
-        depEntries = [x.strip() for x in file(fullpath)
+        depEntries = [x.strip() for x in open(fullpath)
                       if x.startswith('require ') or
                          x.startswith('require(')]
         depEntries = (x.split() for x in depEntries)

@@ -17,6 +17,7 @@
 
 """ Extended pdb """
 import inspect
+import io
 import pdb
 import os
 import re
@@ -753,7 +754,7 @@ class Epdb(pdb.Pdb):
         isatty = False
         try:
             fileno = sys.stdout.fileno()
-            isatty = isinstance(sys.stdout, file) and os.isatty(fileno)
+            isatty = isinstance(sys.stdout, io.IOBase) and os.isatty(fileno)
         except AttributeError:
             pass
             # sys.stdout is not a regular file,
@@ -774,7 +775,7 @@ class Epdb(pdb.Pdb):
         isatty = False
         try:
             fileno = sys.stdin.fileno()
-            isatty = isinstance(sys.stdout, file) and os.isatty(fileno)
+            isatty = isinstance(sys.stdout, io.IOBase) and os.isatty(fileno)
         except AttributeError:
             pass
             # sys.stdout is not a regular file,

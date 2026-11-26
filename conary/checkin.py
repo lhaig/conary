@@ -1687,11 +1687,11 @@ def addFiles(fileList, ignoreExisting=False, text=False, binary=False,
         if isConfig:
             sb = os.stat(filename)
             if sb.st_size > 0 and stat.S_ISREG(sb.st_mode):
-                fobj = file(filename, "r")
+                fobj = open(filename, "rb")
                 fobj.seek(-1, 2)
                 term = fobj.read(1)
                 fobj.close()
-                if term != '\n':
+                if term != b"\n":
                     log.error("%s does not end with a trailing new line",
                                 filename)
 
@@ -2278,7 +2278,7 @@ def generateStatus(repos, dirName='.'):
         results.extend([('?', x) for x in dirfilesSet])
         results.extend([('A', x) for x in addedFilenames])
         # Sort by file path
-        results.sort(lambda x, y: cmp(x[1], y[1]))
+        results.sort(key=lambda x: x[1])
         return results
 
     oldTrove = repos.getTrove(state.getName(), state.getVersion(), deps.deps.Flavor())
@@ -2333,7 +2333,7 @@ troveCs.getNewFileList() ]
     results[0:0] = unknown
 
     # Sort by file path
-    results.sort(lambda x, y: cmp(x[1], y[1]))
+    results.sort(key=lambda x: x[1])
 
     return results
 
@@ -2347,14 +2347,14 @@ def stat_(repos):
     return _showStat(generateStatus(repos))
 
 
-def localAutoSourceChanges(oldTrove, xxx_todo_changeme):
+def localAutoSourceChanges(oldTrove, stateInfo):
     # look for autosource files which have changed from upstream; we don't
     # use buildLocalChanges to do this because we don't want to download
     # autosource'd files which haven't changed; a side affect is that
     # changing, adding, or removing a url in a recipe won't show up here as a
     # change to an autosource files; only changes due to refresh will be
     # noticed
-    (changeSet, ((isDifferent, newState),)) = xxx_todo_changeme
+    (changeSet, ((isDifferent, newState),)) = stateInfo
     for (pathId, path, fileId, version) in newState.iterFileList():
         if not newState.fileNeedsRefresh(pathId): continue
         assert(newState.fileIsAutoSource(pathId))

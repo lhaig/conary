@@ -19,12 +19,22 @@
 import copy
 import itertools
 from collections import deque
+from functools import cmp_to_key
+
+from conary.lib.compat import cmp
 
 class BackEdgeError(Exception):
     def __init__(self, src, dst, *args, **kwargs):
         self.src = src
         self.dst = dst
         Exception.__init__(self, *args, **kwargs)
+
+def _sortKey(sortAlg):
+    """Turn a Python 2 style comparison function into a sort key."""
+    if sortAlg is None:
+        return None
+    return cmp_to_key(sortAlg)
+
 
 class NodeData(object):
     """Stores data associated with nodes.  Subclasses can determine
@@ -53,12 +63,12 @@ class NodeData(object):
         return iter(self.data)
 
     def sort(self, sortAlg=None):
-        return sorted(enumerate(self.data), sortAlg)
+        return sorted(enumerate(self.data), key=_sortKey(sortAlg))
 
     def sortSubset(self, indexes, sortAlg=None, reverse=False):
         data = self.data
-        return sorted(((x, data[x]) for x in indexes), sortAlg,
-                      reverse=reverse)
+        return sorted(((x, data[x]) for x in indexes),
+                      key=_sortKey(sortAlg), reverse=reverse)
 
     def getItemsByIndex(self, indexes):
         return [self.data[x] for x in indexes]
@@ -87,7 +97,7 @@ class NodeDataByHash(NodeData):
 
     def sort(self, sortAlg=None):
         return sorted(((x[1], x[0]) for x in self.hashedData.items()),
-                      sortAlg)
+                      key=_sortKey(sortAlg))
 
     def copy(self):
         new = self.__class__()

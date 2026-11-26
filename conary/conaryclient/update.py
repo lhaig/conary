@@ -4187,7 +4187,7 @@ def _storeJobInfo(remainingJobs, updJob):
 
     # Save information about pre scripts already run
     path = os.path.join(restartDir, "jobPreScriptsAlreadyRun")
-    file(path, "w").write(_serializePreScripts(
+    open(path, 'w').write(_serializePreScripts(
         updJob.iterJobPreScriptsAlreadyRun()))
 
     troveMapDir = os.path.join(restartDir, "trove-changesets")
@@ -4250,7 +4250,7 @@ def _loadRestartInfo(restartDir, updJob):
     if os.path.exists(verFile):
         ver = []
         try:
-            ver = [ x for x in file(verFile) if x.startswith('version ') ]
+            ver = [ x for x in open(verFile) if x.startswith('version ') ]
         except IOError:
             pass
         else:
@@ -4266,7 +4266,7 @@ def _loadRestartInfo(restartDir, updJob):
     # Load information about pre scripts already run
     path = os.path.join(restartDir, "jobPreScriptsAlreadyRun")
     try:
-        iterable = file(path)
+        iterable = open(path)
     except IOError:
         iterable = []
     updJob.setJobPreScriptsAlreadyRun(_unserializePreScripts(iterable))

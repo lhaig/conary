@@ -85,10 +85,10 @@ class DumbCache(dict):
 
     def _shrink(self):
         order = sorted((x for x in list(self.items()) if x[1][1] is not None),
-                       lambda a, b: cmp(b[1][1], a[1][1]))
-        toRemove = order[0:self.limit / 10]
+                       key=lambda a: a[1][1], reverse=True)
+        toRemove = order[0:self.limit // 10]
         if (len(self) - len(toRemove)) > (self.limit * 0.95):
-            toRemove += [ x for x in list(self.items()) ][0:self.limit / 10]
+            toRemove += [ x for x in list(self.items()) ][0:self.limit // 10]
 
         for x in toRemove:
             del self[x[0]]

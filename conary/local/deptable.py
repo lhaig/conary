@@ -15,6 +15,7 @@
 #
 
 
+from conary.lib.compat import cmp
 from conary import dbstore, trove, versions
 from conary.deps import deps
 from conary.lib import graph
@@ -292,8 +293,8 @@ class DependencyWorkTables:
         WHERE NOT Dependencies.class IN (%s) AND RemovedTroveIds.rowId > ?
         """% ",".join('"%d"' % x.tag for x in self.ignoreDepClasses), max)
 
-    def removeTrove(self, xxx_todo_changeme, nodeId):
-        (name, version, flavor) = xxx_todo_changeme
+    def removeTrove(self, troveTup, nodeId):
+        (name, version, flavor) = troveTup
         if flavor is None or flavor.isEmpty():
             flavor = None
         else:

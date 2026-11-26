@@ -515,7 +515,7 @@ class SubscriptionLogWriter(LogWriter):
     def start(self):
         # do not use openPath because this file needs 'a' for
         # immediate synchronize()
-        self.stream = file(self.path, 'a')
+        self.stream = open(self.path, 'a')
         self.logging = True
 
     def freetext(self, text):
@@ -552,7 +552,7 @@ def startLog(path, xmlPath, subscribeLogPath, withStdin = True):
     screenWriter = StreamLogWriter()
     subscriptionWriter = SubscriptionLogWriter(subscribeLogPath)
     # touch this file to ensure that synchronize() works immediately
-    file(subscribeLogPath, 'a')
+    open(subscribeLogPath, 'a')
     lgr = Logger(withStdin = withStdin,
                  writers = [plainWriter, xmlWriter,
                             screenWriter, subscriptionWriter],
@@ -669,7 +669,7 @@ class Logger:
         timestampLen = len(timestamp)
         self.command('synchronizeMark %s' %timestamp)
         self.flush()
-        syncFile = file(self.syncPath)
+        syncFile = open(self.syncPath, 'rb')
 
         def _fileLongEnough():
             syncFile.seek(0, 2)
@@ -695,7 +695,7 @@ class Logger:
 
         i = 0
         _seekTimestamp()
-        while syncFile.read(timestampLen) != timestamp:
+        while syncFile.read(timestampLen) != timestamp.encode():
             _waitedTooLong(i, 'search')
             i += 1
             time.sleep(0.01)

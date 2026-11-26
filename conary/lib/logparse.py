@@ -16,7 +16,7 @@
 
 
 def getConaryLogLineList(conaryLogFile='/var/log/conary'):
-    return [ x.strip() for x in file(conaryLogFile).readlines() ]
+    return [ x.strip() for x in open(conaryLogFile).readlines() ]
 
 def getConaryLogEventList(lines=None):
     """

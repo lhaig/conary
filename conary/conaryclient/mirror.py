@@ -15,6 +15,7 @@
 #
 
 import copy
+import functools
 import itertools
 import optparse
 import os
@@ -28,6 +29,7 @@ from conary.conaryclient import callbacks as clientCallbacks
 from conary.conaryclient import cmdline
 from conary import conarycfg, callbacks, trove
 from conary.lib import cfg, util, log
+from conary.lib.compat import cmp
 from conary.repository import errors, changeset, netclient
 from conary.deps.deps import parseFlavor
 
@@ -255,8 +257,16 @@ def groupTroves(troveList):
         if len(bhasgrp) > len(ahasgrp):
             return -1
         return cmp(ahasgrp, bhasgrp)
-    grouping.sort(_groupsort)
+    grouping.sort(key=functools.cmp_to_key(_groupsort))
     return grouping
+
+def _troveListCmp(a, b):
+    """Order (mark, (name, version, flavor)) by mark, version, flavor and
+    then reverse name."""
+    return (cmp(a[0], b[0]) or
+            cmp(a[1][1], b[1][1]) or
+            cmp(a[1][2], b[1][2]) or
+            cmp(b[1][0], a[1][0]))
 
 def buildJobList(src, target, groupList, absolute=False, splitNodes=True,
         jobSize=20):
@@ -568,7 +578,7 @@ def _getNewSigs(src, cfg, mark):
     log.debug("%d changed sigs after label and match filtering", len(sigList))
     # protection against duplicate items returned in the list by some servers
     sigList = list(set(sigList))
-    sigList.sort(lambda a,b: cmp(a[0], b[0]))
+    sigList.sort(key=lambda a: a[0])
     log.debug("downloading %d signatures from source repository", len(sigList))
     # XXX: we could also get the metadata in here, but getTroveInfo
     # would use a getChangeSet call against older repos, severely
@@ -820,10 +830,7 @@ def getTroveList(src, cfg, mark):
         if not troveList:
             return (maxMark, [])
     # sort deterministically by mark, version, flavor, reverse name
-    troveList.sort(lambda a,b: cmp(a[0], b[0]) or
-                   cmp(a[1][1], b[1][1]) or
-                   cmp(a[1][2], b[1][2]) or
-                   cmp(b[1][0], a[1][0]) )
+    troveList.sort(key=functools.cmp_to_key(_troveListCmp))
     log.debug("%d new troves returned", len(troveList))
     # We cut off the last troves that have the same flavor, version to
     # avoid committing an incomplete trove. This could happen if the
@@ -990,7 +997,7 @@ def mirrorRepository(sourceRepos, targetRepos, cfg,
         log.debug("split %d troves into %d chunks by target", len(troveList), len(byTarget))
     # sort the targetSets by length
     targetSets = list(enumerate(targetSetList))
-    targetSets.sort(lambda a,b: cmp(len(a[1]), len(b[1])))
+    targetSets.sort(key=lambda a: len(a[1]))
     bundlesMark = 0
     for idx, targetSet in targetSets:
         troveList = byTarget[idx]

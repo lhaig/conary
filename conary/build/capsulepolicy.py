@@ -322,7 +322,7 @@ class RPMProvides(policy.Policy):
 
             if capsule and capsule[0] == 'rpm':
                 path = capsule[1]
-                h = rpmhelper.readHeader(file(path))
+                h = rpmhelper.readHeader(open(path, 'rb'))
                 prov = h.getProvides(mergeKmodSymbols=self.mergeKmodSymbols,
                     enableRPMVersionDeps=self.recipe.cfg.enableRPMVersionDeps)
 
@@ -492,7 +492,7 @@ class RPMRequires(policy.Policy):
                 if matchFound:
                     continue
 
-                h = rpmhelper.readHeader(file(path))
+                h = rpmhelper.readHeader(open(path, 'rb'))
                 rReqs, rProv = h.getDeps(mergeKmodSymbols=self.mergeKmodSymbols,
                     enableRPMVersionDeps=self.recipe.cfg.enableRPMVersionDeps)
 

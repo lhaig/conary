@@ -279,7 +279,7 @@ class AbstractPackageRecipe(Recipe):
             return
         del self.__dict__[name]
 
-    def setCrossCompile(self, xxx_todo_changeme):
+    def setCrossCompile(self, crossInfo):
         """ Tell conary it should cross-compile, or build a part of a
             cross-compiler toolchain.
 
@@ -296,7 +296,7 @@ class AbstractPackageRecipe(Recipe):
                  binaries from this build should be runnable on the build
                  architecture.
         """
-        (crossHost, crossTarget, isCrossTool) = xxx_todo_changeme
+        (crossHost, crossTarget, isCrossTool) = crossInfo
         def _parseArch(archSpec, target=False):
             if isinstance(archSpec, deps.Flavor):
                 return archSpec, None, None

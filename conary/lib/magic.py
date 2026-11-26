@@ -153,7 +153,7 @@ class deb(Magic):
     def __init__(self, path, basedir):
         Magic.__init__(self, path, basedir)
         fullPath = basedir + path
-        f = file(fullPath)
+        f = open(fullPath, 'rb')
         try:
             h = debhelper.DebianPackageHeader(f)
         except (debhelper.Error, debhelper.ar.ArchiveError):
@@ -229,7 +229,7 @@ class java(Magic):
     def __init__(self, path, basedir='', buffer=''):
         Magic.__init__(self, path, basedir)
         fullpath = basedir+path
-        prov, req = javadeps.getDeps(file(fullpath).read())
+        prov, req = javadeps.getDeps(open(fullpath, 'rb').read())
         if prov:
             self.contents['provides'] = set([prov])
         if req:
@@ -271,7 +271,7 @@ class RPM(Magic):
     def __init__(self, path, basedir=''):
         Magic.__init__(self, path, basedir)
         try:
-            f = file(path)
+            f = open(path, 'rb')
         except:
             return None
         # Convert list of objects to simple types
@@ -341,7 +341,7 @@ def magic(path, basedir=''):
         oldmode = mode
         os.chmod(n, mode | 0o400)
 
-    f = file(n)
+    f = open(n, 'rb')
     if oldmode is not None:
         os.chmod(n, oldmode)
 

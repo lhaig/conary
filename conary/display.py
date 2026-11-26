@@ -25,6 +25,7 @@ import textwrap
 import time
 
 #conary
+from conary.lib.compat import cmp
 from conary import files
 from conary import trove
 from conary.deps import deps
@@ -102,7 +103,7 @@ def getBuildLog(troveSource, n, v, f):
                                         withFiles = True)
     for (pathId, path, fileId, version, file_) in iter:
         if 'buildlog' in file_.tags:
-            return (pathId, path, fileId, version, file)
+            return (pathId, path, fileId, version, file_)
 
 def filterComponents(tupList, primaryTroves=[]):
     tups = set()

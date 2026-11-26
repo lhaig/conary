@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+import functools
+
+from conary.lib.compat import cmp
+
 
 def nextVersion(repos, db, troveNames, sourceVersion, troveFlavor,
                 targetLabel=None, alwaysBumpCount=False):
@@ -204,8 +208,9 @@ def nextLocalVersion(db, troveNames, latest, troveFlavorSet):
     if not relVersions:
         return latest
 
-    relVersions.sort(lambda a, b: cmp(a[0].trailingRevision().buildCount,
-                                      b[0].trailingRevision().buildCount))
+    relVersions.sort(key=functools.cmp_to_key(
+        lambda a, b: cmp(a[0].trailingRevision().buildCount,
+                         b[0].trailingRevision().buildCount)))
     latest, flavors = relVersions[-1]
     if troveFlavorSet & set(flavors):
         latest.incrementBuildCount()

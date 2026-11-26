@@ -976,9 +976,9 @@ class ChangeSet(streams.StreamSet):
 
         return False
 
-    def _makeFileGitDiffCapsule(self, troveSource, pathId, xxx_todo_changeme, xxx_todo_changeme1, diffBinaries):
-        (oldPath, oldFileId, oldFileVersion, oldFileObj) = xxx_todo_changeme
-        (newPath, newFileId, newFileObj) = xxx_todo_changeme1
+    def _makeFileGitDiffCapsule(self, troveSource, pathId, oldFileInfo, newFileInfo, diffBinaries):
+        (oldPath, oldFileId, oldFileVersion, oldFileObj) = oldFileInfo
+        (newPath, newFileId, newFileObj) = newFileInfo
         if pathId == trove.CAPSULE_PATHID:
             return
 
@@ -1013,10 +1013,10 @@ class ChangeSet(streams.StreamSet):
             return
         yield "Encapsulated files differ\n"
 
-    def _makeFileGitDiff(self, troveSource, pathId, xxx_todo_changeme2, xxx_todo_changeme3,
+    def _makeFileGitDiff(self, troveSource, pathId, oldFileInfo, newFileInfo,
                          diffBinaries):
-        (oldPath, oldFileId, oldFileVersion, oldFileObj) = xxx_todo_changeme2
-        (newPath, newFileId, newFileObj) = xxx_todo_changeme3
+        (oldPath, oldFileId, oldFileVersion, oldFileObj) = oldFileInfo
+        (newPath, newFileId, newFileObj) = newFileInfo
         if oldFileId == newFileId:
             return
 

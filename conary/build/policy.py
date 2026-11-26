@@ -24,6 +24,7 @@ import os
 import sys
 import types
 
+from conary.lib.compat import cmp
 from conary.lib import util, log, graph, sha1helper
 from conary.build import action, errors, filter, trovefilter
 

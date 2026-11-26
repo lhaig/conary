@@ -18,11 +18,13 @@
 # Various stuff used by the dbstore drivers
 import time
 
+from conary.lib.compat import CmpMixin, cmp
+
 
 _SIGIL = []
 
 # class to aid in comparing database versions
-class DBversion:
+class DBversion(CmpMixin):
     def __init__(self, major, minor=0):
         self.major = major
         self.minor = minor
@@ -42,6 +44,9 @@ class DBversion:
             return cmp(self.major, other.major) or cmp(self.minor, other.minor)
         raise RuntimeError("incompatible type compare for DBversion",
                            [(self.major, self.minor), other])
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
     def __repr__(self):
         return "DBversion(%d,%d)" % (self.major, self.minor)
 

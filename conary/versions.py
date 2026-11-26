@@ -27,6 +27,7 @@ import weakref
 #conary
 from conary.errors import ParseError, VersionStringError
 from conary.lib import log, api
+from conary.lib.compat import CmpMixin, cmp
 
 staticLabelTable = {}
 
@@ -64,7 +65,7 @@ class AbstractLabel(object):
     def __ne__(self, them):
         return not self.__eq__(them)
 
-class SerialNumber(object):
+class SerialNumber(CmpMixin, object):
 
     """
     Provides source and binary serial numbers.
@@ -146,7 +147,7 @@ class SerialNumber(object):
     def __init__(self, value):
         self.numList = [ int(x) for x in value.split(".") ]
 
-class Revision(AbstractRevision):
+class Revision(CmpMixin, AbstractRevision):
     """
     Version element for a version, sourceCount, buildCount
     triplet. These are formatted as "version-sourceCount-buildCount",
@@ -603,7 +604,7 @@ class AbstractVersion(object):
 
     __slots__ = "__weakref__"
 
-class VersionSequence(AbstractVersion):
+class VersionSequence(CmpMixin, AbstractVersion):
 
     __slots__ = ( "versions", "hash", "strRep", 'cached' )
 

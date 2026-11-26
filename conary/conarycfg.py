@@ -28,6 +28,7 @@ import textwrap
 import traceback
 import urllib.request, urllib.parse, urllib.error
 
+from conary.lib.compat import cmp
 from conary.deps import deps, arch
 from conary.lib import util, api
 from conary.lib.cfg import ParseError, SectionedConfigFile, ConfigSection

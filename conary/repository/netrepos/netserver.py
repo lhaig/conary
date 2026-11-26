@@ -1921,7 +1921,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         fileName = url[len(base) + 1:] + "-in-status"
         path = "%s/%s" % (self.tmpPath, fileName)
         try:
-            buf = file(path).read()
+            buf = open(path, 'rb').read()
             return pickle.loads(buf)
         except IOError:
             return False

@@ -19,6 +19,7 @@ import itertools
 import re
 import weakref
 from conary.lib import api
+from conary.lib.compat import CmpMixin, cmp
 from conary.lib.ext import dep_freeze
 from conary.errors import ParseError
 import sys
@@ -136,7 +137,7 @@ class BaseDependency(object):
     def __init__(self):
         raise NotImplementedError
 
-class Dependency(BaseDependency):
+class Dependency(CmpMixin, BaseDependency):
 
     __slots__ = ( 'name', 'flags', )
 
@@ -349,7 +350,7 @@ class Dependency(BaseDependency):
             for (flag, sense) in flags:
                 self.flags[flag] = sense
 
-class DependencyClass(object):
+class DependencyClass(CmpMixin, object):
 
     __slots__ = ( 'members', )
 
@@ -834,7 +835,7 @@ def UnknownDependencyFactory(intTag):
 
 #ld = {}
 
-class DependencySet(object):
+class DependencySet(CmpMixin, object):
 
     __slots__ = ( '_members', '_hash' )
 

@@ -358,7 +358,7 @@ class _Source(_AnySource):
         doc = open(filepath)
 
         try:
-            sig = openpgpfile.readSignature(file(self.localgpgfile))
+            sig = openpgpfile.readSignature(open(self.localgpgfile, 'rb'))
         except openpgpfile.PGPError:
             raise SourceError("Failed to read signature from %s" % self.localgpgfile)
 
@@ -1494,7 +1494,7 @@ class addSource(_Source):
         destFile = os.sep.join((destDir, self.dest))
         util.removeIfExists(destFile)
         if self.contents is not None:
-            pout = file(destFile, "w")
+            pout = open(destFile, 'w')
             if self.applymacros:
                 pout.write(self.contents %self.recipe.macros)
             else:
@@ -1504,8 +1504,8 @@ class addSource(_Source):
             f = self.doDownload()
             if self.applymacros:
                 log.info('applying macros to source %s' %f)
-                pin = file(f)
-                pout = file(destFile, "w")
+                pin = open(f)
+                pout = open(destFile, 'w')
                 log.info('copying %s to %s' %(f, destFile))
                 pout.write(pin.read()%self.recipe.macros)
                 pin.close()
@@ -1796,7 +1796,7 @@ class addCapsule(_Source):
                     fullpath = os.sep.join((destDir, path))
                     util.mkdirChain(os.path.dirname(fullpath))
                     if stat.S_ISREG(mode):
-                        file(fullpath, 'w')
+                        open(fullpath, 'w')
                     elif stat.S_ISLNK(mode):
                         if not filelinktos:
                             raise SourceError('Ghost Symlink in RPM has no target')
@@ -2678,7 +2678,7 @@ class addPreUpdateScript(TroveScript):
     _scriptName = 'preUpdateScripts'
 
 def _extractScriptsFromRPM(rpm, directory):
-    r = file(rpm, 'r')
+    r = open(rpm, 'rb')
     h = rpmhelper.readHeader(r)
 
     baseDir = '/'.join((directory, os.path.basename(rpm), ''))
@@ -2693,7 +2693,7 @@ def _extractScriptsFromRPM(rpm, directory):
     )
     for scriptName, tag, progTag in scripts:
         if tag in h or progTag in h:
-            scriptFile = file('/'.join((baseDir, scriptName)), 'w')
+            scriptFile = open('/'.join((baseDir, scriptName)), 'w')
             if progTag in h:
                 scriptFile.write('#!%s\n' %str(h[progTag]))
             if tag in h:
@@ -2735,7 +2735,7 @@ def _extractScriptsFromRPM(rpm, directory):
         triggerType = tflag & triggerMask
         triggerType = triggerTypes.get(triggerType, 'unknown')
         scriptName = 'trigger_%s_%s_%d' %(triggerType, str(tname), ti)
-        scriptFile = file('/'.join((baseDir, scriptName)), 'w')
+        scriptFile = open('/'.join((baseDir, scriptName)), 'w')
         scriptFile.write('#!%s\n' %tprog)
         scriptFile.write('TYPE="%s"\n' %triggerType)
         scriptFile.write('ID="%d"\n' %ti)
@@ -2763,7 +2763,7 @@ def _extractFilesFromRPM(rpm, targetfile=None, directory=None, action=None):
     assert targetfile or directory
     if not directory:
         directory = os.path.dirname(targetfile)
-    r = file(rpm, 'r')
+    r = open(rpm, 'rb')
     h = rpmhelper.readHeader(r)
 
     # CNY-3404
@@ -2891,7 +2891,7 @@ def _extractFilesFromISO(iso, directory):
             if not os.path.isdir(dirName):
                 os.remove(dirName)
                 os.makedirs(dirName)
-        w = file(fullpath, "w")
+        w = open(fullpath, 'w')
         while 1:
             buf = r.read(16384)
             if not buf:

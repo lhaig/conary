@@ -42,7 +42,7 @@ class Mirror(list):
         if not util.exists(path):
             return
 
-        for line in file(path, 'rU').readlines():
+        for line in open(path).readlines():
             line = line.strip().rstrip('/')
             if not line or line.startswith('#'):
                 continue

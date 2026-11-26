@@ -450,7 +450,7 @@ class _RollbackScripts(object):
         group = []
 
         try:
-            stream = file(cls._getMDFileName(dir))
+            stream = open(cls._getMDFileName(dir))
         except IOError as e:
             raise RollbackScriptsError("Open error: %s: %s: %s" %
                 (e.errno, e.filename, e.strerror))
@@ -476,7 +476,7 @@ class _RollbackScripts(object):
         del group[:]
         if g is not None:
             try:
-                scfile = file(cls._getScriptFileName(dir, idx))
+                scfile = open(cls._getScriptFileName(dir, idx))
             except IOError:
                 # If a script is missing, oh well...
                 return

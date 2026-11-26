@@ -1221,9 +1221,9 @@ def _cookPackageObject(repos, cfg, loader, sourceVersion, prep=True,
         util.mkdirChain(os.path.dirname(logPath))
         # touch the logPath files so that the build process expects
         # files to be there for packaging
-        file(logPath, 'w')
-        file(xmlLogPath, 'w')
-        file(subscribeLogPath, 'w')
+        open(logPath, 'w')
+        open(xmlLogPath, 'w')
+        open(subscribeLogPath, 'w')
         try:
             logFile = logger.startLog(tmpLogPath, tmpXmlLogPath,
                                       subscribeLogPath,

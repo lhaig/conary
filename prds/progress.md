@@ -198,3 +198,48 @@ PATTERN: c-api - Python 3 cannot import `<name>module.so`; build `<name>.so`, an
 PATTERN: environment - M2Crypto has no Fedora 45 / Python 3.15 package; SSL test paths skip or fail.
 PATTERN: build - Build conary_test C extensions explicitly with `make -C conary_test`, never from a conftest.
 PATTERN: testing - Re-measure any count an advisor gives before asserting it (acltest has 9 entitlements tests, not 4).
+
+## 2026-11-26 - task 2.6 DONE: bytes/str at the C boundary
+
+- Ran as a parallel batch with 2.5 in worktrees and was applied first. Advisor plan REVISE; review MINOR.
+- Rule (conary/streams.py docstring plus comment blocks in pack.c, streams_set.c, streams_string.c, streams_numeric.c):
+  frozen/wire data is bytes, so freeze()/diff() return bytes and thaw()/twm()/StreamSet() take bytes via y# only. StreamSet
+  tag names are interned str. pack formats are str and S/D data is bytes. StringStream holds bytes (str is UTF-8 encoded on
+  set). The Sha1/Md5/Sha256 streams are bytes only. Deps/flavor streams keep text freeze() (1.7). Version and strings
+  streams hold str and freeze to UTF-8.
+- Extra fixes: StreamSet equality called member.__eq__(other, skipSet), which raises TypeError on compiled streams (now
+  rich compare); Md5Stream.set called StringStream.set without self; StreamCollection dropped sys.intern on bytes and its
+  hasattr('__cmp__') check.
+- MINOR notes: OptionalFlavorStream.diff() still returns str when both sides have flavors (the C bridge encodes it); the
+  memberEq TypeError fallback could swallow a real TypeError; StringsStream.thaw(str) raises AttributeError.
+- Ripple for 2.7/Phase 3: StringStream values (trove names, owner/group, changelog fields) are now bytes and need decoding
+  at the trove.py/files.py layer. conary_test/streamstest.py went from 17 failed/6 passed to 18 failed/5 passed; its tests
+  use str literals.
+
+PATTERN: c-api - Compiled streams' __eq__ is the tp_richcompare slot wrapper (one argument); compare via PyObject_RichCompare from C.
+PATTERN: c-api - There is no bytes-only 'z#'; use 'O' plus a None-or-bytes check so str is rejected.
+PATTERN: py3-port - sys.intern() rejects bytes; do not intern wire data.
+
+## 2026-11-26 - task 2.5 DONE: undefined Python 2 names
+
+- conary/lib/compat.py gains cmp (None sorts first) and CmpMixin (__lt__/__le__/__gt__/__ge__ from __cmp__, NotImplemented
+  passed through, __slots__ = ()). It is used by SerialNumber, Revision, VersionSequence, the deps classes, 10 trove.py classes,
+  _ValueStream and sqllib.DBversion. DBversion gets __eq__.
+- Sorts: single-field sorts use key=. Multi-key, None-safe and public comparator APIs use cmp_to_key. graph.NodeData.sort,
+  NodeDataByHash.sort and sortSubset raised TypeError even with no comparator, so every graph walk was broken.
+  local/update.py cmpLine and cmds/queryrep.py were also missed by pyflakes. cache._shrink had a float slice.
+- file() became open(), mode checked against the Py2 original and the consumer. Binary: magic, javadeps, capsulepolicy,
+  source (RPM/signatures), packagepolicy _markConfig, checkin, netserver pickle, logger syncFile. xmlrpclib became
+  xmlrpc.client. 22 xxx_todo_changeme placeholders renamed.
+- Review MINOR. Not fixed: magic.py and javadeps.py now read bytes but compare against str signatures, so file-type
+  detection silently finds nothing (before, it raised NameError). Orchestrator replaced the test that pinned that behaviour
+  with 3 strict xfails (gzip, script, java class magic). compat.cmp does not order None nested inside tuples. The trove
+  classes' __cmp__ was tested on stand-ins (real instances could not be built before 2.6).
+- versionstest went from 3 failed to 1 failed (that test uses builtin cmp itself).
+- Gates after both: py3tests 651 passed, 3 xfailed; collect-only 2810, 0 errors; pyflakes 0 file/cmp/xmlrpclib;
+  compile_check 476 files, 0 failures.
+
+PATTERN: py3-port - Fixing cmp inside __cmp__ silences pyflakes but Python 3 never calls __cmp__; the class needs CmpMixin, plus __eq__ where it has none.
+PATTERN: py3-port - Positional comparators (sorted(x, f), x.sort(f)) are invisible to pyflakes; find them with an AST scan.
+PATTERN: bytes/str - Switching a reader to 'rb' without converting its literal comparisons to bytes turns a loud failure into silent wrong results; convert both together or add a strict xfail.
+PATTERN: py3-port - Removing the builtin `file` name surfaced real Py2 bugs (display.getBuildLog returned the file type).

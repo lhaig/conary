@@ -32,6 +32,7 @@ from conary import trovetup
 from conary import versions
 from conary.deps import deps
 from conary.lib import sha1helper, api
+from conary.lib.compat import CmpMixin, cmp
 from conary.lib.openpgpfile import KeyNotFound, TRUST_UNTRUSTED, TRUST_TRUSTED
 from conary.lib import openpgpkey
 from conary.lib.ext import pack
@@ -93,7 +94,7 @@ def conaryContents(hasCapsule, pathId, fileObj):
             #fileObj.flags.isConfig() or
             not hasCapsule)
 
-class TroveTuple(streams.StreamSet):
+class TroveTuple(CmpMixin, streams.StreamSet):
     _SINGLE_TROVE_TUP_NAME    = 0
     _SINGLE_TROVE_TUP_VERSION = 1
     _SINGLE_TROVE_TUP_FLAVOR  = 2
@@ -207,7 +208,7 @@ class SearchPath(TroveTupleList):
     def iter(self):
         return ( x[1].get() for x in self.iterAll() )
 
-class SingleTroveRedirect(streams.StreamSet):
+class SingleTroveRedirect(CmpMixin, streams.StreamSet):
     _SINGLE_REDIRECT_NAME   = 1
     _SINGLE_REDIRECT_BRANCH = 2
     _SINGLE_REDIRECT_FLAVOR = 3
@@ -324,7 +325,7 @@ _DIGSIG_FINGERPRINT   = 0
 _DIGSIG_SIGNATURE     = 1
 _DIGSIG_TIMESTAMP     = 2
 
-class DigitalSignature(streams.StreamSet):
+class DigitalSignature(CmpMixin, streams.StreamSet):
     __slots__ = ('fingerprint', 'signature', 'timestamp')
     streamDict = {
         _DIGSIG_FINGERPRINT  : (SMALL, streams.StringStream,   'fingerprint' ),
@@ -432,7 +433,7 @@ _VERSIONED_DIGITAL_SIGNATURES_VERSION = 0
 _VERSIONED_DIGITAL_SIGNATURES_DIGEST   = 1
 _VERSIONED_DIGITAL_SIGNATURES_DIGSIGS = 2
 
-class VersionedDigitalSignatures(streams.StreamSet):
+class VersionedDigitalSignatures(CmpMixin, streams.StreamSet):
     __slots__ = ( 'version', 'digest', 'signatures' )
     streamDict = {
         _VERSIONED_DIGITAL_SIGNATURES_VERSION:
@@ -1064,7 +1065,7 @@ _MSI_COMPONENT_UUID   = 0
 _MSI_COMPONENT_PATH   = 1
 
 
-class SingleRpmObsolete(streams.StreamSet):
+class SingleRpmObsolete(CmpMixin, streams.StreamSet):
 
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = {
@@ -1124,7 +1125,7 @@ class TroveRpmCapsule(streams.StreamSet):
                 self.release(), self.arch())
 
 
-class MsiComponent(streams.StreamSet):
+class MsiComponent(CmpMixin, streams.StreamSet):
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = {
         _MSI_COMPONENT_UUID     : (DYNAMIC, streams.StringStream, 'uuid'),
@@ -1213,7 +1214,7 @@ def _getTroveInfoSigExclusions(streamDict):
 _TROVESCRIPTS_COMPAT_OLD      = 0
 _TROVESCRIPTS_COMPAT_NEW      = 1
 
-class TroveScriptCompatibility(streams.StreamSet):
+class TroveScriptCompatibility(CmpMixin, streams.StreamSet):
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = {
         _TROVESCRIPTS_COMPAT_OLD : (SMALL, streams.ShortStream, 'old'),
@@ -1283,7 +1284,7 @@ _PROPERTY_TYPE        = 5
 
 _PROPERTY_TYPE_SMARTFORM = 'sf'
 
-class Property(streams.StreamSet):
+class Property(CmpMixin, streams.StreamSet):
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = {
         _PROPERTY_TYPE        : (SMALL,   streams.StringStream, 'type' ),
@@ -3516,7 +3517,7 @@ _STREAM_TCS_EXTENDED_METADATA       = 20
 _TCS_TYPE_ABSOLUTE = 1
 _TCS_TYPE_RELATIVE = 2
 
-class AbstractTroveChangeSet(streams.StreamSet):
+class AbstractTroveChangeSet(CmpMixin, streams.StreamSet):
 
     streamDict = {
         _STREAM_TCS_NAME        : (SMALL, streams.StringStream, "name"       ),
@@ -4073,7 +4074,7 @@ class FlavorScoreCache(object):
     def matches(self, oldFlavor, newFlavor):
         return (self[oldFlavor, newFlavor] > self.NEG_INF)
 
-    def __getitem__(self, xxx_todo_changeme):
+    def __getitem__(self, flavorPair):
         # check for superset matching and subset
         # matching.  Currently we don't consider
         # a superset flavor match "better" than
@@ -4083,7 +4084,7 @@ class FlavorScoreCache(object):
         # If we do that, we should consider adding
         # heuristic to prefer strongly satisfied
         # flavors most of all.
-        (oldFlavor, newFlavor) = xxx_todo_changeme
+        (oldFlavor, newFlavor) = flavorPair
         if not (oldFlavor, newFlavor) in self.cache:
             if oldFlavor.isEmpty() and newFlavor.isEmpty():
                 myMax = self.POS_INF

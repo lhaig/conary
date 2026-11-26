@@ -18,6 +18,7 @@
 """
 Provides the output for the "conary repquery" command
 """
+import functools
 import itertools
 
 from conary import conaryclient, trove
@@ -239,7 +240,7 @@ def getTrovesToDisplay(repos, troveSpecs, pathList, whatProvidesList,
 
 
         if not troveSpecs:
-            return sorted(troveTups, display._sortTroves)
+            return sorted(troveTups, key=functools.cmp_to_key(display._sortTroves))
 
         # Search for troves using findTroves.  The options we
         # specify to findTroves are determined by the version and
@@ -445,7 +446,7 @@ def getTrovesToDisplay(repos, troveSpecs, pathList, whatProvidesList,
                         added = True
                     if added and versionFilter == VERSION_FILTER_LATEST:
                         break
-    return sorted(troveTups, display._sortTroves)
+    return sorted(troveTups, key=functools.cmp_to_key(display._sortTroves))
 
 
 def getTrovesByPath(repos, pathList, versionFilter, flavorFilter, labelPath,

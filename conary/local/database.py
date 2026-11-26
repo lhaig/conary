@@ -404,7 +404,7 @@ class UpdateJobFeatures(util.Flags):
         """
         Save features to a file
         """
-        f = file(filePath, "w")
+        f = open(filePath, 'w')
         for slot in self.__slots__:
             if getattr(self, slot):
                 f.write(slot)
@@ -422,7 +422,7 @@ class UpdateJobFeatures(util.Flags):
         if not os.access(filePath, os.R_OK):
             return self
         slots = set(self.__slots__)
-        f = file(filePath)
+        f = open(filePath)
         for line in f:
             line = line.strip()
             if line in slots:

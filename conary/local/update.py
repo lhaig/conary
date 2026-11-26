@@ -20,6 +20,7 @@ Handles all updates to the file system; files should never get changed
 on the filesystem except by this module!
 """
 import errno
+import functools
 import itertools
 import os
 import select
@@ -2297,7 +2298,7 @@ def shlibAction(root, shlibList, tagScript = None, logger=log):
     ldsoDpath = util.joinPaths(root, '/etc/ld.so.conf.d')
 
     if util.exists(ldsopath):
-        ldsolines = file(ldsopath).readlines()
+        ldsolines = open(ldsopath).readlines()
     else:
         # bootstrap
         ldsolines = []
@@ -2307,7 +2308,7 @@ def shlibAction(root, shlibList, tagScript = None, logger=log):
         # ordering is important for actually loading the libraries,
         # but within conary we care only about existance
         for fileName in fixedglob.glob(ldsoDpath+'/*.conf'):
-            ldsoDlines.update(file(fileName).readlines())
+            ldsoDlines.update(open(fileName).readlines())
 
     newlines = []
     # Remove trailing / to avoid like "usr/lib" instead of "/usr/lib" CNY-2982
@@ -2458,17 +2459,17 @@ class _InfoFile(dict):
             # there yet, so we don't need to worry about races for
             # security or anything else...
             fileName = '/'.join((self._root, self._path))
-            f = file(fileName, 'w+')
+            f = open(fileName, 'w+')
             os.chmod(fileName, 0o644)
             # sort lines based on id
-            lines = sorted(self._lines, self.cmpLine)
+            lines = sorted(self._lines, key=functools.cmp_to_key(self.cmpLine))
             f.writelines(['%s\n' %(':'.join(x)) for x in lines])
             f.close()
 
 
 class _KeyVal(dict):
     def __init__(self, path):
-        f = file(path)
+        f = open(path)
         for line in f.readlines():
             key, val = line.split('=', 1)
             self[key] = val.split('\n')[0]

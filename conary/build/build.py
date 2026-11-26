@@ -562,7 +562,7 @@ class Configure(BuildCommand):
                 # get lines and match groups only for matching lines
                 lines = [(line, match)
                          for line, match in ((l, matchRe.match(l))
-                                             for l in file(subLogPath))
+                                             for l in open(subLogPath))
                          if match]
                 for line, match in lines:
                     cmd = match.group(1)
@@ -1341,7 +1341,7 @@ class PythonSetup(BuildCommand):
         macros.data = self.data
 
         # now figure out which kind of setup.py this is
-        if re.compile('(import setuptools|from setuptools import|import ez_setup|from ez_setup import)').search(file('%s/%s' %(rundir, self.setupName)).read()):
+        if re.compile('(import setuptools|from setuptools import|import ez_setup|from ez_setup import)').search(open('%s/%s' %(rundir, self.setupName)).read()):
             macros.pythonsetup = 'python%s %s ' % (pythonVersion,
                                                    self.setupName)
             self._addActionPathBuildRequires(['python'])
@@ -2724,7 +2724,7 @@ class Create(_FileAction):
                                                          braceGlob=False):
             for fullpath in util.braceExpand(bracepath):
                 util.mkdirChain(os.path.dirname(fullpath))
-                f = file(fullpath, 'w')
+                f = open(fullpath, 'w')
                 f.write(contents)
                 f.close()
                 if self.manifest:
@@ -3122,7 +3122,7 @@ class ConsoleHelper(BuildAction):
                     contents.append('session    optional     pam_xauth.so')
                 if self.timestamp is True:
                     contents.append('session    optional     pam_timestamp.so')
-            f = file(destpath, 'w')
+            f = open(destpath, 'w')
             f.writelines([ x+'\n' for x in contents])
             f.close()
             os.chmod(destpath, 0o644)
@@ -3145,7 +3145,7 @@ class ConsoleHelper(BuildAction):
         if self.otherlines is not None:
             contents.extend(self.otherlines)
 
-        f = file(destpath, 'w')
+        f = open(destpath, 'w')
         f.writelines([ x+'\n' for x in contents])
         f.close()
         os.chmod(destpath, 0o644)
@@ -3364,7 +3364,7 @@ class XInetdService(_FileAction):
         if self.manifest:
             self.manifest.recordPaths(dest)
         util.mkdirChain(os.path.dirname(dest))
-        f = file(dest, 'w')
+        f = open(dest, 'w')
         f.write('\n'.join(c) %self.__dict__ %macros)
         f.write('\n')
         self.chmod(macros.destdir, dest)
@@ -3866,7 +3866,7 @@ class User(_UserGroupBuildAction):
             if self.recipe.name[5:] != self.infoname:
                 raise UserGroupError('User name must be the same as package name')
 
-        f = file(self.realfilename, 'w')
+        f = open(self.realfilename, 'w')
         f.write('PREFERRED_UID=%d\n' % self.preferred_uid)
         if self.group:
             self.group = self.group % macros
@@ -3969,7 +3969,7 @@ class Group(_UserGroupBuildAction):
                 self.recipe.name[5:] != self.infoname):
                 raise UserGroupError('Group name must be the same as package name')
 
-        f = file(self.realfilename, 'w')
+        f = open(self.realfilename, 'w')
         f.write('PREFERRED_GID=%d\n' % self.preferred_gid)
         if self.user:
             f.write('USER=%s\n' % self.user % macros)

@@ -230,7 +230,7 @@ class FilesystemRepository(DataStoreRepository, AbstractRepository):
         if withContents:
             if fileObj.hasContents:
                 cont = filecontents.FromDataStore(self.contentsStore,
-                                                    file.contents.sha1())
+                                                    fileObj.contents.sha1())
             else:
                 cont = None
 
@@ -258,9 +258,9 @@ class FilesystemRepository(DataStoreRepository, AbstractRepository):
                     raise errors.FileStreamMissing(x[1])
 
                 if withContents:
-                    if file.hasContents:
+                    if fileObj.hasContents:
                         cont = filecontents.FromDataStore(self.contentsStore,
-                                                          file.contents.sha1())
+                                                          fileObj.contents.sha1())
                     else:
                         cont = None
 

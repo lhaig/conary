@@ -1349,7 +1349,7 @@ class LazyFileCache:
         # is about 12. Even factoring in other sorting constants, you're still
         # winning.
         l = sorted([ x for x in list(self._fdMap.values()) if x._realFd is not None],
-                   lambda a, b: cmp(a._timestamp, b._timestamp))
+                   key=lambda a: a._timestamp)
         for i in range(int(self.threshold / 10)):
             l[i]._release()
 
@@ -1458,7 +1458,7 @@ class BoundedStringIO(object):
 
     def _writeImpl(self, s):
         backend = object.__getattribute__(self, '_backend')
-        if isinstance(backend, file):
+        if isinstance(backend, io.TextIOWrapper):
             # File backend
             return backend.write(s)
         # StringIO backend
@@ -1491,7 +1491,7 @@ class BoundedStringIO(object):
         backend = object.__getattribute__(self, '_backend')
         maxMemorySize = object.__getattribute__(self, 'maxMemorySize')
 
-        if not isinstance(backend, file):
+        if not isinstance(backend, io.TextIOWrapper):
             # Memory backend
             # Truncating always reduces size, so we will not switch to a file
             # for this case
@@ -1783,7 +1783,7 @@ def xmlrpcLoad(stream):
         # Assume it's a string
         p.feed(stream)
     # This is not the most elegant solution, we could accommodate more parsers
-    if hasattr(xmlrpclib, 'expat'):
+    if hasattr(xmlrpc.client, 'expat'):
         try:
             p.close()
         except xmlrpc.client.expat.ExpatError:

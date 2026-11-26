@@ -20,6 +20,41 @@ from keyword import iskeyword as _iskeyword
 from operator import itemgetter as _itemgetter
 
 
+def cmp(a, b):
+    """Python 2 style three way comparison: -1, 0 or 1."""
+    if a is None or b is None:
+        # Python 2 ordered None before everything else
+        return (a is not None) - (b is not None)
+    return (a > b) - (a < b)
+
+
+class CmpMixin(object):
+    """
+    Provides the rich ordering comparisons (<, <=, >, >=) for classes that
+    define Python 2 style __cmp__(self, other), which Python 3 never calls.
+    __eq__, __ne__ and __hash__ are deliberately not provided: classes keep
+    their own, or define them explicitly.
+    """
+
+    __slots__ = ()
+
+    def __lt__(self, other):
+        r = self.__cmp__(other)
+        return r if r is NotImplemented else r < 0
+
+    def __le__(self, other):
+        r = self.__cmp__(other)
+        return r if r is NotImplemented else r <= 0
+
+    def __gt__(self, other):
+        r = self.__cmp__(other)
+        return r if r is NotImplemented else r > 0
+
+    def __ge__(self, other):
+        r = self.__cmp__(other)
+        return r if r is NotImplemented else r >= 0
+
+
 def all(iterable):
     for element in iterable:
         if not element:

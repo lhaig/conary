@@ -2121,7 +2121,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
                 templ = []
                 for l in list(sentFiles.values()):
                     templ.extend(l)
-                templ.sort(lambda a, b: cmp(a[0], b[0]))
+                templ.sort(key=lambda a: a[0])
                 sendL = [ x[1] for x in templ ]
                 idxL = [ x[0] for x in templ ]
                 try:
@@ -2780,12 +2780,12 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
         return troveFinder.findTroves(troves, allowMissing)
 
     @api.publicApi
-    def findTrove(self, labelPath, xxx_todo_changeme,
+    def findTrove(self, labelPath, troveSpec,
                   defaultFlavor=None, acrossLabels = False,
                   acrossFlavors = False, affinityDatabase = None,
                   getLeaves = True, bestFlavor = True,
                   troveTypes = TROVE_QUERY_PRESENT, exactFlavors = False):
-        (name, versionStr, flavor) = xxx_todo_changeme
+        (name, versionStr, flavor) = troveSpec
         res = self.findTroves(labelPath, ((name, versionStr, flavor),),
                               defaultFlavor, acrossLabels, acrossFlavors,
                               affinityDatabase, False, getLeaves, bestFlavor,

@@ -167,7 +167,7 @@ class AbstractTroveSource:
                                             **kw)
         return troveFinder.findTroves(troves, allowMissing)
 
-    def findTrove(self, labelPath, xxx_todo_changeme1,
+    def findTrove(self, labelPath, troveSpec,
                   defaultFlavor=None, acrossLabels = False,
                   acrossFlavors = False, affinityDatabase = None,
                   bestFlavor = None, getLeaves = None,
@@ -175,7 +175,7 @@ class AbstractTroveSource:
         """
         See L{repository.trovesource.AbstractTroveSource.findTroves}
         """
-        (name, versionStr, flavor) = xxx_todo_changeme1
+        (name, versionStr, flavor) = troveSpec
         res = self.findTroves(labelPath, ((name, versionStr, flavor),),
                               defaultFlavor, acrossLabels, acrossFlavors,
                               affinityDatabase, bestFlavor=bestFlavor,
@@ -1339,8 +1339,8 @@ class ChangesetFilesTroveSource(SearchableTroveSource):
                         callback = None):
         # Returns the changeset plus a remainder list of the bits it
         # couldn't do
-        def _findTroveObj(availSet, xxx_todo_changeme):
-            (name, version, flavor) = xxx_todo_changeme
+        def _findTroveObj(availSet, troveSpec):
+            (name, version, flavor) = troveSpec
             info = (name, version, flavor)
             (inDb, fromCs) = availSet[info]
 
