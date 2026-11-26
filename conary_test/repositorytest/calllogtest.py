@@ -29,7 +29,7 @@ class CallLogTest(rephelp.RepositoryHelper):
 
         logPath = os.path.join(self.workDir, "logfile")
         # Create empty file
-        file(logPath, "w+")
+        open(logPath, "w+")
 
         log = calllog.ClientCallLogger(logPath, readOnly = True)
         self.assertEqual(len([ x for x in log ]), 0)
@@ -37,7 +37,7 @@ class CallLogTest(rephelp.RepositoryHelper):
     def testCallLoggerSimple(self):
         logPath = os.path.join(self.workDir, "logfile")
         # Create empty file
-        stream = file(logPath, "w+")
+        stream = open(logPath, "w+b")
 
         infos = [
             (1000001, 'http://localhost', [('a', 'a'), ('b', 'b')],

@@ -518,7 +518,7 @@ class ConfigTest(testhelp.TestCase):
         cfg.store(sio)
         reference = sio.getvalue()
 
-        for mod in (pickle, cPickle):
+        for mod in (pickle,):
             for level in (0, 1, 2):
                 pickled = mod.dumps(cfg, level)
                 restored = mod.loads(pickled)

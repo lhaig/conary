@@ -683,7 +683,7 @@ The following dependencies would not be met after this update:
 
         # Create file now
         util.mkdirChain(os.path.dirname(modelPath))
-        file(modelPath, "w").write("install group-me\n")
+        open(modelPath, "w").write("install group-me\n")
         self.assertEqual(client.hasSystemModel(), True)
         sysmodel = client.getSystemModel()
         self.assertEqual(sysmodel.model.filedata, ["install group-me\n"])

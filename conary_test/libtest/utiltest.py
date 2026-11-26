@@ -953,23 +953,23 @@ class UtilTest(testhelp.TestCase):
         unlzmaPath = os.path.join(workDir, "unlzma")
         dumbFilePath = os.path.join(workDir, "some-file")
         scriptContents = "#!/bin/bash\n\n/bin/cat"
-        file(xzPath, "w").write(scriptContents)
-        file(unlzmaPath, "w").write(scriptContents)
-        data = "Feed dog to cat"
-        file(dumbFilePath, "w").write(data)
+        open(xzPath, "w").write(scriptContents)
+        open(unlzmaPath, "w").write(scriptContents)
+        data = b"Feed dog to cat"
+        open(dumbFilePath, "wb").write(data)
         os.chmod(xzPath, 0o755)
         os.chmod(unlzmaPath, 0o755)
 
         try:
             os.environ['PATH'] = workDir
-            decompressor = util.LZMAFile(file(dumbFilePath))
+            decompressor = util.LZMAFile(open(dumbFilePath, 'rb'))
             self.assertEqual(decompressor.read(), data)
             decompressor.close()
             # Make sure we prefer xz over unlzma
             self.assertEqual(decompressor.executable, xzPath)
             # But if xz is not available, we can use unlzma
             os.unlink(xzPath)
-            decompressor = util.LZMAFile(file(dumbFilePath))
+            decompressor = util.LZMAFile(open(dumbFilePath, 'rb'))
             self.assertEqual(decompressor.read(), data)
             decompressor.close()
             self.assertEqual(decompressor.executable, unlzmaPath)

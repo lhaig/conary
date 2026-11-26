@@ -144,7 +144,7 @@ VERSIONCMP=""
 echo triggerprein has non-sequential sense flag >/dev/null
 '''),
         ):
-            self.assertEqual(file(
+            self.assertEqual(open(
                 '%s/scripts/_CAPSULE_SCRIPTS_/scripts-1.0-1.x86_64.rpm/%s'
                 %(self.buildDir, scriptName)).read(), scriptContents)
 
@@ -178,7 +178,7 @@ class TestCookWithRPMCapsule(CapsuleRecipe):
 
 
         # get file list from rpm header
-        r = file(resources.get_archive() + '/' + rpmName, 'r')
+        r = open(resources.get_archive() + '/' + rpmName, 'rb')
         h = rpmhelper.readHeader(r)
         rpmFileList = dict(
             zip( h[rpmhelper.OLDFILENAMES],
@@ -654,7 +654,7 @@ class TestCookWithRPMCapsule(CapsuleRecipe):
         for rpmName, pathList in rpmVerifyData:
             pathMap = dict((x[0], x[1:5]) for x in pathList)
             # get file list from rpm header
-            r = file(resources.get_archive() + '/' + rpmName, 'r')
+            r = open(resources.get_archive() + '/' + rpmName, 'rb')
             h = rpmhelper.readHeader(r)
             rpmFileList = dict(
                 zip( h[rpmhelper.OLDFILENAMES],
@@ -918,7 +918,7 @@ class GroupShare(GroupRecipe):
         self._installPkgs(['group-dist'], output = '')
         self.resetRoot()
         self._installPkgs(['ghost-conflict=1.0'], output = '^$')
-        file(self.rootDir+'/etc/fake', 'w')
+        open(self.rootDir+'/etc/fake', 'w')
         self._installPkgs(['ghost-conflict=1.1'], output = '^$',
                           keepExisting=True)
         self.resetRoot()

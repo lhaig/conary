@@ -788,7 +788,7 @@ class User(UserInfoRecipe):
               fileContents = [ ('/foo', rephelp.RegularFile(contents = 'bar') )
                              ] )
 
-        f = file(self.rootDir + '/foo', "w")
+        f = open(self.rootDir + '/foo', "w")
         f.write('something')
         f.close()
         self.updatePkg('foo:runtime')
@@ -963,7 +963,7 @@ class User(UserInfoRecipe):
         self.logFilter.compare(())
         ldsoname = util.joinPaths(self.rootDir, '/etc/ld.so.conf')
         assert(util.isregular(ldsoname))
-        ldsoContents = file(ldsoname).read()
+        ldsoContents = open(ldsoname).read()
         if use.Arch.x86:
             self.assertEqual(ldsoContents, '/lib\n/usr/lib\n')
         elif use.Arch.x86_64:
@@ -1013,7 +1013,7 @@ class User(UserInfoRecipe):
             ['warning: ldconfig skipped (insufficient permissions)'])
         ldsoname = util.joinPaths(self.rootDir, '/etc/ld.so.conf')
         assert(util.isregular(ldsoname))
-        ldsoContents = file(ldsoname).read()
+        ldsoContents = open(ldsoname).read()
         if use.Arch.x86:
             assert ldsoContents == '/lib\n/usr/lib\n'
         elif use.Arch.x86_64:
@@ -1034,14 +1034,14 @@ class User(UserInfoRecipe):
         ldsoDname = util.joinPaths(self.rootDir, '/etc/ld.so.conf.d/first.conf')
         assert(util.isregular(ldsoname))
         assert(util.isregular(ldsoDname))
-        ldsoContents = file(ldsoname).read()
+        ldsoContents = open(ldsoname).read()
         if use.Arch.x86:
             assert ldsoContents == 'include /etc/ld.so.conf.d/*.conf\n/opt/foo\n/usr/lib\n'
         elif use.Arch.x86_64:
             assert ldsoContents == 'include /etc/ld.so.conf.d/*.conf\n/opt/foo\n/usr/lib64\n'
         else:
             raise NotImplementedError('edit test for this arch')
-        ldsoDContents = file(ldsoDname).read()
+        ldsoDContents = open(ldsoDname).read()
         if use.Arch.x86:
             assert ldsoDContents == '/lib\n'
         elif use.Arch.x86_64:
@@ -4039,7 +4039,7 @@ True)])
         # Create an unmanaged file which will get managed
         fPath = util.joinPaths(self.rootDir, '/usr/share/somefile')
         util.mkdirChain(os.path.dirname(fPath))
-        file(fPath, "w+").write("Unmanaged Content")
+        open(fPath, "w+").write("Unmanaged Content")
 
         itemsList = [
             ('group-test', (None, None), ('2.0', None), True),
@@ -4061,7 +4061,7 @@ True)])
         self.assertEqual(updJob.getKeywordArguments()['migrate'], True)
 
         client.applyUpdateJob(updJob)
-        self.assertEqual(file(fPath).read(), 'Managed Content')
+        self.assertEqual(open(fPath).read(), 'Managed Content')
 
         # Roll back, produce some bogus XML for the job invocation
         self.rollback(self.rootDir, 1)
@@ -4078,7 +4078,7 @@ True)])
         restartDir = client.applyUpdateJob(updJob)
         self.assertTrue(restartDir, "No critical updates found")
 
-        file(util.joinPaths(restartDir, "job-invocation"), "w+").write("<Junk")
+        open(util.joinPaths(restartDir, "job-invocation"), "w+").write("<Junk")
 
         updJob = client.newUpdateJob()
         client.prepareUpdateJob(updJob, None,
@@ -4372,13 +4372,13 @@ foo:run
 
         root = self.cfg.root
         util.mkdirChain(root+'/etc/conary')
-        file(root+'/etc/conary/system-model', 'w').write(
+        open(root+'/etc/conary/system-model', 'w').write(
             'search group-dist=localhost@rpl:linux/1.0\ninstall group-dist\n')
         model = cml.CML(self.cfg)
         modelFile = systemmodel.SystemModelFile(model)
         updatecmd.doModelUpdate(self.cfg, model, modelFile, [],
             keepExisting=True)
-        self.assertEqual(file(root+'/contents1').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/contents1').read(), 'hello, world!\n')
 
         rc, txt = self.captureOutput(
             updatecmd.updateAll, self.cfg, systemModel=model,
@@ -4391,17 +4391,17 @@ foo:run
              '')))
 
         self.assertEqual(util.exists(root+'/contents1'), False)
-        self.assertEqual(file(root+'/contents2').read(), 'hello, world!\n')
-        self.assertEqual(file(root+'/etc/conary/system-model').read(),
+        self.assertEqual(open(root+'/contents2').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/etc/conary/system-model').read(),
             'search group-dist=localhost@rpl:linux/2.0-1-1\n'
             'install group-dist\n')
 
         updatecmd.doModelUpdate(self.cfg, model, modelFile,
             ['bar=localhost@rpl:linux'], keepExisting=False)
         self.assertEqual(util.exists(root+'/contents1'), False)
-        self.assertEqual(file(root+'/contents2').read(), 'hello, world!\n')
-        self.assertEqual(file(root+'/contents3').read(), 'hello, world!\n')
-        self.assertEqual(file(root+'/etc/conary/system-model').read(),
+        self.assertEqual(open(root+'/contents2').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/contents3').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/etc/conary/system-model').read(),
             'search group-dist=localhost@rpl:linux/2.0-1-1\n'
             'install group-dist\n'
             'update bar=localhost@rpl:linux/2.0-1-1\n')
@@ -4409,9 +4409,9 @@ foo:run
         updatecmd.doModelUpdate(self.cfg, model, modelFile,
             ['-bar=localhost@rpl:linux'], keepExisting=False)
         self.assertEqual(util.exists(root+'/contents1'), False)
-        self.assertEqual(file(root+'/contents2').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/contents2').read(), 'hello, world!\n')
         self.assertEqual(util.exists(root+'/contents3'), False)
-        self.assertEqual(file(root+'/etc/conary/system-model').read(),
+        self.assertEqual(open(root+'/etc/conary/system-model').read(),
             'search group-dist=localhost@rpl:linux/2.0-1-1\n'
             'install group-dist\n')
 
@@ -4424,13 +4424,13 @@ foo:run
 
         root = self.cfg.root
         util.mkdirChain(root+'/etc/conary')
-        file(root+'/etc/conary/system-model', 'w').write(
+        open(root+'/etc/conary/system-model', 'w').write(
             'install group-dist=localhost@rpl:linux/1.0\n')
         model = cml.CML(self.cfg)
         modelFile = systemmodel.SystemModelFile(model)
         updatecmd.doModelUpdate(self.cfg, model, modelFile, [],
             keepExisting=True)
-        self.assertEqual(file(root+'/contents1').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/contents1').read(), 'hello, world!\n')
 
         self.addComponent('conf:runtime', '1.0', filePrimer=1)
         self.addCollection('conf', '1.0', [ ':runtime' ])
@@ -4443,8 +4443,8 @@ foo:run
                 systemModelFile=modelFile)
 
         self.assertEqual(util.exists(root+'/contents1'), True)
-        self.assertEqual(file(root+'/contents1').read(), 'hello, world!\n')
-        self.assertEqual(file(root+'/etc/conary/system-model').read(),
+        self.assertEqual(open(root+'/contents1').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/etc/conary/system-model').read(),
             'install group-dist=localhost@rpl:linux/2.0-1-1\n')
 
         self.addComponent('conf:runtime', '2.0', fileContents=[
@@ -4474,7 +4474,7 @@ foo:run
         self.updatePkg('group-dist=2.2', recurse = False)
 
         util.mkdirChain(root+'/etc/conary')
-        file(root+'/etc/conary/system-model', 'w').write(
+        open(root+'/etc/conary/system-model', 'w').write(
             'install group-dist=localhost@rpl:linux/1.0\n')
 
         self.addComponent('new1:runtime', '1.0', fileContents=[
@@ -4510,7 +4510,7 @@ foo:run
             updatecmd.updateAll, self.cfg, systemModel=model,
                 systemModelFile=modelFile)
 
-        self.assertEqual(file(root+'/etc/conary/system-model').read(),
+        self.assertEqual(open(root+'/etc/conary/system-model').read(),
             'install group-dist=localhost@rpl:linux/3.1-1-1\n')
 
         # get rid of /contents1 conflict a different way
@@ -4526,13 +4526,13 @@ foo:run
             updatecmd.updateAll, self.cfg, systemModel=model,
                 systemModelFile=modelFile)
 
-        self.assertEqual(file(root+'/etc/conary/system-model').read(),
+        self.assertEqual(open(root+'/etc/conary/system-model').read(),
             'install group-dist=localhost@rpl:linux/3.2-1-1\n')
 
-        self.assertEqual(file(root+'/contents1').read(), 'hello, world!\n')
-        self.assertEqual(file(root+'/new').read(), 'b\n')
+        self.assertEqual(open(root+'/contents1').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/new').read(), 'b\n')
         self.rollback(1)
-        self.assertEqual(file(root+'/contents1').read(), 'hello, world!\n')
+        self.assertEqual(open(root+'/contents1').read(), 'hello, world!\n')
         self.assertEqual(util.exists(root+'/new'), False)
 
     @testhelp.context('sysmodel', 'rollback')
@@ -4558,9 +4558,9 @@ foo:run
         # Force an error during an update job
         root = self.cfg.root
         util.mkdirChain(root+'/etc/conary')
-        file(root+'/etc/conary/system-model', 'w').write(
+        open(root+'/etc/conary/system-model', 'w').write(
             'search group-dist=localhost@rpl:linux/1.0\ninstall group-dist\n')
-        file(root+'/contents1', 'w')
+        open(root+'/contents1', 'w')
         os.chmod(root+'/contents1', 0)
         model = cml.CML(self.cfg)
         modelFile = systemmodel.SystemModelFile(model)
@@ -4573,7 +4573,7 @@ foo:run
 
         # ensure that an unrelated update attempt gets rejected
         # if a snapshot has been written
-        file(root+'/etc/conary/system-model.next', 'w').write(
+        open(root+'/etc/conary/system-model.next', 'w').write(
             'search group-dist=localhost@rpl:linux/1.0\ninstall group-dist\n')
         ic = conarycmd.InstallCommand()
         rc, txt = self.captureOutput(
@@ -4584,7 +4584,7 @@ foo:run
 
         # now, mangle the main system model to make sure that the
         # next sync picks up where it left off:
-        file(root+'/etc/conary/system-model', 'w').write(
+        open(root+'/etc/conary/system-model', 'w').write(
             'search group-dist=localhost@rpl:linux/WRONG\ninstall group-dist\n')
         # create a new model with current state; this is a new command line
         model = cml.CML(self.cfg)
@@ -4600,7 +4600,7 @@ foo:run
             False)
 
         # Now, blow up an updateall!
-        file(root+'/contents2', 'w')
+        open(root+'/contents2', 'w')
         os.chmod(root+'/contents2', 0)
         model = cml.CML(self.cfg)
         modelFile = systemmodel.SystemModelFile(model)

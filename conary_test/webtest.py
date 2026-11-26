@@ -253,7 +253,7 @@ class WebFrontEndTest(WebRepositoryHelper):
         # a bad request
         # Note: see testUserStrangePass for the correct behavior. This should
         # not have been a bad request, but a Forbidden
-        self.authinfo = base64.encodestring('foo:bar:baz').strip()
+        self.authinfo = base64.b64encode(b'foo:bar:baz').decode()
         page = self.assertContent('/userlist', code=[401],
                                   content = 'Unauthorized')
 

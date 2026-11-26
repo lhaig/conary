@@ -61,7 +61,7 @@ class LookAsideTest(rephelp.RepositoryHelper):
         #                         'NEGATIVE/test/download.rpath.com/blah'))))
 
         # now we put a file in place
-        f = file(os.sep.join((testdir, 'bar')), 'w')
+        f = open(os.sep.join((testdir, 'bar')), 'w')
         f.write('this is a test')
         f.close()
         c = lookaside.findAll(self.cfg, repCache, 'bar', 'test', (testdir,))
@@ -232,7 +232,7 @@ class RefreshTest(PackageRecipe):
             negativePath = os.path.join(self.cacheDir, 'NEGATIVE/test',
                 'localhost:%d' % contentServer.port, '2')
             util.mkdirChain(os.path.dirname(negativePath))
-            file(negativePath, "w")
+            open(negativePath, "w")
 
             self.logCheck(self.refresh, ('1', ),
                 [ r'. Trying http://localhost:[0-9]*/1\.\.\.',
@@ -423,7 +423,7 @@ class SourceGoesAwayTest(PackageRecipe):
         # server again.
 
         # Create archive
-        file(os.path.join(self.workDir, "file1"), "w").write("cont\n")
+        open(os.path.join(self.workDir, "file1"), "w").write("cont\n")
         archiveFile = os.path.join(self.workDir, "archive-1.tar.gz")
         cmd = ["tar", "zcf", archiveFile, "-C", self.workDir, "file1"]
         p = rephelp.subprocess.Popen(cmd)
@@ -438,12 +438,12 @@ class SourceGoesAwayTest(PackageRecipe):
                 pass
 
             def do_GET(self):
-                file(self.requestLog, "a").write(self.path + '\n')
+                open(self.requestLog, "a").write(self.path + '\n')
                 if not self.path.endswith('.tar.gz'):
                     self.send_response(404)
                     self.end_headers()
                     return
-                content = file(archiveFile).read()
+                content = open(archiveFile, 'rb').read()
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(len(content)))
@@ -481,11 +481,11 @@ class ArchiveTest(PackageRecipe):
 
             # Make sure we have the proper files in the request log
             self.assertEqual(
-                [ x.strip() for x in file(TarGzRequestor.requestLog) ],
+                [ x.strip() for x in open(TarGzRequestor.requestLog) ],
                 [ '//archive-1.tar.bz2', '//archive-1.tar.gz', ])
 
             # Empty the request log file
-            file(TarGzRequestor.requestLog, "w")
+            open(TarGzRequestor.requestLog, "w")
 
             # When cooking from the repository, we should not hit the web
             # server again
@@ -495,7 +495,7 @@ class ArchiveTest(PackageRecipe):
 
             # Request log should be empty
             self.assertEqual(
-                [ x.strip() for x in file(TarGzRequestor.requestLog) ],
+                [ x.strip() for x in open(TarGzRequestor.requestLog) ],
                 [])
 
         finally:

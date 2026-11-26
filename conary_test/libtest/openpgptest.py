@@ -493,7 +493,7 @@ def readKey(rowList):
         if row[0] == '=':
             break
         keyLines.append(row.strip())
-    return base64.decodestring(''.join(keyLines))
+    return base64.b64decode(''.join(keyLines))
 
 
 pubkey1 = """\
@@ -1125,7 +1125,7 @@ class OpenPGPMessageTest(BaseTestHelper):
     def testVerifyDocumentSignature(self):
         key = openpgpfile.seekKeyById('29BF4FCA',
                                       self.getKeyring('pubringrev.gpg'))
-        doc = file(self.getKeyring('pk2.gpg'))
+        doc = open(self.getKeyring('pk2.gpg'), 'rb')
         sigfile = self.getKeyring('pk2.gpg.sig')
         # Read signature
         msg = openpgpfile.PGP_Message(sigfile)
@@ -1167,7 +1167,7 @@ class OpenPGPMessageTest(BaseTestHelper):
         # Verify v4 signature
         sigfile = self.getKeyring('pk2.gpg.sig2')
         # Read signature
-        sig = openpgpfile.readSignature(file(sigfile))
+        sig = openpgpfile.readSignature(open(sigfile, 'rb'))
 
         sig.verifyDocument(cryptoKey, doc)
 
@@ -1209,8 +1209,8 @@ class OpenPGPMessageTest(BaseTestHelper):
             key = openpgpfile.seekKeyById(t.keyId,
                                           self.getKeyring(t.pubring))
             # getKeyring is just returning a path to a file
-            doc = file(self.getKeyring(t.doc))
-            docSig = file(self.getKeyring(t.docSig))
+            doc = open(self.getKeyring(t.doc), 'rb')
+            docSig = open(self.getKeyring(t.docSig), 'rb')
             sig = openpgpfile.readSignature(docSig)
 
             cryptoKey = key.getCryptoKey()
@@ -1218,9 +1218,9 @@ class OpenPGPMessageTest(BaseTestHelper):
 
     def testReadSignature(self):
         sigfile = self.getKeyring('pk2.gpg.sig')
-        sig = openpgpfile.readSignature(file(sigfile))
+        sig = openpgpfile.readSignature(open(sigfile, 'rb'))
         sigfile = self.getKeyring('pk2.gpg.sig2')
-        sig = openpgpfile.readSignature(file(sigfile))
+        sig = openpgpfile.readSignature(open(sigfile, 'rb'))
         sio = util.ExtendedStringIO("cadfadf")
         try:
             openpgpfile.readSignature(sio)
@@ -2018,7 +2018,7 @@ class OpenPGPMessageTest(BaseTestHelper):
 
     def testVersion3Sig(self):
         sig = self.getKeyring('ver3.sig.asc')
-        sig = openpgpfile.parseAsciiArmorKey(file(sig).read())
+        sig = openpgpfile.parseAsciiArmorKey(open(sig, 'rb').read())
         sio = util.ExtendedStringIO(sig)
         msg = openpgpfile.PGP_Message(sio)
         sigpkt = next(msg.iterPackets())
@@ -2035,8 +2035,8 @@ class OpenPGPMessageTest(BaseTestHelper):
         # Concatenate the key several times, to make sure we stop at the right
         # place
         kr = os.path.join(self.workDir, 'keyring')
-        f = file(kr, "w+")
-        src = file(self.getKeyring('pk-extra-subkey-sigs.gpg'))
+        f = open(kr, "w+b")
+        src = open(self.getKeyring('pk-extra-subkey-sigs.gpg'), 'rb')
         for i in range(3):
             src.seek(0)
             openpgpfile.PGP_BasePacket._copyStream(src, f)

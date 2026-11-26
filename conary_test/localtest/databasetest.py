@@ -241,7 +241,7 @@ class UpdateFeaturesTest(testhelp.TestCase):
         # No flags set
         ft.setAll(False)
         ft.saveToFile(fpath)
-        self.assertEqual(file(fpath).read(), "")
+        self.assertEqual(open(fpath).read(), "")
 
         # Empty file means no flags set
         ft = database.UpdateJobFeatures()
@@ -254,7 +254,7 @@ class UpdateFeaturesTest(testhelp.TestCase):
 
         ft.saveToFile(fpath)
         self.assertTrue(os.path.exists(fpath))
-        self.assertEqual(file(fpath).readline().strip(),
+        self.assertEqual(open(fpath).readline().strip(),
                             "postRollbackScriptsOnRollbackStack")
 
         # Munge permissions

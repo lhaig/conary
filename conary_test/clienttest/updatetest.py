@@ -3631,7 +3631,7 @@ conary erase 'test:runtime=/localhost@rpl:linux/2.0-1-1[]'
 
         # Change the version
         vFilePath = os.path.join(restartDir, "__version__")
-        file(vFilePath, "w").write("version 1001.1plus\n")
+        open(vFilePath, "w").write("version 1001.1plus\n")
 
         updJob = database.UpdateJob(client.db)
         self.assertEqual(updJob.getPreviousVersion(), None)
@@ -3646,19 +3646,19 @@ conary erase 'test:runtime=/localhost@rpl:linux/2.0-1-1[]'
 
         # Readable file, junk at the beginning
         os.chmod(vFilePath, 0o644)
-        file(vFilePath, "w").write("junk 1\nversion -1\n")
+        open(vFilePath, "w").write("junk 1\nversion -1\n")
         updJob = database.UpdateJob(client.db)
         update._loadRestartInfo(restartDir, updJob)
         self.assertEqual(updJob.getPreviousVersion(), '-1')
 
         # Just junk
-        file(vFilePath, "w").write("junk 1")
+        open(vFilePath, "w").write("junk 1")
         updJob = database.UpdateJob(client.db)
         update._loadRestartInfo(restartDir, updJob)
         self.assertEqual(updJob.getPreviousVersion(), None)
 
         # Empty file
-        file(vFilePath, "w").write("")
+        open(vFilePath, "w").write("")
         updJob = database.UpdateJob(client.db)
         update._loadRestartInfo(restartDir, updJob)
         self.assertEqual(updJob.getPreviousVersion(), None)

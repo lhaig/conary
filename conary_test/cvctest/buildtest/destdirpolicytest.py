@@ -788,8 +788,8 @@ class TestNormalizeCompression(PackageRecipe):
         bar = self.workDir + '/usr/share/bar.gz'
         a = self.workDir + '/usr/share/a.bz2'
         b = self.workDir + '/usr/share/b.bz2'
-        assert(file(foo).read() == file(bar).read())
-        assert(file(a).read() == file(b).read())
+        assert(open(foo).read() == open(bar).read())
+        assert(open(a).read() == open(b).read())
         assert(os.lstat(foo).st_mode &0o777 == 0o444)
         assert(os.lstat(a).st_mode &0o777 == 0o440)
 
@@ -1032,7 +1032,7 @@ class TestNormalizeInterpreterPaths(PackageRecipe):
         workpath = self.workDir + path
         mode = os.lstat(workpath)[stat.ST_MODE]
         os.chmod(workpath, mode | 0o400)
-        f = file(workpath)
+        f = open(workpath)
         line = f.readline()
         f.close()
         os.chmod(workpath, mode)
@@ -1042,7 +1042,7 @@ class TestNormalizeInterpreterPaths(PackageRecipe):
         workpath = self.workDir + path
         mode = os.lstat(workpath)[stat.ST_MODE]
         os.chmod(workpath, mode | 0o400)
-        f = file(workpath)
+        f = open(workpath)
         thisline = f.readline()
         f.close()
         os.chmod(workpath, mode)
@@ -1108,14 +1108,14 @@ class TestNormalizePamConfig(PackageRecipe):
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1], depCheck=False)
         path = self.workDir+'/etc/pam.d/foo'
-        f = file(path)
+        f = open(path)
         line = f.readline()
         f.close()
         self.assertEqual(line.find('ISA'), -1)
         self.assertEqual(os.stat(path)[stat.ST_MODE] & 0o777, 0o400)
 
         path = self.workDir+'/etc/pam.d/stack'
-        f = file(path)
+        f = open(path)
         line = f.readline()
         f.close()
         assert line.find('pam_stack') == -1, line
@@ -1342,7 +1342,7 @@ class TestNormalizePythonInterpreterVersionMap(PackageRecipe):
 
         os.chmod(fullpath, mode | 0o400)
 
-        f = file(fullpath, 'r')
+        f = open(fullpath, 'r')
         line = f.readline().strip()
         f.close()
         os.chmod(fullpath, mode)

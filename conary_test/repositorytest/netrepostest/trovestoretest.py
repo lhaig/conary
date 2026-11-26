@@ -839,7 +839,7 @@ Some changes just are.
         cu = store.db.cursor()
         for tbl in [ 'FilePaths', 'Dirnames', 'Basenames' ]:
             cu.execute("select count(*) from %s" % tbl)
-            self.assertEqual(cu.next()[0], 1)
+            self.assertEqual(next(cu)[0], 1)
 
 class TroveStoreTest2(rephelp.RepositoryHelper):
     def testNeedToStoreFile(self):

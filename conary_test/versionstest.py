@@ -25,6 +25,7 @@ SEEK_END = 2
 from conary.errors import ParseError, VersionStringError
 
 from conary import versions
+from conary.lib.compat import cmp
 from conary.versions import AbstractRevision
 from conary.versions import Label
 from conary.versions import LocalLabel

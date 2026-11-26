@@ -239,7 +239,7 @@ class WritersTest(testhelp.TestCase):
             lgr.write('one continued find\n')
             lgr.synchronize()
 
-            lines = file(tmpFile).readlines()
+            lines = open(tmpFile).readlines()
             self.assertFalse('ignore' in lines[0])
             self.assertTrue('.' in lines[0])
             self.assertTrue('one find' in lines[1])

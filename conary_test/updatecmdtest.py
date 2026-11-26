@@ -1229,7 +1229,7 @@ The following dependencies could not be resolved:
 
         # We should not attempt to run the script for group-dist since we
         # don't have permissions to chroot
-        file(myfile, "w")
+        open(myfile, "w")
         rc, txt = self.captureOutput(self.updatePkg, ['group-dist=3'],
                                      raiseError=True, applyCriticalOnly=True)
         self.assertTrue(os.path.exists(myfile),

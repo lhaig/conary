@@ -38,7 +38,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
                 'foo:source', self.cfg.buildLabel, '1.0',
                 files, changelog.ChangeLog('foo', 'bar'))
         repos.commitChangeSet(cs)
-        n,v,f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n,v,f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         results = client.getFilesFromTrove(n,v,f, ['/foo1', '/foo3'])
         assert(not '/foo2' in results)
         contents = foo1.getContents()
@@ -58,7 +58,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
                 'foo:source', self.cfg.buildLabel, '1.0',
                 files, changelog.ChangeLog('foo', 'bar'))
         repos.commitChangeSet(cs)
-        n,v,f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n,v,f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
 
         trv = repos.getTrove(n, v, f)
 
@@ -100,7 +100,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('foo', 'bar'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v), '/localhost@rpl:linux/1.0-1')
         repos.commitChangeSet(cs)
 
@@ -109,7 +109,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('foo', 'bar'))
-        n2, v2, f2 = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n2, v2, f2 = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v2), '/localhost@rpl:linux/1.0-2')
         repos.commitChangeSet(cs)
 
@@ -117,7 +117,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('foo', 'bar'))
-        n2, v2, f2 = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n2, v2, f2 = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v2), '/localhost@rpl:linux/1.0-3')
         repos.commitChangeSet(cs)
 
@@ -125,7 +125,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.1', files,
                 changelog.ChangeLog('foo', 'bar'))
-        n2, v2, f2 = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n2, v2, f2 = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v2), '/localhost@rpl:linux/1.1-1')
 
     def testNewFileNotSource(self):
@@ -166,7 +166,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('foo', 'bar'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
 
         # source troves don't have a flavor
         self.assertEqual(f, deps.Flavor())
@@ -194,7 +194,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
                 'foo:source', self.cfg.buildLabel, '1.0', {'file': fil},
                 changelog.ChangeLog('foo', 'bar'))
 
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         repos.commitChangeSet(cs)
         trv = repos.getTrove(n, v, f)
         fileList1 = list(trv.iterFileList())
@@ -203,7 +203,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.1', {'file': fil},
                 changelog.ChangeLog('foo', 'bar'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         repos.commitChangeSet(cs)
         trv = repos.getTrove(n, v, f)
         fileList2 = list(trv.iterFileList())
@@ -213,7 +213,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.2', {'file': fil},
                 changelog.ChangeLog('foo', 'bar'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         repos.commitChangeSet(cs)
         trv = repos.getTrove(n, v, f)
         fileList3 = list(trv.iterFileList())
@@ -228,7 +228,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('foo', 'bar'), factory = 'factory-foo')
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v), '/localhost@rpl:linux/1.0-1')
         repos.commitChangeSet(cs)
 
@@ -240,7 +240,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('foo', 'bar'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v), '/localhost@rpl:linux/1.0-2')
         repos.commitChangeSet(cs)
         trv = repos.getTrove(n, v, f)
@@ -254,7 +254,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('user', 'foo'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         self.assertEqual(str(v), '/localhost@rpl:linux/1.0-1')
         repos.commitChangeSet(cs)
 
@@ -272,7 +272,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('user', 'foo'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         repos.commitChangeSet(cs)
 
         trv = repos.getTrove(n, v, f)
@@ -292,7 +292,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
         cs = client.createSourceTrove( \
                 'foo:source', self.cfg.buildLabel, '1.0', files,
                 changelog.ChangeLog('user', 'foo'))
-        n, v, f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n, v, f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         repos.commitChangeSet(cs)
 
         trv = repos.getTrove(n, v, f)
@@ -359,7 +359,7 @@ class ClientNewTroveTest(rephelp.RepositoryHelper):
                 'foo:source', self.cfg.buildLabel, '1.0',
                 files, changelog.ChangeLog('foo', 'bar'))
         repos.commitChangeSet(cs)
-        n,v,f = cs.iterNewTroveList().next().getNewNameVersionFlavor()
+        n,v,f = next(cs.iterNewTroveList()).getNewNameVersionFlavor()
         # markremove it
         cs = changeset.ChangeSet()
         trv = trove.Trove(n, v, f, type=trove.TROVE_TYPE_REMOVED)

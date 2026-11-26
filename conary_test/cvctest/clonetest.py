@@ -1653,7 +1653,7 @@ class testRedirect(RedirectRecipe):
         cs = self.promote(':linux--:branch', 'fileset-foo:source')
         origTrv = self.addComponent('fileset-foo=1',
                           [('/foo', 'contents', '/localhost@rpl:2/1-1-1')])
-        assert(str(origTrv.iterFileList().next()[3]) ==
+        assert(str(next(origTrv.iterFileList())[3]) ==
                         '/localhost@rpl:2/1-1-1')
 
         cs = self.promote(':linux--:branch', 'fileset-foo', cloneSources=True,
@@ -1902,7 +1902,7 @@ class testRedirect(RedirectRecipe):
         self.addComponent('foo:source=/localhost@rpl:linux//shadow/1-1')
         cs = self.promote(':shadow--/localhost@rpl:linux',
                           'foo:source=:shadow', cloneSources=True, test=True)
-        assert(str(cs.iterNewTroveList().next().getNewVersion())
+        assert(str(next(cs.iterNewTroveList()).getNewVersion())
                 == '/localhost@rpl:linux/1-3')
 
     def testCloneAcrossReposDuplicateContents(self):

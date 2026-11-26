@@ -413,7 +413,7 @@ contents(sha1)
         rc = self.stat()
 
         # Sort by file name
-        expected.sort(lambda x, y: cmp(x[1], y[1]))
+        expected.sort(key=lambda x: x[1])
         # Output the format and the file name
         expectedString = "\n".join([ "%s  %s" % items for items in expected ])
         expectedString += '\n'
@@ -791,9 +791,9 @@ contents(sha1)
         f = gzip.open("test.source.gz", "w")
         f.write("some text")
         f.close()
-        file("Makefile", "w").write('ignore this\n')
-        file("asdf", "w").write('#!/bin/bash\n')
-        file("blah.patch", "w").write('ignore this too\n')
+        open("Makefile", "w").write('ignore this\n')
+        open("asdf", "w").write('#!/bin/bash\n')
+        open("blah.patch", "w").write('ignore this too\n')
         self.addfile("testcase.recipe")
         # test non-config extension
         self.addfile("test.source.gz")
@@ -1904,8 +1904,8 @@ class SimpleRecipe(PackageRecipe):
             self.updatePkg('simple')
             file1 = os.path.join(self.rootDir, 'asdf/baz')
             file2 = os.path.join(self.rootDir, 'asdf/boop')
-            self.assertEqual(file(file1).read(), '//foo%20bar/baz:1\n')
-            self.assertEqual(file(file2).read(), '//foo%20bar/boop:1\n')
+            self.assertEqual(open(file1).read(), '//foo%20bar/baz:1\n')
+            self.assertEqual(open(file2).read(), '//foo%20bar/boop:1\n')
         finally:
             contentServer.kill()
 
@@ -2224,7 +2224,7 @@ class GroupTest(GroupRecipe):
         self.addComponent('foo:run=:branch/1')
         self.cookItem(repos, cfg, 'group-test=:branch')
         trv = self.findAndGetTrove('group-test=:branch')
-        self.assertEqual(str(trv.iterTroveList(strongRefs=True).next()[1].trailingLabel()), 'localhost@rpl:branch')
+        self.assertEqual(str(next(trv.iterTroveList(strongRefs=True))[1].trailingLabel()), 'localhost@rpl:branch')
 
     def testUpdate(self):
         os.chdir(self.workDir)
@@ -2480,7 +2480,7 @@ class BarRecipe(PackageRecipe):
     def testGpgKeyRetrievalFailure(self):
         # Clear PGP build keyring
         try:
-            file(os.path.join(self.buildDir, "pubring.pgp"), "w")
+            open(os.path.join(self.buildDir, "pubring.pgp"), "w")
         except IOError:
             pass
 

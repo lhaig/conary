@@ -683,7 +683,7 @@ class TestTags(CapsuleRecipe):
                         'ABCDE']
 
         self.mock(rpmhelper._RpmHeader, 'get', mockGet)
-        h = rpmhelper.readHeader(file(fPath))
+        h = rpmhelper.readHeader(open(fPath, 'rb'))
         (req, prov), output = self.captureOutput(h.getDeps)
         expected = '\n'.join((
         "rpm: kernel[badver]",

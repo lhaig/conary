@@ -662,7 +662,7 @@ class Foo(PackageRecipe):
             self.discardOutput(self.updatePkg, 'group-foo=1.1',
                 criticalUpdateInfo = updateInfo, raiseError = True)
         except errors.ReexecRequired as e:
-            file(os.path.join(e.data, "features"), "w").write("")
+            open(os.path.join(e.data, "features"), "w").write("")
             self.discardOutput(self.updatePkg, 'group-foo=1.1',
                 criticalUpdateInfo = updateInfo, restartInfo=e.data)
 
@@ -874,10 +874,10 @@ class Foo(PackageRecipe):
         self.assertEqual(cb.errcode, None)
         self.assertEqual(cb.started, ('sn', True))
         self.assertEqual(cb.finished, ('sn', True))
-        scriptOut = [ x.strip()[23:] for x in file(conaryLog).readlines() ]
+        scriptOut = [ x.strip()[23:] for x in open(conaryLog).readlines() ]
         self.assertEqual(scriptOut, ['running script sn',
             '[sn] RAN', 'script sn finished'])
-        file(conaryLog, 'w') # truncate
+        open(conaryLog, 'w') # truncate
         assert(rc == 0)
         cb.reset()
 
@@ -890,10 +890,10 @@ class Foo(PackageRecipe):
         assert(rc == 1)
         self.assertEqual(cb.errcode, ('sn2', 1))
         self.assertEqual(cb.started, ('sn2', True))
-        scriptOut = [ x.strip()[23:] for x in file(conaryLog).readlines() ]
+        scriptOut = [ x.strip()[23:] for x in open(conaryLog).readlines() ]
         self.assertEqual(scriptOut, ['running script sn2',
             'script sn2 failed with exit code 1'])
-        file(conaryLog, 'w') # truncate
+        open(conaryLog, 'w') # truncate
         # Finished script should not have been executed here,
         self.assertEqual(cb.finished, False)
         cb.reset()
@@ -901,11 +901,11 @@ class Foo(PackageRecipe):
         rc = update.runTroveScript(absJob, brokenScript, None, self.cfg.tmpDir,
                                    '/', cb, isPre = False, scriptId = 'sn2')
         self.assertEqual(cb.errcode, ('sn2', 1))
-        scriptOut = [ x.strip()[23:] for x in file(conaryLog).readlines() ]
+        scriptOut = [ x.strip()[23:] for x in open(conaryLog).readlines() ]
         self.assertEqual(scriptOut, ['running script sn2',
             '[sn2] [Errno 2] No such file or directory',
             'script sn2 failed with exit code 1'])
-        file(conaryLog, 'w') # truncate
+        open(conaryLog, 'w') # truncate
         cb.reset()
 
         oldRoot = os.chroot
@@ -932,12 +932,12 @@ class Foo(PackageRecipe):
                 [ ('sn', 'ROOT=%s\n' % self.rootDir), ('sn', 'GOOD\n') ])
             assert(cb.errcode is None)
             cb.reset()
-            scriptOut = [ x.strip()[23:] for x in file(conaryLog).readlines() ]
+            scriptOut = [ x.strip()[23:] for x in open(conaryLog).readlines() ]
             self.assertEqual(scriptOut, ['running script sn',
                 '[sn] ROOT=%s' %self.rootDir,
                 '[sn] GOOD',
                 'script sn finished'])
-            file(conaryLog, 'w') # truncate
+            open(conaryLog, 'w') # truncate
 
             rootDir = self.rootDir + '/'
             rc = update.runTroveScript(absJob, goodScript, None,
@@ -946,12 +946,12 @@ class Foo(PackageRecipe):
             assert(rc == 0)
             self.assertEqual(cb.output,
                 [ ('sn2', 'ROOT=%s\n' % rootDir), ('sn2', 'GOOD\n') ])
-            scriptOut = [ x.strip()[23:] for x in file(conaryLog).readlines() ]
+            scriptOut = [ x.strip()[23:] for x in open(conaryLog).readlines() ]
             self.assertEqual(scriptOut, ['running script sn2',
                 '[sn2] ROOT=%s/' %self.rootDir,
                 '[sn2] GOOD',
                 'script sn2 finished'])
-            file(conaryLog, 'w') # truncate
+            open(conaryLog, 'w') # truncate
             assert(cb.errcode is None)
             cb.reset()
 
@@ -961,10 +961,10 @@ class Foo(PackageRecipe):
                                        isPre = False, scriptId = 'sn3')
             assert(rc == 1)
             assert(cb.errcode == ('sn3', 1))
-            scriptOut = [ x.strip()[23:] for x in file(conaryLog).readlines() ]
+            scriptOut = [ x.strip()[23:] for x in open(conaryLog).readlines() ]
             self.assertEqual(scriptOut, ['running script sn3',
                 'script sn3 failed with exit code 1'])
-            file(conaryLog, 'w') # truncate
+            open(conaryLog, 'w') # truncate
         finally:
             os.chroot = oldRoot
             os.getuid = oldGetuid
@@ -1051,7 +1051,7 @@ class Foo(PackageRecipe):
         update.runTroveScript(job, script = 'blah', tagScript = tagScript,
             tmpDir = '/', root = self.rootDir, callback = None,
             isPre = False)
-        lines = file(tagScript).readlines()
+        lines = open(tagScript).readlines()
         for line in lines:
             self.assertFalse(self.rootDir in line, "%s in %s" % (self.rootDir,
                 repr(line)))
@@ -1240,7 +1240,7 @@ class Test(CapsuleRecipe):
     def testUpdateDoesNotWriteToExistingFiles(self):
         # CNY-2596
         realOpen = os.open
-        realFileObject = file
+        realFileObject = open
 
         def mockOpen(path, flag, mode = 0o777):
             if (path.startswith(self.rootDir) and
@@ -1250,15 +1250,14 @@ class Test(CapsuleRecipe):
 
             return realOpen(path, flag, mode)
 
-        class mockFile(file):
+        def mockFile(path, flags = "r", *args, **kwargs):
+            if (isinstance(path, str) and
+                    path.startswith(self.rootDir) and
+                    not path.startswith(self.rootDir + self.cfg.dbPath) and
+                    os.path.exists(path)):
+                assert(not("a" in flags or "w" in flags))
 
-            def __init__(fileObj, path, flags = "r", buffering = True):
-                if (path.startswith(self.rootDir) and
-                        not path.startswith(self.rootDir + self.cfg.dbPath) and
-                        os.path.exists(path)):
-                    assert(not("a" in flags or "w" in flags))
-
-                file.__init__(fileObj, path, flags, buffering)
+            return realFileObject(path, flags, *args, **kwargs)
 
         # The update path needs to make files and rename(2) them into
         # place to avoid ETXTBSY. This test currently tests non-config
@@ -1276,7 +1275,6 @@ class Test(CapsuleRecipe):
         self.mock(os, 'open', mockOpen)
         import conary.local.update
         self.mock(conary.local.update, 'open', mockFile)
-        self.mock(conary.local.update, 'file', mockFile)
 
         self.updatePkg('foo:runtime=1.0')
         self.updatePkg('foo:runtime=2.0')
@@ -1297,7 +1295,7 @@ class Test(CapsuleRecipe):
     def testSingleLeadingSlashForTaggedFiles(self):
         # CNY-3141, CNY-3142
         tagFile = os.path.join(self.workDir, 'tag-file')
-        file(tagFile, "w").write("""
+        open(tagFile, "w").write("""
 datasource stdin
 file /foobar
 implements files update
@@ -1335,7 +1333,7 @@ implements files remove
         # Start mocking things
         self.mock(os, "getuid", lambda: 0)
         def mockExecve(cmd0, cmd, env):
-            f = file(tagResultFile, "a")
+            f = open(tagResultFile, "a")
             import sys
             for line in sys.stdin:
                 f.write("%s %s" % (' '.join(cmd), line))
@@ -1351,13 +1349,13 @@ implements files remove
             "/foobar files update /etc/testfirst.2",
             "/foobar files remove /etc/testsecond.1",
         ]
-        self.assertEqual([ x.rstrip() for x in file(tagResultFile) ],
+        self.assertEqual([ x.rstrip() for x in open(tagResultFile) ],
             expected)
 
     def testSingleLeadingSlashArgs(self):
         # CNY-3141, CNY-3142
         tagFile = os.path.join(self.workDir, 'tag-file')
-        file(tagFile, "w").write("""
+        open(tagFile, "w").write("""
 file /foobar
 implements files update
 implements files remove
@@ -1433,7 +1431,7 @@ implements files remove
 
         self.mock(os, "getuid", lambda: 0)
         def mockExecve(cmd0, cmd, env):
-            f = file(tagResultFile, "a")
+            f = open(tagResultFile, "a")
             f.write("%s\n" % (' '.join(cmd)))
             f.close()
             os._exit(0)
@@ -1446,7 +1444,7 @@ implements files remove
             "/foobar files update /etc/testfirst.1 /etc/testfirst.2",
             "/foobar files remove /etc/testsecond.1",
         ]
-        self.assertEqual([ x.rstrip() for x in file(tagResultFile) ],
+        self.assertEqual([ x.rstrip() for x in open(tagResultFile) ],
             expected)
 
         for fileNames in list(fsJob.tagUpdates.values()):

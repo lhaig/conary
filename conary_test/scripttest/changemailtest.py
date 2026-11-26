@@ -27,7 +27,7 @@ class ChangemailTest(rephelp.RepositoryHelper):
         # scripts should not normally be in the path!
         # This whole workaround is ugly -- all the changemail
         # bits should be in conary, not in scripts.
-        f = file(self.workDir+'/changemailtmp', 'w+')
+        f = open(self.workDir+'/changemailtmp', 'w+')
         f.write(' '*1024)
         f.flush()
         SMTP = mock.MockObject()
@@ -49,7 +49,7 @@ class ChangemailTest(rephelp.RepositoryHelper):
         SMTP().connect._mock.assertCalled('localhost')
 
         # now test some binary bytes
-        f = file(self.workDir+'/changemailtmp', 'w+')
+        f = open(self.workDir+'/changemailtmp', 'w+')
         # Unfortunately, literal UTF-8 characters confuse our
         # changemail.
         f.write('Th\xc3\xads \xc3\xacs a te\xc5\x9ft of \xc3\x9fome'

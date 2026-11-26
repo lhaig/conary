@@ -1156,7 +1156,7 @@ class NetServerTest(rephelp.RepositoryHelper):
         scriptPath = self.workDir + '/action'
         resultsPath = self.workDir + '/results'
 
-        f = file(scriptPath, "w")
+        f = open(scriptPath, "w")
         f.write('#!/bin/bash\n')
         f.write('echo $* > %s\n' % resultsPath)
         f.write('cat >> %s\n' % resultsPath)

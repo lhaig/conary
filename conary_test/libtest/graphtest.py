@@ -21,6 +21,7 @@ from io import StringIO
 
 #conary
 from conary.lib import graph
+from conary.lib.compat import cmp
 
 #test
 

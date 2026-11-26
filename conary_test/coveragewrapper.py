@@ -31,6 +31,7 @@ if conaryPath not in sys.path:
     sys.path.insert(0, conaryPath)
 
 from conary.lib import util
+from conary.lib.compat import cmp
 
 class CoverageWrapper(object):
     def __init__(self, coveragePath, dataPath, annotatePath, baseDirs):

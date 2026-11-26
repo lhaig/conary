@@ -167,8 +167,8 @@ class TestSource(PackageRecipe):
         os.chdir(self.workDir)
         self.newpkg('tmpwatch')
         os.chdir('tmpwatch')
-        file('localfoo', 'w').close()
-        file('local name with spaces', 'w').close()
+        open('localfoo', 'w').close()
+        open('local name with spaces', 'w').close()
         self.writeFile('tmpwatch.recipe', recipestr)
         self.addfile('tmpwatch.recipe')
         self.addfile('localfoo', text=True)
@@ -376,7 +376,7 @@ class TestSig1(PackageRecipe):
 
         def mockedDownloadPublicKey(slf):
             if slf.keyid == 'A0B3E88B':
-                f = file(os.path.join(resources.get_archive(), '0xA0B3E88B.pgp'))
+                f = open(os.path.join(resources.get_archive(), '0xA0B3E88B.pgp'), 'rb')
                 return openpgpfile.parseAsciiArmorKey(f)
             raise source.SourceError("Failed to retrieve PGP key %s" % slf.keyid)
 
@@ -426,7 +426,7 @@ class TestSig1(PackageRecipe):
             lc.append(None)
             if len(lc) < 7:
                 raise transport.TransportError("Blah!")
-            f = file(os.path.join(resources.get_archive(), '0xA0B3E88B.pgp'))
+            f = open(os.path.join(resources.get_archive(), '0xA0B3E88B.pgp'), 'rb')
             data = openpgpfile.parseAsciiArmorKey(f)
 
             return data
@@ -1367,7 +1367,7 @@ class TestSource(PackageRecipe):
         class FileHandler(http.server.SimpleHTTPRequestHandler):
             count = 0
             def log_message(slf, *args, **kw):
-                file(logFile, "a").write("%s\n" % slf.path)
+                open(logFile, "a").write("%s\n" % slf.path)
 
             def do_GET(slf):
                 if slf.path.endswith('/count'):
@@ -1388,7 +1388,7 @@ class TestSource(PackageRecipe):
                     contentType = "application/x-gzip"
                 else:
                     archpath = os.path.join(self.workDir, "foo.asc")
-                    file(archpath, "w+").write("Pretend this is a PGP sig")
+                    open(archpath, "w+").write("Pretend this is a PGP sig")
                     contentType = 'application/pgp-signature'
                 fileSize = os.stat(archpath).st_size
                 slf.send_response(200)
@@ -1515,10 +1515,10 @@ class Foo(PackageRecipe):
 
         mirrorsDir = os.path.join(self.workDir, "mirrors")
         util.mkdirChain(mirrorsDir)
-        file(os.path.join(mirrorsDir, "alif"), "w").write(
+        open(os.path.join(mirrorsDir, "alif"), "w").write(
             "http://localhost:%s/bad/b1/\nhttp://localhost:%s/bad/b2/\n" %
                 (hs.port, hs.port))
-        file(os.path.join(mirrorsDir, "ba"), "w").write(
+        open(os.path.join(mirrorsDir, "ba"), "w").write(
             "http://localhost:%s/bad/worst/\nhttp://localhost:%s/good/\n" %
                 (hs.port, hs.port))
         self.cfg.mirrorDirs = [ mirrorsDir ]
@@ -1538,7 +1538,7 @@ class Foo(PackageRecipe):
 
             # CNY-2778
             # Reset log file
-            file(logFile, "w+")
+            open(logFile, "w+")
             # Reset cache
             util.rmtree(self.cacheDir, ignore_errors = True)
             # Now build again, with the archive as part of the multi-url
@@ -1573,7 +1573,7 @@ class Foo(PackageRecipe):
 
         mirrorsDir = os.path.join(self.workDir, "mirrors")
         util.mkdirChain(mirrorsDir)
-        file(os.path.join(mirrorsDir, "alif"), "w").write(
+        open(os.path.join(mirrorsDir, "alif"), "w").write(
             "http://localhost:%s/bad/b1/\nhttp://localhost:%s/good/b2/\n" %
                 (hs.port, hs.port))
         self.cfg.mirrorDirs = [ mirrorsDir ]
@@ -1756,7 +1756,7 @@ class Foo(PackageRecipe):
             self.addfile("foo.recipe")
             self.discardOutput(self.commit)
 
-            self.assertEqual([x.strip() for x in file(logFile)],
+            self.assertEqual([x.strip() for x in open(logFile)],
                 ['/good/foo-1.0.tar.bz2', '/good/foo-1.0.tar.gz'])
 
             # Get rid of the lookaside cache
@@ -1764,7 +1764,7 @@ class Foo(PackageRecipe):
             # Cook. Make sure we didn't hit the server again
             self.cookItem(repos, self.cfg, 'foo')
 
-            self.assertEqual([x.strip() for x in file(logFile)],
+            self.assertEqual([x.strip() for x in open(logFile)],
                 ['/good/foo-1.0.tar.bz2', '/good/foo-1.0.tar.gz'])
         finally:
             hs.close()

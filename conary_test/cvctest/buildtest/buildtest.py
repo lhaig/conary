@@ -99,7 +99,7 @@ class TestXMLCatalog2(PackageRecipe):
         # was created correctly, so we just test to see if an 
         # expected number of lines are present. Note: this line
         # count could change with future versions of libxml2.
-        F = file(util.joinPaths(self.workDir, '/etc/xml/a.xml'))
+        F = open(util.joinPaths(self.workDir, '/etc/xml/a.xml'))
         lines = F.readlines()
         assert(len(lines) == 6)
         F.close()
@@ -141,7 +141,7 @@ class TestSGMLCatalog(PackageRecipe):
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1])  
 
-        F = file(util.joinPaths(self.workDir, '/etc/sgml/sgml-entities.cat'))
+        F = open(util.joinPaths(self.workDir, '/etc/sgml/sgml-entities.cat'))
         lines = F.readlines()
         list = ['CATALOG "bar.cat"\n',
                 'CATALOG "foo.cat"\n']
@@ -658,19 +658,19 @@ class TestCreate(PackageRecipe):
             self.updatePkg(self.workDir, p[0], p[1])
         a = os.lstat(util.joinPaths(self.workDir, 'a'))
         b = os.lstat(util.joinPaths(self.workDir, 'b'))
-        F = file(util.joinPaths(self.workDir, 'c'))
+        F = open(util.joinPaths(self.workDir, 'c'))
         c = F.read()
         F.close
-        F = file(util.joinPaths(self.workDir, 'd'))
+        F = open(util.joinPaths(self.workDir, 'd'))
         d = F.read()
         F.close
-        F = file(util.joinPaths(self.workDir, 'e'))
+        F = open(util.joinPaths(self.workDir, 'e'))
         e = F.read()
         F.close
-        F = file(util.joinPaths(self.workDir, 'e'))
+        F = open(util.joinPaths(self.workDir, 'e'))
         e = F.read()
         F.close
-        F = file(util.joinPaths(self.workDir, 'f'))
+        F = open(util.joinPaths(self.workDir, 'f'))
         f = F.read()
         F.close
         g = os.lstat(util.joinPaths(self.workDir, '/bin/g'))
@@ -1131,27 +1131,27 @@ class TestConsoleHelper(PackageRecipe):
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1], depCheck=False)
 
-        F = file(util.joinPaths(self.workDir, '/etc/security/console.apps/foo'))
+        F = open(util.joinPaths(self.workDir, '/etc/security/console.apps/foo'))
         fooC = F.readlines()
         F.close
         assert(len(fooC) == 2)
 
-        F = file(util.joinPaths(self.workDir, '/etc/security/console.apps/bar'))
+        F = open(util.joinPaths(self.workDir, '/etc/security/console.apps/bar'))
         barC = F.readlines()
         F.close
         assert(len(barC) == 7)
 
-        F = file(util.joinPaths(self.workDir, '/etc/pam.d/foo'))
+        F = open(util.joinPaths(self.workDir, '/etc/pam.d/foo'))
         fooP = F.readlines()
         F.close
         assert(len(fooP) == 4)
 
-        F = file(util.joinPaths(self.workDir, '/etc/pam.d/bar'))
+        F = open(util.joinPaths(self.workDir, '/etc/pam.d/bar'))
         barP = F.readlines()
         F.close
         assert(len(barP) == 8)
 
-        F = file(util.joinPaths(self.workDir, '/etc/pam.d/blah'))
+        F = open(util.joinPaths(self.workDir, '/etc/pam.d/blah'))
         blahP = F.readlines()
         F.close
         assert(len(blahP) == 1)
@@ -1479,7 +1479,7 @@ class TestXInetdService(PackageRecipe):
                                       ignoreDeps=True)
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1], depCheck=False)
-        f = file(self.workDir + '/etc/xinetd.d/foo')
+        f = open(self.workDir + '/etc/xinetd.d/foo')
         l = [ x[:-1] for x in f.readlines() ]
         e = ['# default: False',
              '# description: the foo service with a really long description to see \\',

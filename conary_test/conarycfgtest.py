@@ -19,7 +19,7 @@ from testrunner import testhelp
 import http.server
 import copy
 import os
-import queue
+import queue as queuemod
 import shutil
 import socket
 import sys
@@ -853,11 +853,11 @@ EOFEOF
             exitCode = ((scriptTemplate % unparsable)
                         + "echo 'foo' > /dev/stderr\nexit 22")
             self.assertEqual(_test(exitCode, True), 'Entitlement generator at "%s/localhost" died with exit status 22 - stderr output follows:\nfoo\n' % d)
-            exitSignal = """#!/usr/bin/python
+            exitSignal = """#!%s
 import os, sys
-print  >>sys.stderr, "foo\\n"
+print("foo\\n", file=sys.stderr)
 os.kill(os.getpid(), 9)
-"""
+""" % sys.executable
             self.assertEqual(_test(exitSignal, True), 'Entitlement generator at "%s/localhost" died with signal 9 - stderr output follows:\nfoo\n\n' % d)
         finally:
             shutil.rmtree(cfg.entitlementDir)
@@ -1061,13 +1061,16 @@ class ExtraHeadersTest(testhelp.TestCase):
 def startServer():
     def startFunc(port, queue):
         srv = HTTPServer(queue, ("127.0.0.1", port), QueuedRequestHandler)
+        # never block forever if the client fails before connecting
+        srv.timeout = 10
         queue.put("started")
         # Handle only one request
         srv.handle_request()
 
     port = testhelp.findPorts(num = 1)[0]
-    queue = queue.Queue(maxsize = 20)
+    queue = queuemod.Queue(maxsize = 20)
     t = threading.Thread(target = startFunc, args = (port, queue))
+    t.daemon = True
     t.start()
     return t, port, queue
 

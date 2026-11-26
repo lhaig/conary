@@ -1147,13 +1147,13 @@ exit 0
         model = cml.CML(self.cfg)
         modelFile = systemmodel.SystemModelFile(model)
 
-        file(sm, 'w').write('')
+        open(sm, 'w').write('')
         self.updatePkg('foo:runtime=1', modelFile=modelFile)
-        file(sm, 'a').write('install foo:runtime=1\n')
+        open(sm, 'a').write('install foo:runtime=1\n')
         self.updatePkg('foo:runtime=2', modelFile=modelFile)
-        file(sm, 'a').write('install foo:runtime=2\n')
+        open(sm, 'a').write('install foo:runtime=2\n')
         self.updatePkg('foo:runtime=3', modelFile=modelFile)
-        file(sm, 'a').write('install foo:runtime=3\n')
+        open(sm, 'a').write('install foo:runtime=3\n')
 
 
         rbsm = self.cfg.root + '/var/lib/conarydb/rollbacks/%d/system-model'

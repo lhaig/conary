@@ -1204,7 +1204,7 @@ class TagsTest(rephelp.RepositoryHelper):
     def testTagsTest1(self):
         if not os.path.exists('/etc/conary/tags/x-font'):
             raise testhelp.SkipTestException('/etc/conary/tags/x-font must be on system for this test')
-        xFontContents=file('/etc/conary/tags/x-font').read()
+        xFontContents=open('/etc/conary/tags/x-font').read()
 
         if '/usr/share/X11/fonts' in xFontContents:
             fontPath = '/usr/share/X11/fonts'
@@ -1460,7 +1460,7 @@ class TagLocaleTest(PackageRecipe):
         mockRecipe._getCapsulePathsForFile._mock.setDefaultReturn(False)
         lp = lang.TagLocale(mockRecipe)
         mock.mockMethod(lp._tagLocale)
-        localefilenames = [x.strip() for x in file(resources.get_archive('localefilenames'))]
+        localefilenames = [x.strip() for x in open(resources.get_archive('localefilenames'))]
         for filename in localefilenames:
             lp.doFile(filename)
         localeTags = set(x[0][1] for x in lp._tagLocale._mock.calls)
@@ -1692,7 +1692,7 @@ class TestInitscriptContents(PackageRecipe):
 
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1], depCheck=False)
-        contents = file(self.workDir+'/etc/init.d/foo').read()
+        contents = open(self.workDir+'/etc/init.d/foo').read()
         assert('/etc/rc.d/init.d/functions' not in contents)
 
         self.resetRepository()
@@ -3449,7 +3449,7 @@ class TestRequires(PackageRecipe):
         pyGtkPth = glob.glob('/usr/*/python%s/site-packages/pygtk.pth' % pythonVer)
         if not pyGtkPth:
             raise testhelp.SkipTestException('pygtk.pth must be on system for this test')
-        if file(pyGtkPth[0]).read().strip() != 'gtk-2.0':
+        if open(pyGtkPth[0]).read().strip() != 'gtk-2.0':
             raise testhelp.SkipTestException('pygtk.pth must contain "gtk-2.0" for this test (update test, please!)')
         trv = self.build(recipestr, "TestRequires",
             macros = dict(pyver = pythonVer))
@@ -3479,7 +3479,7 @@ class TestRequires(PackageRecipe):
                       util.joinPaths(sourceDir, 'syslog.cpython-34m.so'))
         util.copyfile(util.joinPaths(libPath, 'ext/streams.so'),
                       util.joinPaths(sourceDir, 'streams.so'))
-        file(util.joinPaths(sourceDir, "foo.py"), "w+").write("""\
+        open(util.joinPaths(sourceDir, "foo.py"), "w+").write("""\
 #!/usr/bin/python
 
 import sys
@@ -3675,7 +3675,7 @@ class Bloop(PackageRecipe):
         else:
             lib = 'lib'
 
-        file(util.joinPaths(sourceDir, "foo.py"), "w+").write("""\
+        open(util.joinPaths(sourceDir, "foo.py"), "w+").write("""\
 #!/usr/bin/python
 
 import logging
@@ -6031,7 +6031,7 @@ class TestReq(PackageRecipe):
             os.chdir(self.workDir)
             self.newpkg('testreq')
             os.chdir('testreq')
-            file('testreq.recipe', 'w').write(recipeText)
+            open('testreq.recipe', 'w').write(recipeText)
             repos = self.openRepository()
             self.logFilter.add()
             log.setVerbosity(log.DEBUG)
@@ -6106,7 +6106,7 @@ class TestReq(PackageRecipe):
 
         unmanagedLib = '%s/%s/libfoo.a' %(self.workDir, libdir)
         util.mkdirChain(os.path.dirname(unmanagedLib))
-        file(unmanagedLib, 'a')
+        open(unmanagedLib, 'a')
         buildOneRecipe(recipeReqUnmanaged)
         assert("+ EnforceStaticLibBuildRequirements: No trove found matching any of files %s/libfoo.a for -lfoo: possible missing buildRequires" %libdir in self.logFilter.records)
         os.unlink(unmanagedLib)
@@ -7809,7 +7809,7 @@ class TestNPIV(PackageRecipe):
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1], depCheck=False)
         for f in ('/usr/bin/foo', '/usr/share/bar'):
-            header = file(self.workDir+f).readlines()[0].strip()
+            header = open(self.workDir+f).readlines()[0].strip()
             self.assertTrue(('#!/usr/bin/python%s' % pythonVer) in header)
 
 

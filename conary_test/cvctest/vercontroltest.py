@@ -171,7 +171,7 @@ class MercurialTest(rephelp.RepositoryHelper, _VersionControlTestClass):
 
     def vcInit(self):
         util.mkdirChain(os.path.dirname(self.srcRepoPath))
-        file(self.workDir + '/.hgrc', 'w').write(
+        open(self.workDir + '/.hgrc', 'w').write(
             '[ui]\nusername=me <me@example.com>')
         os.system('hg init %s' % self.srcRepoPath)
 

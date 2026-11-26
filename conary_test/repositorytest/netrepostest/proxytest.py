@@ -81,7 +81,7 @@ class ProxyUnitTest(testcase.TestCaseWithWorkDir):
         origChangesetCache = netreposproxy.ChangesetCache
         lockLogFile = os.path.join(self.workDir, "locks.log")
         class MockChangesetCache(origChangesetCache):
-            llf = file(lockLogFile, "a")
+            llf = open(lockLogFile, "a")
             def get(slf, key, shouldLock = True):
                 csPath = origChangesetCache.hashKey(slf, key)
                 ret = origChangesetCache.get(slf, key, shouldLock=shouldLock)
@@ -127,7 +127,7 @@ class ProxyUnitTest(testcase.TestCaseWithWorkDir):
             (str(x), 'trovesNeeded%d' % i, 'filesNeeded%d' % i,
                 'removedTroves%d' % i, str(x))
             for i, x in enumerate(csSizes) ]
-        csFileObj = file(os.path.join(self.workDir, "changeset"), "w+")
+        csFileObj = open(os.path.join(self.workDir, "changeset"), "w+b")
         magic = netreposproxy.filecontainer.FILE_CONTAINER_MAGIC
         fver = netreposproxy.filecontainer.FILE_CONTAINER_VERSION_FILEID_IDX
         fver = netreposproxy.filecontainer.struct.pack("!I", fver)
@@ -135,7 +135,7 @@ class ProxyUnitTest(testcase.TestCaseWithWorkDir):
             csFileObj.write(magic)
             csFileObj.write(fver)
             rest = csSize - len(magic) - len(fver)
-            csFileObj.write((chr(ord('a') + i) * rest))
+            csFileObj.write(bytes([ord('a') + i]) * rest)
         csFileObj.seek(0)
 
         changeSetList = [ (x, (None, None), (None, None), False) for x in
@@ -164,7 +164,7 @@ class ProxyUnitTest(testcase.TestCaseWithWorkDir):
             excludeAutoSource = True)
 
         MockChangesetCache.llf.close()
-        f = file(lockLogFile)
+        f = open(lockLogFile)
         contents = [ x.strip() for x in f ]
         sortedFP = sorted(fingerprints)
 

@@ -29,7 +29,7 @@ class PwClass:
         if user == 'root':
             return (None, None, 0)
 
-        f = file(self.root + '/etc/passwd')
+        f = open(self.root + '/etc/passwd')
         assert (f.readlines() == [
             'root:*:0:0:root:/root:/bin/bash\n',
             'foo:$1$XzHooEIT$hszQQcxv6tokTs46604IW1:1000:1000::/usr/share/foo:/bin/foosh\n',
@@ -64,7 +64,7 @@ class TestUser(UserInfoRecipe):
 
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1])
-        f = file(self.workDir + '/etc/conary/userinfo/foo')
+        f = open(self.workDir + '/etc/conary/userinfo/foo')
         assert (f.readlines() == [
             'PREFERRED_UID=1000\n',
             'GROUP=bar\n',
@@ -72,13 +72,13 @@ class TestUser(UserInfoRecipe):
             'SHELL=/bin/foosh\n',
             'PASSWORD=$1$XzHooEIT$hszQQcxv6tokTs46604IW1\n'])
         f.close()
-        f = file(self.workDir + '/etc/passwd')
+        f = open(self.workDir + '/etc/passwd')
         assert (f.readlines() == [
             'root:*:0:0:root:/root:/bin/bash\n',
             'foo:$1$XzHooEIT$hszQQcxv6tokTs46604IW1:1000:1000::/usr/share/foo:/bin/foosh\n',
         ])
         f.close()
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         assert (f.readlines() == [
             'root:*:0:root\n',
             'bar:*:1000:\n',
@@ -129,7 +129,7 @@ class FooRecipe(PackageRecipe):
         self.updatePkg(self.rootDir, 'foo', resolve=True)
         c.restore()
         self.realRoot()
-        f = file(self.rootDir + '/etc/passwd')
+        f = open(self.rootDir + '/etc/passwd')
         assert (f.readlines() == [
             'root:*:0:0:root:/root:/bin/bash\n',
             'foo:$1$XzHooEIT$hszQQcxv6tokTs46604IW1:1000:1000::/usr/share/foo:/bin/foosh\n',
@@ -178,19 +178,19 @@ class TestUser(UserInfoRecipe):
         self.reset()
         (built, d) = self.buildRecipe(recipestr1, "TestUser")
         self.updatePkg(self.workDir, 'info-foo', resolve=True)
-        f = file(self.workDir + '/etc/conary/userinfo/foo')
+        f = open(self.workDir + '/etc/conary/userinfo/foo')
         assert (f.readlines() == [
             'PREFERRED_UID=1000\n',
             'GROUP=root\n',
             'SHELL=/sbin/nologin\n',])
         f.close()
-        f = file(self.workDir + '/etc/passwd')
+        f = open(self.workDir + '/etc/passwd')
         assert (f.readlines() == [
             'root:*:0:0:root:/root:/bin/bash\n',
             'foo:*:1000:0::/:/sbin/nologin\n',
         ])
         f.close()
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         assert (f.readlines() == [
             'root:*:0:root\n',
         ])
@@ -248,14 +248,14 @@ class TestUser(UserInfoRecipe):
             built, d = self.buildRecipe(recipestr, "TestUser")
             for p in built:
                 self.updatePkg(self.workDir, p[0], p[1], resolve=True)
-        f = file(self.workDir + '/etc/conary/userinfo/foo')
+        f = open(self.workDir + '/etc/conary/userinfo/foo')
         assert (f.readlines() == [
             'PREFERRED_UID=1000\n',
             'GROUPID=998\n',
             'SHELL=/sbin/nologin\n',
             'SUPPLEMENTAL=bar,baz\n',])
         f.close()
-        f = file(self.workDir + '/etc/passwd')
+        f = open(self.workDir + '/etc/passwd')
         assert (f.readlines() == [
             'root:*:0:0:root:/root:/bin/bash\n',
             'fdsa:*:1:2::/:/sbin/nologin\n',
@@ -264,7 +264,7 @@ class TestUser(UserInfoRecipe):
             'foo:*:1000:1::/:/sbin/nologin\n',
         ])
         f.close()
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         assert (f.readlines() == [
             'root:*:0:root\n',
             'foo:*:1:\n',
@@ -290,10 +290,10 @@ class TestGroup(GroupInfoRecipe):
         (built, d) = self.buildRecipe(recipestr1, "TestGroup")
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1])
-        f = file(self.workDir + '/etc/conary/groupinfo/foo')
+        f = open(self.workDir + '/etc/conary/groupinfo/foo')
         assert (f.readlines() == ['PREFERRED_GID=1000\n'])
         f.close()
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         assert (f.readlines() == [
             'root:*:0:root\n',
             'foo:*:1000:\n',
@@ -364,12 +364,12 @@ class TestSupplementalGroup(GroupInfoRecipe):
         (built, d) = self.buildRecipe(recipestr1, "TestSupplementalGroup")
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1])
-        f = file(self.workDir + '/etc/conary/groupinfo/foo')
+        f = open(self.workDir + '/etc/conary/groupinfo/foo')
         assert (f.readlines() == [
             'PREFERRED_GID=1000\n',
             'USER=bar\n'])
         f.close()
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         assert (f.readlines() == [
             'root:*:0:root\n',
             'bar:*:999:\n',
@@ -380,12 +380,12 @@ class TestSupplementalGroup(GroupInfoRecipe):
         self.resetWork()
         for p in builtb:
             self.updatePkg(self.workDir, p[0], p[1])
-        f = file(self.workDir + '/etc/group', 'a')
+        f = open(self.workDir + '/etc/group', 'a')
         f.write('asdf:*:1000:\n')
         f.close()
         for p in built:
             self.updatePkg(self.workDir, p[0], p[1])
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         assert (f.readlines() == [
             'root:*:0:root\n',
             'foo:*:1:bar\n',
@@ -432,7 +432,7 @@ class TestSupplementalGroup(GroupInfoRecipe):
         built, d = self.buildRecipe(recipestr1, "TestSupplementalGroup")
         rc, str = self.captureOutput(self.updatePkg, self.workDir,
                                      'info-adm', resolve=True)
-        f = file(self.workDir + '/etc/group')
+        f = open(self.workDir + '/etc/group')
         lines = f.readlines()
         assert (lines == [
             'root:*:0:root\n',
@@ -440,7 +440,7 @@ class TestSupplementalGroup(GroupInfoRecipe):
             'adm:*:4:\n',
         ])
         f.close()
-        f = file(self.workDir + '/etc/passwd')
+        f = open(self.workDir + '/etc/passwd')
         lines = f.readlines()
         assert (lines == [
             'root:*:0:0:root:/root:/bin/bash\n',

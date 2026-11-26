@@ -268,7 +268,7 @@ class CapsuleTest(rephelp.RepositoryHelper):
 
         root = self.cfg.root
         util.mkdirChain(root+'/etc/conary')
-        file(root+'/etc/conary/system-model', 'w').write(
+        open(root+'/etc/conary/system-model', 'w').write(
             'install group-dist=localhost@rpl:linux/1.0\n')
         model = cml.CML(self.cfg)
         modelFile = systemmodel.SystemModelFile(model)
@@ -877,13 +877,13 @@ class TestPackage(CapsuleRecipe):
                 (c.getName(), ( None, None ),
                               ( c.getVersion(), c.getFlavor() ), True ) ]
                                       , csPath)
-            file("/tmp/foo", "w").write(c.freeze())
+            open("/tmp/foo", "wb").write(c.freeze())
             self.addRPMComponent("simple:rpm=1.1", 'simple-1.1-1.i386.rpm')
             self.updatePkg('simple:rpm=1.0')
 
             testPath = os.path.join(self.rootDir, 'normal')
             self.verifyFile(testPath, 'normal\n')
-            f = file(testPath, "w")
+            f = open(testPath, "w")
             f.write("rollback check")
 
             self.updatePkg('simple:rpm=1.1')
@@ -917,7 +917,7 @@ class TestPackage(CapsuleRecipe):
 
     def checkOrdering(self, troves):
         lastOrder = [x[22:].strip() for x in
-                     file(self.rootDir + '/var/log/conary').readlines()
+                     open(self.rootDir + '/var/log/conary').readlines()
                      if 'RPM install order' in x][-1]
         self.assertEqual(lastOrder.split(': ', 1)[1], troves)
 

@@ -15,6 +15,7 @@
 #
 
 
+import functools
 import os
 
 from conary_test import rephelp
@@ -41,11 +42,11 @@ class FlavorTest(rephelp.RepositoryHelper):
 
         for versionDict in d.values():
             for flavorList in versionDict.values():
-                flavorList.sort(_flavorCmp)
+                flavorList.sort(key=functools.cmp_to_key(_flavorCmp))
 
         for versionDict in targ.values():
             for flavorList in versionDict.values():
-                flavorList.sort(_flavorCmp)
+                flavorList.sort(key=functools.cmp_to_key(_flavorCmp))
 
         assert(d == targ)
 

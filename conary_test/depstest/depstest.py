@@ -20,6 +20,7 @@ import pickle
 import unittest
 
 from conary import errors
+from conary.lib.compat import cmp
 from conary.deps.deps import (
         getMinimalCompatibleChanges,
         parseDep,
@@ -942,7 +943,7 @@ class DepsTest(unittest.TestCase):
                 ( ('use', ['~maybe', 'yes', '~!maybenot', '!no']), parseFlavor('yes,!no,~maybe,~!maybenot')),
                 ]:
             actual = DependencyClass.thawRawDep(*raw)
-            expected = expect.iterDeps().next()[1]
+            expected = next(expect.iterDeps())[1]
             self.assertEqual(actual, expected)
 
     def testDependencyMatcher(self):
