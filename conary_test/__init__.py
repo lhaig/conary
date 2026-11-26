@@ -22,16 +22,53 @@ from testrunner import testhelp
 class ChrootError(Exception):
     pass
 
+def _loadLibcap():
+    """Load libcap with typed prototypes; a missing library is ChrootError."""
+    try:
+        libcap = ctypes.cdll.LoadLibrary('libcap.so.2')
+        libcap.cap_get_pid.argtypes = [ctypes.c_int]
+        libcap.cap_get_pid.restype = ctypes.c_void_p
+        libcap.cap_to_text.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        libcap.cap_to_text.restype = ctypes.c_void_p
+        libcap.cap_free.argtypes = [ctypes.c_void_p]
+        libcap.cap_free.restype = ctypes.c_int
+    except (OSError, AttributeError) as err:
+        raise ChrootError(str(err))
+    return libcap
+
+
+def _hasChrootCap(text):
+    """True if the libcap text form (bytes) grants cap_sys_chroot."""
+    return b'cap_sys_chroot' in text
+
+
+def _probeChrootCapability():
+    libcap = _loadLibcap()
+    cap = libcap.cap_get_pid(os.getpid())
+    if not cap:
+        raise ChrootError('cap_get_pid failed')
+    try:
+        textPtr = libcap.cap_to_text(cap, None)
+        if not textPtr:
+            raise ChrootError('cap_to_text failed')
+        try:
+            return _hasChrootCap(ctypes.string_at(textPtr))
+        finally:
+            libcap.cap_free(textPtr)
+    finally:
+        libcap.cap_free(cap)
+
+
 # singleton
 chrootCapability = None
 def requireChroot():
     global chrootCapability
     if chrootCapability is None:
-        libcap = ctypes.cdll.LoadLibrary('libcap.so.2')
-        libcap.cap_to_text.restype = ctypes.c_char_p
-        cap = libcap.cap_to_text(libcap.cap_get_pid(os.getpid()), None)
-        chrootCapability = 'cap_sys_chroot' in cap
-        libcap.cap_free(cap)
+        try:
+            chrootCapability = _probeChrootCapability()
+        except ChrootError:
+            chrootCapability = False
+            raise
 
     if chrootCapability is False:
         raise ChrootError

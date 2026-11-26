@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+import contextlib
 import errno
 import grp
 import gzip
@@ -942,6 +943,28 @@ def rpmFileColorCmp(fileObjOne, fileObjTwo):
 
     return 0
 
+@contextlib.contextmanager
+def _chrootTo(root):
+    """Chroot into root for the body; always leave it and restore the cwd."""
+    curDir = os.open(".", os.O_RDONLY)
+    chrooted = False
+    try:
+        # chdir to the current root to allow us to chroot back out again
+        os.chdir('/')
+        os.chroot(root)
+        chrooted = True
+        yield
+    finally:
+        try:
+            if chrooted:
+                os.chroot(".")
+        finally:
+            try:
+                os.fchdir(curDir)
+            finally:
+                os.close(curDir)
+
+
 class UserGroupIdCache:
 
     def lookupName(self, root, name):
@@ -952,33 +975,24 @@ class UserGroupIdCache:
         # if not root, cannot chroot and so fall back to system ids
         getChrootIds = root and root != '/' and not os.getuid()
 
-        if getChrootIds:
-            if root[0] != '/':
-                root = os.sep.join((os.getcwd(), root))
-            curDir = os.open(".", os.O_RDONLY)
-            # chdir to the current root to allow us to chroot
-            # back out again
-            os.chdir('/')
-            os.chroot(root)
+        if getChrootIds and root[0] != '/':
+            root = os.sep.join((os.getcwd(), root))
 
-        if name and name[0] == '+':
-            # An id mapped as a string
-            try:
-                theId = int(name)
-            except ValueError:
-                log.warning('%s %s does not exist - using root', self.name,
-                            name)
-        else:
-            try:
-                theId = self.nameLookupFn(name)[2]
-            except KeyError:
-                log.warning('%s %s does not exist - using root', self.name, name)
-                theId = 0
-
-        if getChrootIds:
-            os.chroot(".")
-            os.fchdir(curDir)
-            os.close(curDir)
+        with (_chrootTo(root) if getChrootIds else contextlib.nullcontext()):
+            if name and name[0] == '+':
+                # An id mapped as a string
+                try:
+                    theId = int(name)
+                except ValueError:
+                    log.warning('%s %s does not exist - using root',
+                                self.name, name)
+            else:
+                try:
+                    theId = self.nameLookupFn(name)[2]
+                except KeyError:
+                    log.warning('%s %s does not exist - using root',
+                                self.name, name)
+                    theId = 0
 
         self.nameCache[name] = theId
         self.idCache[theId] = name
@@ -989,16 +1003,9 @@ class UserGroupIdCache:
         if theName is not None:
             return theName
 
-        if root and root != '/':
-            curDir = os.open(".", os.O_RDONLY)
-            os.chdir("/")
-            os.chroot(root)
-
-        name = self.idLookupFn(theId)[0]
-        if root and root != '/':
-            os.chroot(".")
-            os.fchdir(curDir)
-            os.close(curDir)
+        with (_chrootTo(root) if root and root != '/'
+              else contextlib.nullcontext()):
+            name = self.idLookupFn(theId)[0]
 
         self.nameCache[name] = theId
         self.idCache[theId] = name
