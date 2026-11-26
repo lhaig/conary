@@ -199,6 +199,65 @@ def test_capture_output_log_level(tc):
     assert log.getVerbosity() == old
 
 
+def test_capture_output_print_on_error_echoes_to_real_stdout(tc, capfd):
+    before = sys.stdout
+    err = ValueError('bad')
+
+    def boom():
+        print('build log')
+        raise err
+    with pytest.raises(ValueError) as info:
+        tc.captureOutput(boom, _printOnError=True)
+    assert info.value is err
+    assert sys.stdout is before
+    assert 'build log' in capfd.readouterr().out
+
+
+def test_capture_output_print_on_error_false_prints_nothing(tc, capfd):
+    def boom():
+        print('build log')
+        raise ValueError('bad')
+    with pytest.raises(ValueError):
+        tc.captureOutput(boom, _printOnError=False)
+    assert 'build log' not in capfd.readouterr().out
+
+
+@pytest.mark.parametrize('flag', [True, False])
+def test_capture_output_consumes_print_on_error(tc, capfd, flag):
+    def fn(a):
+        print('ok')
+        return a
+    rc, s = tc.captureOutput(fn, 3, _printOnError=flag)
+    assert rc == 3
+    assert s == 'ok\n'
+    assert 'ok' not in capfd.readouterr().out
+
+
+def test_capture_output_print_on_error_with_return_exception(tc, capfd):
+    err = ValueError('bad')
+
+    def boom():
+        print('build log')
+        raise err
+    ret, s = tc.captureOutput(boom, _printOnError=True, _returnException=True)
+    assert ret is err
+    assert s == 'build log\n'
+    assert 'build log' not in capfd.readouterr().out
+
+
+@pytest.mark.parametrize('flag,expected', [
+    (True, 'keep\nkeep2\n'),
+    (False, 'keep\nerror: [Errno 32] Broken pipe\nkeep2\n'),
+])
+def test_capture_output_remove_broken_pipe_errors(tc, flag, expected):
+    def fn(a):
+        print('keep\nerror: [Errno 32] Broken pipe\nkeep2')
+        return a
+    rc, s = tc.captureOutput(fn, 1, _removeBokenPipeErrors=flag)
+    assert rc == 1
+    assert s == expected
+
+
 def test_discard_output(tc, capfd):
     def fn():
         print('hidden')

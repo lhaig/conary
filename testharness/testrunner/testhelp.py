@@ -107,11 +107,21 @@ class TestCase(unittest.TestCase):
 
         _returnException=True returns the exception fn raised as the result
         instead of raising it (openpgptest.py, buildtest/sourcetest.py);
-        logLevel=N sets the conary log verbosity for the call.  Both are
-        consumed here and not passed to fn."""
+        logLevel=N sets the conary log verbosity for the call.
+        _printOnError=True (rephelp.cookObject, derivedtest.py:115) writes
+        the captured text to the real stdout when fn raises, before the
+        exception propagates; with _returnException=True the error is a
+        value, not a failure, so nothing is echoed.
+        _removeBokenPipeErrors=True (tagtest.py:460, upstream's spelling)
+        drops captured lines that report EPIPE ('Broken pipe' /
+        '[Errno 32]'); every other line is kept unchanged.
+        All four are consumed here and not passed to fn."""
         from conary.lib import log
         returnException = kw.pop('_returnException', False)
+        printOnError = kw.pop('_printOnError', False)
+        removeBrokenPipe = kw.pop('_removeBokenPipeErrors', False)
         logLevel = kw.pop('logLevel', None)
+        pending = None
         oldLevel = log.getVerbosity()
         sys.stdout.flush()
         saved_stdout = sys.stdout
@@ -129,8 +139,9 @@ class TestCase(unittest.TestCase):
                     result = fn(*args, **kw)
                 except Exception as err:
                     if not returnException:
-                        raise
-                    result = err
+                        pending = err
+                    else:
+                        result = err
             finally:
                 log.setVerbosity(oldLevel)
                 try:
@@ -142,6 +153,15 @@ class TestCase(unittest.TestCase):
                     os.close(saved_fd)
             tmp.seek(0)
             text = tmp.read().decode('utf-8', 'replace')
+        if removeBrokenPipe:
+            text = ''.join(
+                line for line in text.splitlines(True)
+                if 'Broken pipe' not in line and '[Errno 32]' not in line)
+        if pending is not None:
+            if printOnError:
+                saved_stdout.write(text)
+                saved_stdout.flush()
+            raise pending
         return result, text
 
     def discardOutput(self, fn, *args, **kw):
