@@ -279,7 +279,7 @@ class DBInstanceTable:
                    "troveName=? AND versionId=? AND flavorId=?",
                    item)
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(item)
 
@@ -573,7 +573,7 @@ class Database:
         cu.executemany("INSERT INTO tlList VALUES(?, ?, ?)", _iter(troveList),
                        start_transaction = False)
         # count the number of items we're inserting
-        count = cu.execute('SELECT count(*) FROM tlList').next()[0]
+        count = next(cu.execute('SELECT count(*) FROM tlList'))[0]
         cu.execute("""
 select
     pinned
@@ -723,8 +723,8 @@ order by
                                        troveFlavorId, troveVersion.timeStamps(),
                                        pinned = pin)
 
-        assert(cu.execute("SELECT COUNT(*) FROM TroveTroves WHERE "
-                          "instanceId=?", troveInstanceId).next()[0] == 0)
+        assert(next(cu.execute("SELECT COUNT(*) FROM TroveTroves WHERE "
+                          "instanceId=?", troveInstanceId))[0] == 0)
 
         cu.execute("""
         CREATE TEMPORARY TABLE IncludedTroves(
@@ -898,10 +898,10 @@ order by
             if (name, oldVersion, oldFlavor) not in instanceDict: continue
             oldIncludedId = instanceDict[name, oldVersion, oldFlavor]
 
-            flags = cu.execute("""
+            flags = next(cu.execute("""
                     SELECT flags FROM TroveTroves WHERE
                         instanceId=? and includedId=?""",
-                    instanceId, oldIncludedId).next()[0]
+                    instanceId, oldIncludedId))[0]
 
             if newFlavor.isEmpty():
                 flavorStr = "IS NULL"
@@ -2210,7 +2210,7 @@ order by
                     %s""" % flavorStr,
                         [trove._TROVEINFO_TAG_INCOMPLETE,
                          name, str(version)] + flavorArgs)
-        frzIncomplete = cu.next()[0]
+        frzIncomplete = next(cu)[0]
         return streams.ByteStream(frzIncomplete)() != 0
 
     def iterFilesWithTag(self, tag):

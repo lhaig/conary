@@ -75,9 +75,6 @@ class CaselessDict(dict):
         dict.__setitem__(self, self.__l(key), (key, value))
     def __delitem__(self, key):
         dict.__delitem__(self, self.__l(key))
-    def has_key(self, key):
-        return dict.has_key(self, self.__l(key))
-
     def keys(self):
         return [v[0] for v in dict.values(self)]
     def values(self):
@@ -110,7 +107,7 @@ class CaselessDict(dict):
     def __str__(self):
         return str(dict(dict.values(self)))
     def __iter__(self):
-        for k in dict.itervalues(self):
+        for k in dict.values(self):
             yield k[0]
     def __eq__(self, other):
         if not isinstance(other, dict):
@@ -119,17 +116,17 @@ class CaselessDict(dict):
             return False
         for k, v in other.items():
             lk = self.__l(k)
-            if not dict.has_key(self, lk):
+            if not dict.__contains__(self, lk):
                 return False
             if dict.__getitem__(self, lk)[1] != v:
                 return False
         return True
     def iteritems(self):
-        return (v for v in dict.itervalues(self))
+        return (v for v in dict.values(self))
     def iterkeys(self):
-        return (v[0] for v in dict.itervalues(self))
+        return (v[0] for v in dict.values(self))
     def itervalues(self):
-        return (v[1] for v in dict.itervalues(self))
+        return (v[1] for v in dict.values(self))
 
 # PostgreSQL lowercase everything automatically, so we need a special
 # "lowercase match" list type for matches like

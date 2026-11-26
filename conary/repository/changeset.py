@@ -148,20 +148,20 @@ class ChangeSetFileDict(dict, streams.InfoStream):
             item = item[1]
         return dict.__setitem__(self, item, val)
 
-    def __hasitem__(self):
-        if item[0] is None:
+    def __contains__(self, item):
+        if isinstance(item, tuple) and item[0] is None:
             item = item[1]
-        return dict.__hasitem__(self, item)
+        return dict.__contains__(self, item)
 
     def iteritems(self):
-        for item in dict.iteritems(self):
+        for item in dict.items(self):
             if isinstance(item[0], tuple):
                 yield item
             else:
                 yield (None, item[0]), item[1]
 
     def items(self):
-        return list(self.items())
+        return list(self.iteritems())
 
     def thaw(self ,data):
         i = 0
@@ -2005,10 +2005,10 @@ class DictAsCsf:
     maxMemSize = 16384
 
     def getNextFile(self):
-        if self.__next__ >= len(self.items):
+        if self.next >= len(self.items):
             return None
 
-        (name, contType, contObj, compressed) = self.items[self.__next__]
+        (name, contType, contObj, compressed) = self.items[self.next]
         self.next += 1
 
         if compressed:

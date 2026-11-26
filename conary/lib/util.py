@@ -1049,7 +1049,7 @@ class BZ2File:
     def __init__(self, fobj):
         self.decomp = bz2.BZ2Decompressor()
         self.fobj = fobj
-        self.leftover = ''
+        self.leftover = b''
 
     def read(self, bytes):
         while 1:
@@ -1064,7 +1064,7 @@ class BZ2File:
                         self.leftover = self.leftover[bytes:]
                     else:
                         rc = self.leftover[:]
-                        self.leftover = None
+                        self.leftover = b''
                     return rc
                 # done returning all data, return None as the EOF
                 return None
@@ -1117,7 +1117,7 @@ class PeekIterator:
         return val
 
     def __iter__(self):
-        while True:
+        while not self.done:
             yield next(self)
 
     def __init__(self, iter):
@@ -1136,8 +1136,6 @@ class IterableQueue:
     def __iter__(self):
         while self.l:
             yield self.l.pop(0)
-
-        raise StopIteration
 
     def __init__(self):
         self.l = []
@@ -1159,28 +1157,33 @@ def lstat(path):
     return sb
 
 class LineReader:
+    """Yield complete lines read from a descriptor as str.
+
+    Bytes are buffered until a newline arrives so a multi-byte character
+    split across reads is decoded whole; odd bytes survive surrogateescape.
+    """
 
     def readlines(self):
         s = os.read(self.fd, 4096)
         if not s:
             if self.buf:
                 s = self.buf
-                self.buf = ''
-                return [ s ]
+                self.buf = b''
+                return [ os.fsdecode(s) ]
 
             return None
 
         self.buf += s
 
-        lines = self.buf.split('\n')
+        lines = self.buf.split(b'\n')
         self.buf = lines[-1]
         del lines[-1]
 
-        return [ x + "\n" for x in lines ]
+        return [ os.fsdecode(x) + "\n" for x in lines ]
 
     def __init__(self, fd):
         self.fd = fd
-        self.buf = ''
+        self.buf = b''
 
 exists = file_utils.lexists
 removeIfExists = file_utils.removeIfExists
@@ -1444,26 +1447,26 @@ class FileIgnoreEpipe(object):
 
 class BoundedStringIO(object):
     """
-    An IO object that behaves like a StringIO.
+    An IO object that behaves like a BytesIO (bytes only).
     Data is stored in memory (just like in a StringIO) if shorter than
     maxMemorySize, or in a temporary file.
     """
     defaultMaxMemorySize = 65536
     __slots__ = ['_backend', '_backendType', 'maxMemorySize']
-    def __init__(self, buf='', maxMemorySize=None):
+    def __init__(self, buf=b'', maxMemorySize=None):
         if maxMemorySize is None:
             maxMemorySize = object.__getattribute__(self, 'defaultMaxMemorySize')
         self.maxMemorySize = maxMemorySize
         # Store in memory by default
-        self._backend = io.StringIO(buf)
+        self._backend = io.BytesIO(buf)
         self._backendType = "memory"
 
     def _writeImpl(self, s):
         backend = object.__getattribute__(self, '_backend')
-        if isinstance(backend, io.TextIOWrapper):
+        if object.__getattribute__(self, '_backendType') == 'file':
             # File backend
             return backend.write(s)
-        # StringIO backend
+        # BytesIO backend
 
         maxMemorySize = object.__getattribute__(self, 'maxMemorySize')
 
@@ -1477,7 +1480,7 @@ class BoundedStringIO(object):
         # Get rid of the file from the filesystem, we'll keep an open fd to it
         os.unlink(name)
         setCloseOnExec(fd)
-        backendFile = os.fdopen(fd, "w+")
+        backendFile = os.fdopen(fd, "w+b")
         # Copy the data from the current StringIO (up to the current position)
         backend.seek(0)
         backendFile.write(backend.read(curPos))
@@ -1493,7 +1496,7 @@ class BoundedStringIO(object):
         backend = object.__getattribute__(self, '_backend')
         maxMemorySize = object.__getattribute__(self, 'maxMemorySize')
 
-        if not isinstance(backend, io.TextIOWrapper):
+        if object.__getattribute__(self, '_backendType') == 'memory':
             # Memory backend
             # Truncating always reduces size, so we will not switch to a file
             # for this case
@@ -1508,7 +1511,7 @@ class BoundedStringIO(object):
         # Need to go from file to memory
         # Read data from file first
         backend.seek(0)
-        backendMem = io.StringIO(backend.read(size))
+        backendMem = io.BytesIO(backend.read(size))
         self._backendType = "memory"
         self._backend = backendMem
         backend.close()
@@ -1950,7 +1953,7 @@ class LZMAFile:
                 break
             buffers.append(buf)
             pos += len(buf)
-        return ''.join(buffers)
+        return b''.join(buffers)
 
     def close(self):
         if self.childpid:
@@ -2204,25 +2207,14 @@ class GzipFile(gzip.GzipFile):
 
 class DeterministicGzipFile(gzip.GzipFile):
     """
-    Patch GzipFile to not write mtimes into output.
-
-    Python 2.7 and later take a mtime argument.
+    GzipFile that does not write mtimes into output.
     """
 
-    class _fake_time(object):
-        @staticmethod
-        def time():
-            return 0
-
-    def _write_gzip_header(self):
-        # Patch the gzip module, not time.time directly, so other threads
-        # calling time.time() by other means are not affected.
-        orig_time = gzip.time
-        try:
-            gzip.time = self._fake_time
-            gzip.GzipFile._write_gzip_header(self)
-        finally:
-            gzip.time = orig_time
+    def __init__(self, *args, **kwargs):
+        # mtime is the fifth positional argument of GzipFile
+        if len(args) < 5:
+            kwargs.setdefault('mtime', 0)
+        gzip.GzipFile.__init__(self, *args, **kwargs)
 
 
 # yields sorted paths and their stat bufs

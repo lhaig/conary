@@ -78,7 +78,7 @@ import conary.errors
 from conary.lib import util
 from conary.repository import filecontents
 
-FILE_CONTAINER_MAGIC = "\xEA\x3F\x81\xBB"
+FILE_CONTAINER_MAGIC = b"\xEA\x3F\x81\xBB"
 SUBFILE_MAGIC = 0x3FBB
 # used for files whose contents are > 4gig
 LARGE_SUBFILE_MAGIC = 0x40CD
@@ -169,7 +169,7 @@ class FileContainer:
         return (name, tag, fcf)
 
     def _nextFile(self):
-        offset = self.__next__
+        offset = self.next
 
         nameLen = self.file.pread(10, offset)
         if not len(nameLen):
@@ -212,12 +212,12 @@ class FileContainer:
         if size < 0x100000000:
             header = struct.pack('!HHIH', SUBFILE_MAGIC,
                     len(name), size, len(tag))
-            footer = ''
+            footer = b''
         else:
             total = size + len(name) + len(tag)
             header = struct.pack('!HQ', LARGE_SUBFILE_MAGIC, total)
             footer = struct.pack('!HH', len(name), len(tag))
-        return ''.join((header, name, tag)), footer
+        return b''.join((header, name, tag)), footer
 
     def dumpIter(self, readFileFunc, args=(), offset=0):
         """Dump the changeset as a byte stream, yielding chunks of bytes.

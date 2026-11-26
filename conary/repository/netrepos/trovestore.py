@@ -1196,7 +1196,7 @@ class TroveStore:
         cu.execute("SELECT stream FROM FileStreams WHERE fileId=?",
                    cu.binary(fileId))
         try:
-            stream = cu.next()[0]
+            stream = next(cu)[0]
         except StopIteration:
             raise errors.FileStreamMissing(fileId)
 
@@ -1345,7 +1345,7 @@ class TroveStore:
         filesToRemove = []
         for sha1 in candidateSha1sToRemove:
             cu.execute("SELECT COUNT(*) FROM FileStreams WHERE sha1=?", cu.binary(sha1))
-            if cu.next()[0] == 0:
+            if next(cu)[0] == 0:
                 filesToRemove.append(sha1)
 
         # tmpRemovals drives the removal of most of the shared tables

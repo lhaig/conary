@@ -42,6 +42,14 @@ def _regexp(pattern, item):
 def _timestamp():
     return sqllib.toDatabaseTimestamp()
 
+class _Connection(sqlite3.Connection):
+    """sqlite3.Connection with a settable implicit-begin statement.
+
+    The stdlib connection has no __dict__, so callers (the local database
+    wants a deferred BEGIN) could not set _BEGIN on it."""
+    _BEGIN = "begin immediate"
+
+
 class Cursor(BaseCursor):
     driver = "sqlite"
 
@@ -86,7 +94,7 @@ class Cursor(BaseCursor):
         head = sql.lstrip().upper()
         if head.startswith(self._NO_IMPLICIT_BEGIN):
             return
-        self._tryExecute(self._cursor.execute, Database.basic_transaction)
+        self._tryExecute(self._cursor.execute, self.dbh._BEGIN)
 
     def execute(self, sql, *args, **kw):
         self._executeCheck(sql)
@@ -195,7 +203,8 @@ class Database(BaseDatabase):
         assert(self.database)
         # timeouts are given in milliseconds (historical pysqlite3
         # convention); the stdlib module takes seconds
-        timeout = kwargs.pop("timeout", self.TIMEOUT) / 1000.0
+        self.timeout = kwargs.pop("timeout", self.TIMEOUT)
+        timeout = self.timeout / 1000.0
         # fork-only options that have no stdlib equivalent
         for key in ("command_logfile", "lockJournal", "autocommit",
                 "encoding"):
@@ -204,6 +213,7 @@ class Database(BaseDatabase):
         # commit()/rollback() still end an open transaction. Cursor takes
         # care of starting 'begin immediate' transactions.
         kwargs["isolation_level"] = None
+        kwargs["factory"] = _Connection
         try:
             self.dbh = sqlite3.connect(self.database, timeout=timeout,
                     **kwargs)

@@ -75,6 +75,6 @@ class Flavors:
         cu.execute("SELECT flavor FROM Flavors WHERE flavorId = ?",
                    flavorId)
         try:
-            return deps.ThawFlavor(cu.next()[0])
+            return deps.ThawFlavor(next(cu)[0])
         except StopIteration:
             raise KeyError(flavorId)

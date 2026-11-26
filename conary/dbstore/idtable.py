@@ -93,7 +93,7 @@ class IdTable(object):
         cu.execute("SELECT %s FROM %s WHERE %s=?"
                    %(self.strName, self.tableName, self.keyName), (theId,))
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(theId)
 
@@ -116,7 +116,7 @@ class IdTable(object):
         cu = self.db.cursor()
         cu.execute(self.__select(), (item,))
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(item)
 
@@ -155,13 +155,13 @@ class IdTable(object):
             yield row
 
     def keys(self):
-        return [ x for x in self.keys() ]
+        return list(self.iterkeys())
 
     def values(self):
-        return [ x for x in self.values() ]
+        return list(self.itervalues())
 
     def items(self):
-        return [ x for x in self.items() ]
+        return list(self.iteritems())
 
 
 class CachedIdTable(IdTable):
@@ -238,7 +238,7 @@ class IdPairMapping:
         cu = self.db.cursor()
         cu.execute(self.__select(), (first, second))
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(key)
 
@@ -290,7 +290,7 @@ class IdMapping:
         cu = self.db.cursor()
         cu.execute(self.__select(), key)
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(key)
 

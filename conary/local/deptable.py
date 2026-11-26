@@ -95,7 +95,7 @@ class DependencyWorkTables:
             select count(*) from
                 TmpDependencies join dependencies using (class, name, flag)
             """)
-            count = self.cu.next()[0]
+            count = next(self.cu)[0]
             assert(not count)
 
         if multiplier != 1:
@@ -106,7 +106,7 @@ class DependencyWorkTables:
                 select count(*) from
                     TmpDependencies where depId > 0
                 """)
-                count = self.cu.next()[0]
+                count = next(self.cu)[0]
                 assert(not count)
 
             self.cu.execute("SELECT COALESCE(MIN(depNum), 0) "
@@ -115,7 +115,7 @@ class DependencyWorkTables:
             self.cu.execute("SELECT COALESCE(MAX(depNum), 0) "
                             "FROM %(reqTable)s" % substDict)
 
-        substDict['baseReqNum'] = self.cu.next()[0] + multiplier
+        substDict['baseReqNum'] = next(self.cu)[0] + multiplier
 
         if len(dependencyTables) == 1:
             substDict['depId'] = "%s.depId" % dependencyTables
@@ -238,7 +238,7 @@ class DependencyWorkTables:
                     %s
         """ % (flavorCheck), args)
 
-        instanceId = self.cu.next()[0]
+        instanceId = next(self.cu)[0]
         self.cu.execute("delete from removedtroveids where troveId=?",
                         instanceId)
 
@@ -248,7 +248,7 @@ class DependencyWorkTables:
         # merged into TmpRequires and DepCheck so we can just merge the
         # new changes.
         self.cu.execute("SELECT COALESCE(MAX(rowId), -1) FROM RemovedTroveIds")
-        max = self.cu.next()[0]
+        max = next(self.cu)[0]
 
         self.cu.execute("""
         INSERT INTO RemovedTroveIds (troveId, nodeId)

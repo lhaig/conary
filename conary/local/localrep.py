@@ -165,7 +165,7 @@ class SqlDataStore(datastore.AbstractDataStore):
             hash = sha1helper.sha1ToString(hash)
         cu = self.db.cursor()
         cu.execute("SELECT COUNT(*) FROM DataStore WHERE hash=?", hash)
-        return (cu.next()[0] != 0)
+        return (next(cu)[0] != 0)
 
     def decrementCount(self, hash):
         """
@@ -176,7 +176,7 @@ class SqlDataStore(datastore.AbstractDataStore):
             hash = sha1helper.sha1ToString(hash)
         cu = self.db.cursor()
         cu.execute("SELECT count FROM DataStore WHERE hash=?", hash)
-        count = cu.next()[0]
+        count = next(cu)[0]
         if count == 1:
             cu.execute("DELETE FROM DataStore WHERE hash=?", hash)
         else:
@@ -193,7 +193,7 @@ class SqlDataStore(datastore.AbstractDataStore):
             hash = sha1helper.sha1ToString(hash)
         cu = self.db.cursor()
         cu.execute("SELECT COUNT(*) FROM DataStore WHERE hash=?", hash)
-        exists = cu.next()[0]
+        exists = next(cu)[0]
 
         if exists:
             cu.execute("UPDATE DataStore SET count=count+1 WHERE hash=?",
@@ -233,7 +233,7 @@ class SqlDataStore(datastore.AbstractDataStore):
             hash = sha1helper.sha1ToString(hash)
         cu = self.db.cursor()
         cu.execute("SELECT data FROM DataStore WHERE hash=?", hash)
-        data = cu.next()[0]
+        data = next(cu)[0]
         data = zlib.decompress(data)
         return StringIO(data)
 

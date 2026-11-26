@@ -88,7 +88,7 @@ class InstanceTable:
         cu.execute("SELECT instanceId FROM Instances WHERE "
                         "itemId=? AND versionId=? AND flavorId=?", item)
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(item)
 
@@ -121,7 +121,7 @@ class InstanceTable:
           and Versions.version = ?
           and Flavors.flavor = ? """, (troveName, vStr, fStr))
         try:
-            return cu.next()[0]
+            return next(cu)[0]
         except StopIteration:
             raise KeyError(troveName, troveVersion, troveFlavor)
         # not reached

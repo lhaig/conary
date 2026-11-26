@@ -973,7 +973,7 @@ class UpdateJob:
         jl = self._jobPreScriptsByJob
         if not jl:
             assert not self._jobPreScripts, "Must call reorderPreScripts first"
-            raise StopIteration
+            return
         actionsInOrder = [ 'prerollback', 'preinstall', 'preupdate', 'preerase' ]
         for action, lAction in zip(actionsInOrder, jl):
             for jidx, lScriptIdx in lAction:
@@ -1487,7 +1487,7 @@ class SqlDbRepository(trovesource.SearchableTroveSource,
                             Flavors.flavor %s
                    """ % flavorTest, troveName, version.asString())
 
-        result = cu.next()[0] != 0
+        result = next(cu)[0] != 0
 
         return result
 

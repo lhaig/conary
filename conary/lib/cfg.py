@@ -498,7 +498,7 @@ class _Config(object, metaclass=_ConfigMeta):
         return iter(self._cfg_def.options.keys())
 
     def items(self):
-        return list(self.items())
+        return list(self.iteritems())
 
     def iteritems(self):
         for name in self._cfg_def.options:

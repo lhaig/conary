@@ -293,19 +293,19 @@ class SqlDB(rephelp.RepositoryHelper):
 
         # make sure the versions got removed; the None entry is still there
         cu.execute("SELECT count(*) FROM Versions")
-        assert(cu.next()[0] == 1)
+        assert(next(cu)[0] == 1)
 
         # make sure the dependency table got cleaned up
         cu.execute("SELECT count(*) FROM Dependencies")
-        assert(cu.next()[0] == 0)
+        assert(next(cu)[0] == 0)
 
         # make sure the instances table got cleaned up
         cu.execute("SELECT count(*) FROM Instances")
-        assert(cu.next()[0] == 0)
+        assert(next(cu)[0] == 0)
 
         # make sure the troveInfo table got cleaned up
         cu.execute("SELECT count(*) FROM TroveInfo")
-        assert(cu.next()[0] == 0)
+        assert(next(cu)[0] == 0)
 
     def testDatabase2(self):
         db = sqldb.Database(':memory:')
@@ -549,14 +549,14 @@ class SqlDB(rephelp.RepositoryHelper):
         # make sure there aren't any install buckets left
         cu.execute("select count(*) from troveinfo where infoType=?",
                    trove._TROVEINFO_TAG_INSTALLBUCKET)
-        assert(cu.next()[0] == 0)
+        assert(next(cu)[0] == 0)
         
         # make sure the path hashs look right for libpng:lib
         cu.execute("select data from troveinfo, instances where "
                    "trovename='libpng:lib' and "
                    "troveinfo.instanceid=instances.instanceid "
                    "and infoType=?", trove._TROVEINFO_TAG_PATH_HASHES)
-        ph = trove.PathHashes(cu.next()[0])
+        ph = trove.PathHashes(next(cu)[0])
 
         cu.execute("select path from instances, dbtrovefiles where "
                    "instances.instanceid=dbtrovefiles.instanceid "
@@ -607,10 +607,10 @@ class SqlDB(rephelp.RepositoryHelper):
         # check to make sure that we fixed our broken deps and troveinfo
         cu.execute("select count(*) from troveinfo where infoType=3 "
                    "and hex(data) == '31'");
-        assert(cu.next()[0] == 0)
+        assert(next(cu)[0] == 0)
         cu.execute("select count(*) from dependencies where "
                    "name like 'conary:%' and flag='1'")
-        assert(cu.next()[0] == 0)
+        assert(next(cu)[0] == 0)
 
         # verify the conary:runtime trove
         v = VersionFromString('/conary.rpath.com@rpl:devel//1/1.0-2-0.1')
@@ -621,12 +621,12 @@ class SqlDB(rephelp.RepositoryHelper):
         # verify that we can insert a '1.0' into deps and troveinfo
         cu.execute("insert into Dependencies values (NULL, 4, 'test', '1.0')")
         cu.execute("select flag from Dependencies where name='test'")
-        assert(cu.next()[0] == '1.0')
+        assert(next(cu)[0] == '1.0')
 
         cu.execute("insert into TroveInfo values (300, 3, '1.0')")
         cu.execute("select data from TroveInfo where instanceId=300 and "
                    "infotype=3")
-        assert(cu.next()[0] == '1.0')
+        assert(next(cu)[0] == '1.0')
 
         db.close()
         db2.close()
@@ -717,7 +717,7 @@ class SqlDB(rephelp.RepositoryHelper):
         assert(instPkg == pkg)
 
         # make sure there aren't broken bits in TroveTroves
-        assert(db.db.cursor().execute("select count(*) from trovetroves").next()[0]
+        assert(next(db.db.cursor().execute("select count(*) from trovetroves"))[0]
                     == 1)
 
     def testMapPinned(self):
@@ -739,10 +739,10 @@ class SqlDB(rephelp.RepositoryHelper):
         db.mapPinnedTroves([('testpkg:comp', (self.v10, self.emptyFlavor),
                                              (self.v20, self.emptyFlavor))])
         cu = db.db.cursor()
-        assert(cu.execute('SELECT COUNT(*) FROM TroveTroves WHERE inPristine=0').next()[0] == 1)
+        assert(next(cu.execute('SELECT COUNT(*) FROM TroveTroves WHERE inPristine=0'))[0] == 1)
         db.mapPinnedTroves([('testpkg:comp', (self.v10, self.emptyFlavor),
                                              (self.v20, self.emptyFlavor))])
-        assert(cu.execute('SELECT COUNT(*) FROM TroveTroves WHERE inPristine=0').next()[0] == 1)
+        assert(next(cu.execute('SELECT COUNT(*) FROM TroveTroves WHERE inPristine=0'))[0] == 1)
         pkg = db.getTroves([('testpkg', self.v20, self.emptyFlavor)], pristine=False)[0]
         assert(list(pkg.strongTroves.keys())[0][1] == self.v10)
         assert(list(pkg.weakTroves.keys()) == [])
