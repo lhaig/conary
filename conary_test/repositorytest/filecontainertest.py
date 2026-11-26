@@ -50,7 +50,7 @@ def checkFiles(c, names, data, tags):
         rc = c.getNextFile()
 
     if names:
-        raise AssertionError("files not found: %s" % " ".join(names))
+        raise AssertionError("files not found: %s" % b" ".join(names).decode())
 
 class FilecontainerTest(unittest.TestCase):
     def setUp(self):
@@ -79,27 +79,27 @@ class FilecontainerTest(unittest.TestCase):
         names = []
         c = FileContainer(f)
 
-        self.assertRaises(AssertionError, c.addFile, "name", 
-                          FromString("data"), "tag")
+        self.assertRaises(AssertionError, c.addFile, b"name", 
+                          FromString(b"data"), b"tag")
 
         c.close()
         os.unlink(self.fn)
         f = util.ExtendedFile(self.fn, "w+", buffering = False)
         c = FileContainer(f)
 
-        data.append("contents of file1")
-        tags.append("extra data")
-        names.append("file1")
+        data.append(b"contents of file1")
+        tags.append(b"extra data")
+        names.append(b"file1")
         c.addFile(names[0], FromString(data[0]), tags[0])
 
-        data.append("file2 gets some contents")
-        tags.append("tag")
-        names.append("file2")
+        data.append(b"file2 gets some contents")
+        tags.append(b"tag")
+        names.append(b"file2")
         c.addFile(names[1], FromString(data[1]), tags[1])
 
-        data.append("")
-        tags.append("empty")
-        names.append("")
+        data.append(b"")
+        tags.append(b"empty")
+        names.append(b"")
         c.addFile(names[2], FromString(data[2]), tags[2])
 
         c.close()
@@ -129,7 +129,7 @@ class FilecontainerTest(unittest.TestCase):
                 util.ExtendedFile.__init__(self, *args, **kwargs)
 
             def write(self, s):
-                if len(s) > 100 and s[0] == '\0' and s[-1] == '\0':
+                if len(s) > 100 and s[:1] == b'\0' and s[-1:] == b'\0':
                     self.seek(len(s) - 1, 2)
                     self.needsWrite = True
                     return len(s)
@@ -138,12 +138,12 @@ class FilecontainerTest(unittest.TestCase):
 
             def close(self):
                 if self.needsWrite:
-                    self.write('\0')
+                    self.write(b'\0')
                     self.needsWrite = False
 
             def seek(self, *args):
                 if self.needsWrite:
-                    self.write('\0')
+                    self.write(b'\0')
                     self.needsWrite = False
 
                 return util.ExtendedFile.seek(self, *args)
@@ -165,14 +165,14 @@ class FilecontainerTest(unittest.TestCase):
                     bytes = self.size - self.offset
                     self.offset = self.size
 
-                return "\0" * bytes
+                return b"\0" * bytes
 
         f = SparseFile(self.fn, "w+", buffering = False)
         c = FileContainer(f)
         totalSize = 0x100001000
-        c.addFile('test', FromFile(FalseFile(totalSize)), 'testdata',
+        c.addFile(b'test', FromFile(FalseFile(totalSize)), b'testdata',
                   precompressed = True)
-        c.addFile('end', FromString('endcontents'), 'enddata',
+        c.addFile(b'end', FromString(b'endcontents'), b'enddata',
                   precompressed = True)
         c.close()
 
@@ -180,13 +180,13 @@ class FilecontainerTest(unittest.TestCase):
         name, tag, f = c.getNextFile()
         storedSize = f.seek(0, 2)
         assert(storedSize == totalSize)
-        assert(tag == 'testdata')
+        assert(tag == b'testdata')
 
         name, tag, f = c.getNextFile()
-        assert(name == 'end')
-        assert(tag == 'enddata')
+        assert(name == b'end')
+        assert(tag == b'enddata')
         s = f.read()
-        assert(s == 'endcontents')
+        assert(s == b'endcontents')
 
     def tearDown(self):
         os.unlink(self.fn)

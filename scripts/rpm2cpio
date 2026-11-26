@@ -39,12 +39,12 @@ def main(argv):
     if len(argv) > 2 or len(argv) < 2:
         return usage()
     try:
-        r = file(argv[1], 'r')
+        r = open(argv[1], 'rb')
     except:
         return usage()
 
     try:
-        rpmhelper.extractRpmPayload(r, sys.stdout)
+        rpmhelper.extractRpmPayload(r, sys.stdout.buffer)
     except rpmhelper.UnknownPayloadFormat as e:
         sys.stderr.write('payload is not in cpio format: %s\n' % e.args[0])
         return 1

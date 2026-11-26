@@ -49,7 +49,7 @@ class DebHelperTest(testhelp.TestCase):
             ' .',
             ' Line4',
         ]
-        sio = io.StringIO('\n'.join(lines))
+        sio = io.BytesIO('\n'.join(lines).encode())
         sio.seek(0)
 
         ret = parser.parse(sio)
@@ -63,7 +63,7 @@ class DebHelperTest(testhelp.TestCase):
         ])
 
     def testDebHeader(self):
-        fobj = file(os.path.join(resources.get_archive(), "bash.deb"))
+        fobj = open(os.path.join(resources.get_archive(), "bash.deb"), "rb")
 
         fields = [debhelper.NAME, debhelper.VERSION, debhelper.RELEASE,
                       debhelper.SUMMARY, debhelper.DESCRIPTION]

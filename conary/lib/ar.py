@@ -55,14 +55,14 @@ def Archive(fileObj):
     length = fileObj.tell()
     fileObj.seek(0)
     magic = fileObj.read(8)
-    if len(magic) < 8 or magic != '!<arch>\n':
+    if len(magic) < 8 or magic != b'!<arch>\n':
         raise ArchiveError('Unrecognized format')
     pFileObj = util.ExtendedFdopen(os.dup(fileObj.fileno()))
     longNameData = None
 
     while fileObj.tell() <= (length-1):
         hdr = fileObj.read(60)
-        if len(hdr) < 60 or hdr[58:60] != '`\n':
+        if len(hdr) < 60 or hdr[58:60] != b'`\n':
             raise ArchiveError('Unrecognized header')
         size = int(hdr[48:58])
         name = hdr[0:16].strip()
@@ -70,20 +70,22 @@ def Archive(fileObj):
         data = util.SeekableNestedFile(pFileObj, size, start)
         fileObj.seek(size + size%2, 1) # padded to even size
 
-        if name == '//' and longNameData is None:
+        if name == b'//' and longNameData is None:
             # GNU extended name data block
             longNameData = data.read()
             continue
 
-        if name.startswith('/') and len(name) > 1 and longNameData is not None:
+        if name.startswith(b'/') and len(name) > 1 and longNameData is not None:
             # reference into data block
             nameIndex = int(name[1:])
-            nameEndIndex = longNameData[nameIndex:].index('\n')
-            name = longNameData[nameIndex:nameIndex+nameEndIndex].rstrip('/')
+            nameEndIndex = longNameData[nameIndex:].index(b'\n')
+            name = longNameData[nameIndex:nameIndex+nameEndIndex].rstrip(b'/')
 
-        if '/' in name and len(name) > 1:
+        if b'/' in name and len(name) > 1:
             # GNU adds trailing / to names; '/' is the name of ranlib table
-            name = name.rstrip('/')
+            name = name.rstrip(b'/')
+        # names are metadata: str, any odd byte preserved
+        name = os.fsdecode(name)
 
         yield ArFile(
             name = name,

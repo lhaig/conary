@@ -52,9 +52,9 @@ class _javaSymbolTable:
     def _asUtf8(cls, contents, i):
         length = struct.unpack('>H', contents[i:i+2])[0]
         data = contents[i+2:i+2+length]
-        # If we cared, we'd uncomment the next line
-        #return data.decode('utf-8'), i+2+length
-        return data, i+2+length
+        # Pool strings are modified UTF-8; surrogateescape keeps odd bytes
+        # (and never raises) so the dependency strings stay str.
+        return data.decode('utf-8', 'surrogateescape'), i+2+length
 
     @classmethod
     def _asClassRef(cls, contents, i):
@@ -211,7 +211,7 @@ def _isValidTLD(refString):
     return "." in refString
 
 def _parseSymbolTable(contents):
-    if len(contents) <= 4 or contents[0:4] != "\xCA\xFE\xBA\xBE":
+    if len(contents) <= 4 or contents[0:4] != b"\xCA\xFE\xBA\xBE":
         raise ValueError('no java magic')
     poolSize = struct.unpack('>H', contents[8:10])[0]
     if not poolSize:
@@ -221,7 +221,7 @@ def _parseSymbolTable(contents):
     c = 1
     symbolTable = _javaSymbolTable()
     while c < poolSize:
-        tag = struct.unpack('B', contents[i])[0]
+        tag = contents[i]
         i += 1
         c, i = symbolTable.process(tag, contents, c, i)
 

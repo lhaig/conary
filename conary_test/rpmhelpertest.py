@@ -42,8 +42,8 @@ class RPMHelperTest(testhelp.TestCase):
                 ('popt-1.13-6.fc12.i686.rpm', 85544),
             ])
         for rpmName, expectedSize in archives:
-            fileobj = file(os.path.join(self.archiveDir, rpmName))
-            sio = io.StringIO()
+            fileobj = open(os.path.join(self.archiveDir, rpmName), 'rb')
+            sio = io.BytesIO()
             rpmhelper.extractRpmPayload(fileobj, sio)
             sio.seek(0, 2)
             self.assertEqual(sio.tell(), expectedSize)
@@ -52,20 +52,20 @@ class RPMHelperTest(testhelp.TestCase):
         header = {rpmhelper.PAYLOADFORMAT: "super-payload format"}
         self.mock(rpmhelper, "readHeader", lambda x: header)
         e = self.assertRaises(rpmhelper.UnknownPayloadFormat,
-            rpmhelper.extractRpmPayload, file("/dev/null"), None)
+            rpmhelper.extractRpmPayload, open("/dev/null", 'rb'), None)
         self.assertEqual(e.args[0], "super-payload format")
 
         # No payload format, it should assume CPIO. Test compression
         header = {rpmhelper.PAYLOADCOMPRESSOR: "lame"}
         e = self.assertRaises(rpmhelper.UnknownCompressionType,
-            rpmhelper.extractRpmPayload, file("/dev/null"), None)
+            rpmhelper.extractRpmPayload, open("/dev/null", 'rb'), None)
         self.assertEqual(e.args[0], "lame")
 
         # No payload compressor defined we should detect gzip or
         # assume uncompressed
         header = {rpmhelper.PAYLOADFORMAT: "cpio"}
-        fileIn = io.StringIO()
-        fileIn.write('\x1f\x8bThis should be some gziped data')
+        fileIn = io.BytesIO()
+        fileIn.write(b'\x1f\x8bThis should be some gziped data')
         fileIn.seek(0)
 
         def gzipFunc(*args, **kw):
@@ -73,8 +73,8 @@ class RPMHelperTest(testhelp.TestCase):
         self.mock(util, "GzipFile", gzipFunc)
         self.assertEqual(rpmhelper.UncompressedRpmPayload(fileIn),
                              'Gzip File')
-        fileIn = io.StringIO()
-        fileIn.write('This is just some uncompressed data')
+        fileIn = io.BytesIO()
+        fileIn.write(b'This is just some uncompressed data')
         fileIn.seek(0)
         self.assertEqual(rpmhelper.UncompressedRpmPayload(fileIn),
                              fileIn)
@@ -105,7 +105,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testRpmHeader(self):
         rpmName = 'tmpwatch-2.9.7-1.1.el5.2.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         # both NAME and SIG_SIZE are 1000, but their value should be different
         self.assertEqual(header[rpmhelper.NAME], 'tmpwatch')
@@ -114,7 +114,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testRpmDeps(self):
         rpmName = 'depstest-0.1-1.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         reqset, provset = header.getDeps(enableRPMVersionDeps=False)
         self.assertEqual(str(reqset), '\n'.join((
@@ -131,7 +131,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testRpmVersionDeps(self):
         rpmName = 'depstest-0.1-1.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         reqset, provset = header.getDeps()
         self.assertEqual(str(reqset), '\n'.join((
@@ -156,7 +156,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testRpmVersionDepsRelase(self):
         rpmName = 'versiondeps-bar-1-2.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         reqset, provset = header.getDeps()
         self.assertEqual(str(reqset), '\n'.join((
@@ -179,7 +179,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testRpmDepsPerl(self):
         rpmName = 'perl-Archive-Tar-1.46-68.fc11.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         reqset, provset = header.getDeps(enableRPMVersionDeps=False)
         self.assertEqual(str(reqset), '\n'.join((
@@ -221,7 +221,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testRpmVersionDepsPerl(self):
         rpmName = 'perl-Archive-Tar-1.46-68.fc11.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         reqset, provset = header.getDeps(enableRPMVersionDeps=True)
         self.assertEqual(str(reqset), '\n'.join((
@@ -278,7 +278,7 @@ class RPMHelperTest(testhelp.TestCase):
     def testVerifySig(self):
         rpmName = 'tmpwatch-2.9.7-1.1.el5.2.x86_64.rpm'
         rpmPath = os.path.join(self.archiveDir, rpmName)
-        fileObj = file(rpmPath)
+        fileObj = open(rpmPath, 'rb')
         header = rpmhelper.readHeader(fileObj)
         from conary.lib import openpgpfile
         sig = openpgpfile.readSignature(header[rpmhelper.SIG_GPG])
@@ -296,13 +296,13 @@ class RPMHelperTest(testhelp.TestCase):
 
         # Finally, StringIO
         fileObj.seek(0)
-        fileObj = io.StringIO(fileObj.read())
+        fileObj = io.BytesIO(fileObj.read())
         rpmhelper.verifySignatures(fileObj, [ k ])
 
         # Replace last byte
-        fileObj = io.StringIO(fileObj.getvalue()[:-1])
+        fileObj = io.BytesIO(fileObj.getvalue()[:-1])
         fileObj.seek(0, 2)
-        fileObj.write("\xff")
+        fileObj.write(b"\xff")
         fileObj.seek(0)
         e = self.assertRaises(rpmhelper.MD5SignatureError,
             rpmhelper.verifySignatures, fileObj, [ k ])
@@ -311,7 +311,7 @@ class RPMHelperTest(testhelp.TestCase):
 
     def testExtractFilesFromCpio(self):
         rpmName = 'popt-1.5-4x.i386.rpm'
-        fileobj = file(os.path.join(self.archiveDir, rpmName))
+        fileobj = open(os.path.join(self.archiveDir, rpmName), 'rb')
         payload = rpmhelper.UncompressedRpmPayload(fileobj)
         fileList = [
             './usr/include/popt.h',
@@ -337,7 +337,7 @@ class RPMHelperTest(testhelp.TestCase):
         self.assertEqual( [ self._fileSize(x) for x in ret ],
             [ 2, 2, 0, None, 2, None ])
         self.assertEqual( [ self._fileContents(x) for x in ret ],
-            [ '2\n', '2\n', '', None, '1\n', None ])
+            [ b'2\n', b'2\n', b'', None, b'1\n', None ])
 
     def testExtractRpmPayloadFdLeak(self):
         fdCount0 = util.countOpenFileDescriptors()

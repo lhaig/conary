@@ -21,7 +21,7 @@ from conary.lib import ar
 
 class ArTest(rephelp.RepositoryHelper):
     def getArchiveFile(self, path):
-        return file('%s/%s' %(self.sourceSearchDir, path))
+        return open('%s/%s' %(self.sourceSearchDir, path), 'rb')
 
     def testDeb(self):
         a = ar.Archive(self.getArchiveFile('testempty.deb'))
@@ -37,7 +37,7 @@ class ArTest(rephelp.RepositoryHelper):
         b = [x.name for x in c]
         self.assertEqual(b, ['debian-binary', 'control.tar.gz', 'data.tar.gz'])
         magic = [x.data.read() for x in c if x.name == 'debian-binary'][0]
-        self.assertEqual(magic, '2.0\n')
+        self.assertEqual(magic, b'2.0\n')
 
     def testArchiveRepr(self):
         timestamp = 1145659903

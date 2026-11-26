@@ -19,7 +19,7 @@
 Streaming implementation of a CPIO archive.
 Usage::
 
-    >>> fileObj = file("archive.cpio")
+    >>> fileObj = open("archive.cpio", "rb")
     >>> arch = CpioStream(fileObj)
     >>> for ent in arch:
     >>>    print "Entry name:", ent.filename
@@ -68,7 +68,7 @@ class CpioHeader(object):
         'skip',
     ]
     HeaderLength = 110
-    MAGIC = '070701'
+    MAGIC = b'070701'
     def __init__(self, data):
         assert(len(data) == self.HeaderLength)
         # Conveniently, the new ASCII format defines all fields (except for
@@ -89,10 +89,10 @@ class CpioHeader(object):
         self.skip += self.pad(self.filesize)
 
     def serialize(self):
-        out = io.StringIO()
+        out = io.BytesIO()
         out.write(self.magic)
         for slotName in self.__slots__[1:14]:
-            out.write("%08x" % getattr(self, slotName))
+            out.write(b"%08x" % getattr(self, slotName))
         return out.getvalue()
 
     @classmethod
@@ -112,7 +112,7 @@ class OverlayStream(object):
         # We track the position in the parent stream, so if the parent stream
         # advanced outside of this read(), we need to fail
         if self._currentPosition >= self._size:
-            return ""
+            return b""
         self._verifyPosition()
         if amt is None:
             amt = self._size - self._currentPosition
@@ -150,7 +150,7 @@ class CpioStream(object):
             return None
         header = self.readHeader(buf)
         # Trim out the trailing NUL byte
-        filename = self._readExact(header.namesize)[:-1]
+        filename = os.fsdecode(self._readExact(header.namesize)[:-1])
         pad = (header.pad(header.HeaderLength + header.namesize) -
             header.HeaderLength - header.namesize)
         if pad:
@@ -171,7 +171,7 @@ class CpioStream(object):
 
     def read(self, amt):
         return self._readExact(amt)
-        out = io.StringIO()
+        out = io.BytesIO()
         buf = self.stream.read(size)
         if not buf:
             return
@@ -227,10 +227,10 @@ class CpioExploder(CpioStream):
 
                 if stat.S_ISCHR(ent.header.mode):
                     os.mknod(target, stat.S_IFCHR,
-                             os.makedev(ent.rdevmajor, ent.rdevminor))
+                             os.makedev(ent.header.rdevmajor, ent.header.rdevminor))
                 elif stat.S_ISBLK(ent.header.mode):
                     os.mknod(target, stat.S_IFBLK,
-                             os.makedev(ent.rdevmajor, ent.rdevminor))
+                             os.makedev(ent.header.rdevmajor, ent.header.rdevminor))
                 elif stat.S_ISDIR(ent.header.mode):
                     os.mkdir(target)
                 elif stat.S_ISFIFO(ent.header.mode):
@@ -245,7 +245,7 @@ class CpioExploder(CpioStream):
                         linkMap[ent.header.inode] = l
                         continue
 
-                    f = open(target, "w")
+                    f = open(target, "wb")
                     buf = ent.payload.read(64 * 1024)
                     while buf:
                         f.write(buf)

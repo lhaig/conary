@@ -2,6 +2,7 @@
 import gzip
 import hashlib
 import os
+import sys
 
 import pytest
 
@@ -32,15 +33,11 @@ def test_magic_reads_binary_files(tmp_path):
     p = tmp_path / 'data.gz'
     p.write_bytes(gzip.compress(PAYLOAD))
     # Binary content must be readable (a text mode open() would raise
-    # UnicodeDecodeError on the 0x8b byte); sniffing the bytes against the
-    # str signatures in magic.py is a separate bytes/str port item.
-    magic.magic(str(p))
+    # UnicodeDecodeError on the 0x8b byte)
+    assert isinstance(magic.magic(str(p)), magic.gzip)
 
-    elf = tmp_path / 'x.elf'
-    elf.write_bytes(b'\x7fELF' + b'\x00' * 60)
-    # the ELF reader may reject the stub, but opening and sniffing must
-    # not raise a decode error
-    magic.magic(str(elf))
+    # a real ELF (the interpreter); opening and sniffing must not raise
+    assert isinstance(magic.magic(os.path.realpath(sys.executable)), magic.ELF)
 
     junk = tmp_path / 'junk'
     junk.write_bytes(b'\xff\xfe\xfd' * 2000)
@@ -55,10 +52,8 @@ def test_javadeps_main_reads_bytes(tmp_path):
         assert javadeps.getDeps(f.read()) == (None, None)
 
 
-# magic.py and javadeps.py now read bytes but still compare against str
-# signatures, so detection silently fails. These encode the correct
-# behaviour and flip to passing when the signatures become bytes.
-@pytest.mark.xfail(strict=True, reason='magic.py compares bytes to str signatures')
+# magic.py and javadeps.py compare the bytes they read against bytes
+# signatures; a str signature would silently detect nothing.
 @pytest.mark.parametrize('name,data,cls', [
     ('data.gz', gzip.compress(PAYLOAD), 'gzip'),
     ('run.sh', b'#!/bin/sh\necho hi\n', 'script'),
@@ -69,7 +64,6 @@ def test_magic_detects_type(tmp_path, name, data, cls):
     assert isinstance(magic.magic(str(p)), getattr(magic, cls))
 
 
-@pytest.mark.xfail(strict=True, reason='javadeps.py compares bytes to a str magic')
 def test_javadeps_recognises_class_magic():
     # Valid magic with an empty pool must fail on the pool, not the magic.
     data = b'\xca\xfe\xba\xbe\x00\x00\x00\x34' + b'\x00' * 8
@@ -79,24 +73,40 @@ def test_javadeps_recognises_class_magic():
 
 def test_bounded_stringio_spills_to_file_and_keeps_writing():
     b = util.BoundedStringIO(maxMemorySize=16)
-    b.write('x' * 10)
+    b.write(b'x' * 10)
     assert b._backendType == 'memory'
-    b.write('y' * 30)           # spills to a temporary file
+    b.write(b'y' * 30)          # spills to a temporary file
     assert b._backendType == 'file'
-    b.write('z' * 5)            # the file backend branch of _writeImpl
+    b.write(b'z' * 5)           # the file backend branch of _writeImpl
     b.seek(0)
-    assert b.read() == 'x' * 10 + 'y' * 30 + 'z' * 5
+    assert b.read() == b'x' * 10 + b'y' * 30 + b'z' * 5
     b.seek(5)
     b.truncate(8)               # the file backend branch of _truncateImpl
+    assert b._backendType == 'memory'
     b.seek(0)
-    assert b.read() == 'x' * 8
+    assert b.read() == b'x' * 8
+
+
+def test_bounded_stringio_keeps_binary_across_spill():
+    b = util.BoundedStringIO(maxMemorySize=64)
+    b.write(PAYLOAD[:40])
+    b.write(PAYLOAD[40:])
+    assert b._backendType == 'file'
+    b.seek(0)
+    assert b.read() == PAYLOAD
+
+
+def test_bounded_stringio_rejects_str():
+    b = util.BoundedStringIO()
+    with pytest.raises(TypeError):
+        b.write('text')
 
 
 def test_bounded_stringio_truncate_memory_backend():
-    b = util.BoundedStringIO('hello world')
+    b = util.BoundedStringIO(b'hello world')
     b.truncate(5)
     b.seek(0)
-    assert b.read() == 'hello'
+    assert b.read() == b'hello'
 
 
 def test_logparse_reads_text(tmp_path):

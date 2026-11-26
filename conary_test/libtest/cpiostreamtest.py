@@ -32,25 +32,25 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
 
     def oldtest(self):
         cpioPath = self._createCpio()
-        sha1sum = digestlib.sha1(file(cpioPath).read()).hexdigest()
+        sha1sum = digestlib.sha1(open(cpioPath, 'rb').read()).hexdigest()
         resultFilePath = os.path.join(self.workDir, 'result.cpio')
         # Use a variety of sizes, to try to come up with different chunking
         # solutions
         for bufferSize in [1001, 1003, 3001]:
-            f = file(resultFilePath, "w")
-            src = cpiostream.CpioStream(file(cpioPath))
+            f = open(resultFilePath, 'wb')
+            src = cpiostream.CpioStream(open(cpioPath, 'rb'))
             while 1:
                 buf = src.read(bufferSize)
                 if not buf:
                     break
                 f.write(buf)
             f.close()
-            nsha1sum = digestlib.sha1(file(resultFilePath).read()).hexdigest()
+            nsha1sum = digestlib.sha1(open(resultFilePath, 'rb').read()).hexdigest()
             self.assertEqual(nsha1sum, sha1sum)
 
     def testIterate(self):
         cpioPath = self._createCpio()
-        src = cpiostream.CpioStream(file(cpioPath))
+        src = cpiostream.CpioStream(open(cpioPath, 'rb'))
         fileNames = [ x.filename for x in src ]
         self.assertEqual(fileNames,
             [
@@ -68,7 +68,7 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
 
     def testIterateAndRead(self):
         cpioPath = self._createCpio()
-        src = cpiostream.CpioStream(file(cpioPath))
+        src = cpiostream.CpioStream(open(cpioPath, 'rb'))
         for ent in src:
             ent.payload.read()
 
@@ -76,7 +76,7 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
         # We only read every other file - this tests that we are properly
         # rolling the cpio stream forward
         cpioPath = self._createCpio()
-        src = cpiostream.CpioStream(file(cpioPath))
+        src = cpiostream.CpioStream(open(cpioPath, 'rb'))
         for i, ent in enumerate(src):
             if i % 2 == 0:
                 ent.payload.read()
@@ -84,7 +84,7 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
     def testIterateAndPartialRead2(self):
         # Read only a portion of the payload
         cpioPath = self._createCpio()
-        src = cpiostream.CpioStream(file(cpioPath))
+        src = cpiostream.CpioStream(open(cpioPath, 'rb'))
         for i, ent in enumerate(src):
             if i % 2 == 0:
                 amt = min(10, ent.header.filesize)
@@ -94,7 +94,7 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
 
     def testOutOfOrderRead(self):
         cpioPath = self._createCpio()
-        src = cpiostream.CpioStream(file(cpioPath))
+        src = cpiostream.CpioStream(open(cpioPath, 'rb'))
         ent = next(src)
         # Advance to the next entry, the first one should no longer be able to
         # read
@@ -103,7 +103,7 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
 
     def testOutOfOrderRead2(self):
         cpioPath = self._createCpio()
-        src = cpiostream.CpioStream(file(cpioPath))
+        src = cpiostream.CpioStream(open(cpioPath, 'rb'))
         ent = next(src)
         # The cpio stream advances one byte. This should be enough to kill the
         # reads for the entry
@@ -114,25 +114,25 @@ class CpioStreamTest(testcase.TestCaseWithWorkDir):
         if rpmName is None:
             rpmName = 'perl-Archive-Tar-1.46-68.fc11.x86_64.rpm'
         cpioPath = os.path.join(self.workDir, 'archive.cpio')
-        rpmFile = file(os.path.join(self.archiveDir, rpmName))
-        rpmhelper.extractRpmPayload(rpmFile, file(cpioPath, "w"))
+        rpmFile = open(os.path.join(self.archiveDir, rpmName), 'rb')
+        rpmhelper.extractRpmPayload(rpmFile, open(cpioPath, 'wb'))
         return cpioPath
 
     def testExpansion(self):
         cpioPath = self._createCpio()
         target = self.workDir + '/root'
-        expander = cpiostream.CpioExploder(file(cpioPath))
+        expander = cpiostream.CpioExploder(open(cpioPath, 'rb'))
         expander.explode(target)
-        sha1sum = digestlib.sha1(file(
-            target + '/usr/lib/perl5/5.10.0/Archive/Tar.pm').read()).hexdigest()
+        sha1sum = digestlib.sha1(open(
+            target + '/usr/lib/perl5/5.10.0/Archive/Tar.pm', 'rb').read()).hexdigest()
         self.assertEqual(sha1sum, 'cbe78d8a0d26a86436e4fc56f8581ffd3db4bd83')
 
         shutil.rmtree(self.workDir)
         os.mkdir(self.workDir)
 
         cpioPath = self._createCpio(rpmName = 'simple-1.1-1.i386.rpm')
-        expander = cpiostream.CpioExploder(file(cpioPath))
+        expander = cpiostream.CpioExploder(open(cpioPath, 'rb'))
         expander.explode(target)
         assert(os.path.isdir(target + '/dir'))
-        sha1sum = digestlib.sha1(file(target + '/normal').read()).hexdigest()
+        sha1sum = digestlib.sha1(open(target + '/normal', 'rb').read()).hexdigest()
         self.assertEqual(sha1sum, '5662cdf7d378e7505362c59239f73107b6edf1d3')

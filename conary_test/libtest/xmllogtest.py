@@ -222,8 +222,8 @@ class XmlLogParseTest(testhelp.TestCase):
 
             # only inspect the first two lines. they won't have timestamps
             logData = open(logPath).read().splitlines()[:2]
-            gzData = gzip.GzipFile(gzPath, 'r').read().splitlines()[:2]
-            bzData = bz2.BZ2File(bz2Path, 'r').read().splitlines()[:2]
+            gzData = gzip.GzipFile(gzPath, 'r').read().decode('utf-8').splitlines()[:2]
+            bzData = bz2.BZ2File(bz2Path, 'r').read().decode('utf-8').splitlines()[:2]
             self.assertFalse(not logData, "expected log content")
             self.assertEqual(logData, gzData)
             self.assertEqual(logData, bzData)

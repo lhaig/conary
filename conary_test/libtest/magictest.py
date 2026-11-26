@@ -89,7 +89,7 @@ class MagicTest(rephelp.RepositoryHelper):
         # the EAR file convenienty has a WAR file in it, so let's use it
         warPath = os.path.join(self.workDir, "warfile")
         z = zipfile.ZipFile(oear)
-        file(warPath, "a").write(z.read("war-ic.war"))
+        open(warPath, 'ab').write(z.read("war-ic.war"))
 
         tests = [
             (_p('broken.jar'),      magic.jar, None),
@@ -399,7 +399,7 @@ class MagicTest(rephelp.RepositoryHelper):
         metainfDir = os.path.join(fdir, "META-INF")
         util.mkdirChain(metainfDir)
         ddPath = os.path.join(metainfDir, "application.xml")
-        file(ddPath, "a").write( "Some non-XML content")
+        open(ddPath, 'ab').write(b"Some non-XML content")
         zipfilename = os.path.join(self.workDir, "some-fake-ear")
         z = zipfile.ZipFile(zipfilename, "w")
         ddRelPath = "META-INF/application.xml"
@@ -415,11 +415,11 @@ class MagicTest(rephelp.RepositoryHelper):
     def testGzipFile(self):
         archivePath = os.path.join(self.workDir, 'archive.gz')
         g = gzip.GzipFile(archivePath, 'w')
-        g.write('testing some random file that must be as least 262 bytes' \
-                'long to test that the tar magic test in conary.lib.magic' \
-                'will not mistakenly identify these file contents as a tar' \
-                'archive. Originally there was a typo in the magic logic,' \
-                'and anything that was longer than 262 bytes would trigger')
+        g.write(b'testing some random file that must be as least 262 bytes' \
+                b'long to test that the tar magic test in conary.lib.magic' \
+                b'will not mistakenly identify these file contents as a tar' \
+                b'archive. Originally there was a typo in the magic logic,' \
+                b'and anything that was longer than 262 bytes would trigger')
         g.close()
         m = magic.magic(archivePath)
         self.assertEqual(m.name, 'gzip')
@@ -454,11 +454,11 @@ class MagicTest(rephelp.RepositoryHelper):
 
     def testBadGzipContents(self):
         archivePath = os.path.join(self.workDir, 'busted.tar.gz')
-        f = open(archivePath, 'w')
+        f = open(archivePath, 'wb')
         # this is the magic signature of a gzip file
-        f.write('\x1f\x8b')
+        f.write(b'\x1f\x8b')
         # and some garbage to fill out the file
-        f.write('some random data')
+        f.write(b'some random data')
         f.close()
         m = magic.magic(archivePath)
 
@@ -472,7 +472,7 @@ class MagicTest(rephelp.RepositoryHelper):
         util.mkdirChain(os.path.dirname(fullPath))
 
         g = gzip.GzipFile(fullPath, 'w')
-        g.write('some random data')
+        g.write(b'some random data')
         g.close()
         m = magic.magic(archivePath, basedir = self.workDir)
         self.assertEqual(m.name, 'gzip')
@@ -480,7 +480,7 @@ class MagicTest(rephelp.RepositoryHelper):
     def testBzipFile(self):
         archivePath = os.path.join(self.workDir, 'archive.bz')
         b = bz2.BZ2File(archivePath, 'w')
-        b.write('testing some random file')
+        b.write(b'testing some random file')
         b.close()
         m = magic.magic(archivePath)
         self.assertEqual(m.name, 'bzip')
@@ -502,11 +502,11 @@ class MagicTest(rephelp.RepositoryHelper):
 
     def testBadBzipContents(self):
         archivePath = os.path.join(self.workDir, 'busted.tar.gz')
-        f = open(archivePath, 'w')
+        f = open(archivePath, 'wb')
         # this is the magic signature of a bzip file
-        f.write('BZh')
+        f.write(b'BZh')
         # and some garbage to fill out the file
-        f.write('some random data')
+        f.write(b'some random data')
         f.close()
         m = magic.magic(archivePath)
 
@@ -516,7 +516,7 @@ class MagicTest(rephelp.RepositoryHelper):
         util.mkdirChain(os.path.dirname(fullPath))
 
         b = bz2.BZ2File(fullPath, 'w')
-        b.write('some random data')
+        b.write(b'some random data')
         b.close()
         m = magic.magic(archivePath, basedir = self.workDir)
         self.assertEqual(m.name, 'bzip')

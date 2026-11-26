@@ -52,10 +52,10 @@ class MiscTest(rephelp.RepositoryHelper):
         outfd = -1
         try:
             # set up some constants
-            teststr = ' ' * 1000
+            teststr = b' ' * 1000
             path = self.workDir + '/testfile'
             # open a sparse file and seek out to the requested offset
-            f = open(path, 'w')
+            f = open(path, 'wb')
             f.seek(offset)
             # write a gzip file containing the test string
             gz = util.BoundedStringIO()
@@ -84,10 +84,10 @@ class MiscTest(rephelp.RepositoryHelper):
             self.assertEqual(sha2, expected)
             # make sure that the copied file matches the gzip compressed
             # string
-            f = open(path + '-copy')
+            f = open(path + '-copy', 'rb')
             self.assertEqual(f.read(), s)
             # and that it also is correctly uncompressed
-            f = open(tmpname)
+            f = open(tmpname, 'rb')
             self.assertEqual(f.read(), teststr)
         finally:
             if infd > 0:

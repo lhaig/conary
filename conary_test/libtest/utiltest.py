@@ -235,11 +235,11 @@ class UtilTest(testhelp.TestCase):
 
     def testSeekableNestedFile(self):
         (fd, name) = tempfile.mkstemp()
-        f = util.ExtendedFile(name, "w++", buffering = False)
+        f = util.ExtendedFile(name, "w+", buffering = False)
         os.close(fd)
         os.unlink(name)
 
-        s = [ "hello world", "foo bar bang" ]
+        s = [ b"hello world", b"foo bar bang" ]
         fs = []
 
         f.write(s[0])
@@ -249,16 +249,16 @@ class UtilTest(testhelp.TestCase):
 
         assert(fs[0].read() == s[0])
         assert(fs[1].read() == s[1])
-        assert(fs[0].read() == "")
-        assert(fs[1].read() == "")
+        assert(fs[0].read() == b"")
+        assert(fs[1].read() == b"")
 
         assert(fs[0].pread(offset = 0) == s[0])
-        assert(fs[0].read() == "")
+        assert(fs[0].read() == b"")
 
         fs[0].seek(0)
-        assert(fs[1].read() == "")
+        assert(fs[1].read() == b"")
         assert(fs[0].read() == s[0])
-        assert(fs[0].read() == "")
+        assert(fs[0].read() == b"")
 
         fs[0].seek(5)
         assert(fs[0].read() == s[0][5:])
@@ -270,7 +270,7 @@ class UtilTest(testhelp.TestCase):
 
     def testSeekableNestedFileNested(self):
         # Nested nested files
-        s = "0123456789"
+        s = b"0123456789"
 
         (fd, name) = tempfile.mkstemp()
         f = util.ExtendedFile(name, "w+", buffering = False)
@@ -281,19 +281,19 @@ class UtilTest(testhelp.TestCase):
         # Start from the second byte, make sure pread works
         f1 = util.SeekableNestedFile(f, 9, 1)
         first = f1.pread(1, 0)
-        self.assertEqual(first, '1')
+        self.assertEqual(first, b'1')
 
         # Create nested files within the first nested file
         f21 = util.SeekableNestedFile(f1, 5, 1)
 
         # Make sure pread, read, tell all work as expected
         first = f21.pread(1, 0)
-        self.assertEqual(first, '2')
-        self.assertEqual(f21.read(), '23456')
+        self.assertEqual(first, b'2')
+        self.assertEqual(f21.read(), b'23456')
         self.assertEqual(f21.tell(), 5)
 
         f31 = util.SeekableNestedFile(f21, 3, 4)
-        self.assertEqual(f31.read(), '6')
+        self.assertEqual(f31.read(), b'6')
 
     def testPushIterator(self):
         p = util.PushIterator(x for x in range(3))
@@ -438,19 +438,19 @@ class UtilTest(testhelp.TestCase):
         rdr = util.LineReader(p[0])
         writeFd = p[1]
 
-        os.write(writeFd, "hel")
+        os.write(writeFd, b"hel")
         assert(rdr.readlines() == [ ])
-        os.write(writeFd, "lo\n")
+        os.write(writeFd, b"lo\n")
         assert(rdr.readlines() == [ "hello\n" ])
 
-        os.write(writeFd, "hello\nworld\n")
+        os.write(writeFd, b"hello\nworld\n")
         assert(rdr.readlines() == [ "hello\n", "world\n" ])
 
-        os.write(writeFd, "hello\nthere")
+        os.write(writeFd, b"hello\nthere")
         assert(rdr.readlines() == [ "hello\n" ])
-        os.write(writeFd, "\nbig")
+        os.write(writeFd, b"\nbig")
         assert(rdr.readlines() == [ "there\n" ])
-        os.write(writeFd, "\nwide\nworld\n")
+        os.write(writeFd, b"\nwide\nworld\n")
         assert(rdr.readlines() == [ "big\n", "wide\n", "world\n" ])
 
         os.close(writeFd)
@@ -546,16 +546,16 @@ class UtilTest(testhelp.TestCase):
         fd, fn = tempfile.mkstemp()
         try:
             os.close(fd)
-            f = open(fn, 'r+')
-            f.write('hello, world!\n')
+            f = open(fn, 'r+b')
+            f.write(b'hello, world!\n')
             f.flush()
             # seek the file back to the start
             os.lseek(f.fileno(), 0, 0)
             s = util.pread(f.fileno(), 6, 3)
-            self.assertEqual(s, 'lo, wo')
+            self.assertEqual(s, b'lo, wo')
 
             s = util.pread(f.fileno(), int(6), int(3))
-            self.assertEqual(s, 'lo, wo')
+            self.assertEqual(s, b'lo, wo')
 
             # make sure that pread doesn't affect the current file pos
             self.assertEqual(os.lseek(f.fileno(), 0, 1), 0)
@@ -569,11 +569,11 @@ class UtilTest(testhelp.TestCase):
                 self.assertEqual(str(e), '[Errno 9] Bad file descriptor')
 
             f.seek(0x80000001, 0)
-            f.write('1')
+            f.write(b'1')
             f.flush()
             os.lseek(f.fileno(), 0, 0)
             s = util.pread(f.fileno(), 1, 0x80000001)
-            self.assertEqual(s, '1')
+            self.assertEqual(s, b'1')
 
             s = util.pread(f.fileno(), 1, 2**32 + 1024)
 
@@ -591,12 +591,12 @@ class UtilTest(testhelp.TestCase):
     def testExtendedFile(self):
         fd, fn = tempfile.mkstemp()
         try:
-            os.write(fd, "hello world")
+            os.write(fd, b"hello world")
             os.close(fd)
             f = util.ExtendedFile(fn, buffering=False)
 
-            assert(f.read(5) == 'hello')
-            assert(f.pread(5, 6) == 'world')
+            assert(f.read(5) == b'hello')
+            assert(f.pread(5, 6) == b'world')
             assert(f.tell() == 5)
         finally:
             os.unlink(fn)
@@ -659,22 +659,22 @@ class UtilTest(testhelp.TestCase):
     def testBoundedStringIO(self):
         x = util.BoundedStringIO(maxMemorySize=256)
         self.assertEqual(x.getBackendType(), 'memory')
-        self.assertTrue(isinstance(x._backend, io.StringIO))
+        self.assertTrue(isinstance(x._backend, io.BytesIO))
 
-        x.write("0123456789" * 30)
+        x.write(b"0123456789" * 30)
         self.assertEqual(x.getBackendType(), 'file')
-        self.assertTrue(isinstance(x._backend, file))
+        self.assertTrue(isinstance(x._backend, io.BufferedRandom))
 
         # Test truncate
         x.truncate(298)
         self.assertEqual(x.getBackendType(), 'file')
-        self.assertTrue(isinstance(x._backend, file))
+        self.assertTrue(isinstance(x._backend, io.BufferedRandom))
 
         # Truncate some more
         x.truncate(255)
 
         self.assertEqual(x.getBackendType(), 'memory')
-        self.assertTrue(isinstance(x._backend, io.StringIO))
+        self.assertTrue(isinstance(x._backend, io.BytesIO))
 
     def testProtectedTemplate(self):
         t = util.ProtectedTemplate("$foo is the new $bar", foo='a', bar='b')
@@ -750,12 +750,12 @@ class UtilTest(testhelp.TestCase):
         # data
         fd, tempf = tempfile.mkstemp()
         os.unlink(tempf)
-        sio = os.fdopen(fd, "w+")
+        sio = os.fdopen(fd, "w+b")
 
         # Some data we will compress
         for fn in ['distcache-1.4.5-2.src.rpm', 'distcc-2.9.tar.bz2',
                       'initscripts-10-11.src.rpm', 'jcd.iso']:
-            util.copyStream(file(os.path.join(resources.get_archive(), fn)), sio)
+            util.copyStream(open(os.path.join(resources.get_archive(), fn), 'rb'), sio)
         sio.seek(0)
 
         cstr = util.compressStream(sio)
@@ -1143,10 +1143,10 @@ class UtilTest(testhelp.TestCase):
 
 
     def testBz2File(self):
-        fobj = file(os.path.join(resources.get_archive(),
-                                 'distcc-2.9.tar.bz2'))
+        fobj = open(os.path.join(resources.get_archive(),
+                                 'distcc-2.9.tar.bz2'), 'rb')
         b = util.BZ2File(fobj)
-        s = 'distcc-2.9'
+        s = b'distcc-2.9'
         out = b.read(len(s))
         self.assertEqual(out,s)
 
@@ -1168,7 +1168,7 @@ class UtilTest(testhelp.TestCase):
         fobj = tempfile.TemporaryFile()
         p = subprocess.Popen([xzbin, "-zc"],
             stdin=subprocess.PIPE, stdout=fobj)
-        data = "0" * 1024
+        data = b"0" * 1024
         for i in range(1024):
             p.stdin.write(data)
         p.stdin.close()
@@ -1184,7 +1184,7 @@ class UtilTest(testhelp.TestCase):
         limit = 128000
         buf = b.read(limit)
         self.assertEqual(len(buf), limit)
-        self.assertEqual(list(set(buf)), ["0"])
+        self.assertEqual(list(set(buf)), [ord("0")])
 
     def testSplitExact(self):
         pad = object()

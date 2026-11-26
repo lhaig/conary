@@ -17,6 +17,7 @@
 
 import base64
 import bz2
+import io
 import errno
 import gzip
 import os
@@ -70,11 +71,12 @@ def openPath(path):
         def flush(self):
             pass
 
+    # The writers emit str; the compressed files take bytes, so wrap them.
     if path.endswith('.bz2'):
-        return BZ2File(path, 'w')
+        return io.TextIOWrapper(BZ2File(path, 'w'), encoding='utf-8')
     if path.endswith('.gz'):
-        return gzip.GzipFile(path, 'w')
-    return open(path, 'w')
+        return io.TextIOWrapper(gzip.GzipFile(path, 'w'), encoding='utf-8')
+    return open(path, 'w', encoding='utf-8')
 
 
 class Lexer(object):
@@ -755,9 +757,9 @@ class Logger:
 
         newTermios = termios.tcgetattr(slaveFd)
         # Don't wait after receiving a character
-        newTermios[6][termios.VTIME] = '\x00'
+        newTermios[6][termios.VTIME] = 0
         # Read at least these many characters before returning
-        newTermios[6][termios.VMIN] = '\x01'
+        newTermios[6][termios.VMIN] = 1
 
         termios.tcsetattr(slaveFd, termios.TCSADRAIN, newTermios)
         # Raw mode

@@ -42,10 +42,10 @@ class XmlLogParseTest(testhelp.TestCase):
             self.assertEqual(data, 'test')
 
             data = gzip.GzipFile(gzipComp, 'r').read()
-            self.assertEqual(data, 'test')
+            self.assertEqual(data, b'test')
 
             data = bz2.BZ2File(bz2Comp, 'r').read()
-            self.assertEqual(data, 'test')
+            self.assertEqual(data, b'test')
         finally:
             util.rmtree(tmpDir)
 

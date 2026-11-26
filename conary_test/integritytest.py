@@ -99,7 +99,7 @@ class IntegrityTest(rephelp.RepositoryHelper):
         t = trove.Trove('test:test', v, flavor, None)
         path = self.workDir + '/blah'
         f = open(path, 'w')
-        f.write('hello, world!\n')
+        f.write(b'hello, world!\n')
         f.close()
         pathId = sha1helper.md5String('/blah')
         f = files.FileFromFilesystem(path, pathId)
@@ -134,12 +134,12 @@ class IntegrityTest(rephelp.RepositoryHelper):
         t = trove.Trove('test:test', v, flavor, None)
         path = self.workDir + '/blah'
         f = open(path, 'w')
-        f.write('hello, world!\n')
+        f.write(b'hello, world!\n')
         f.close()
         pathId = sha1helper.md5String('/blah')
         f = files.FileFromFilesystem(path, pathId)
         # add the file, but munge the fileid
-        brokenFileId = ''.join(reversed(f.fileId()))
+        brokenFileId = bytes(reversed(f.fileId()))
         cs.addFile(None, brokenFileId, f.freeze())
         t.addFile(pathId, '/blah', v, brokenFileId)
         t.computeDigests()
@@ -169,7 +169,7 @@ class IntegrityTest(rephelp.RepositoryHelper):
         t = trove.Trove('test:test', v, flavor, None)
         path = self.workDir + '/blah'
         f = open(path, 'w')
-        f.write('hello, world!\n')
+        f.write(b'hello, world!\n')
         f.close()
         pathId = sha1helper.md5String('/blah')
         f = files.FileFromFilesystem(path, pathId)

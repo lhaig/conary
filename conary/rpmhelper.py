@@ -421,7 +421,7 @@ class _RpmHeader(object):
         while count:
             if dataType == 2:
                 # RPM_INT8_TYPE
-                items.append(struct.unpack("B", self.data[offset])[0])
+                items.append(self.data[offset])
                 offset += 1
             elif dataType == 3:
                 # RPM_INT16_TYPE
@@ -433,12 +433,10 @@ class _RpmHeader(object):
                 offset += 4
             elif dataType in (6, 8, 9):
                 # RPM_STRING_TYPE, RPM_STRING_ARRAY_TYPE, RPM_I18NSTRING_TYPE
-                s = ""
-                while self.data[offset] != '\0':
-                    s += self.data[offset]
-                    offset += 1
-                items.append(s)
-                offset += 1
+                end = self.data.index(b'\0', offset)
+                # file names and the like can hold any byte
+                items.append(os.fsdecode(self.data[offset:end]))
+                offset = end + 1
 
             count -= 1
 
@@ -515,7 +513,8 @@ class RpmHeader(object):
                 pos = f.tell()
                 try:
                     totalSize = os.fstat(f.fileno()).st_size
-                except AttributeError:
+                except (AttributeError, io.UnsupportedOperation):
+                    # no file descriptor (BytesIO and friends)
                     totalSize = None
 
                 if totalSize and headerPlusPayloadSize < (totalSize - pos):
@@ -573,8 +572,8 @@ def headerFromBlob(blob):
     Load a header from a bare RPM structure like those from rpmlib's unload()
     method.
     """
-    blob = '\x8e\xad\xe8\x01\0\0\0\0' + blob
-    sio = io.StringIO(blob)
+    blob = b'\x8e\xad\xe8\x01\0\0\0\0' + blob
+    sio = io.BytesIO(blob)
     return _RpmHeader(sio)
 
 
@@ -770,7 +769,7 @@ def UncompressedRpmPayload(fileIn):
         compression = header[PAYLOADCOMPRESSOR]
     else:
         b = fileIn.read(4096)
-        if len(b) > 2 and b[0] == '\x1f' and b[1] == '\x8b':
+        if len(b) > 2 and b[0:2] == b'\x1f\x8b':
             compression = 'gzip'
         else:
             compression = 'uncompressed'

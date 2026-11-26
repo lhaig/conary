@@ -18,7 +18,6 @@
 import os
 import re
 import stat
-import string
 import struct
 import xml.dom.minidom
 import zipfile
@@ -33,13 +32,13 @@ from conary.lib import javadeps
 from conary.lib import util
 
 MSI_MAGIC_STRINGS = (
-    ("\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x3E\x00\x03\x00\xFE\xFF\x09\x00\x06"),
-    ("\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x3e\x00\x04\x00\xfe\xff\x0c\x00\x06"),
+    (b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     b"\x00\x00\x00\x00\x00\x00\x3E\x00\x03\x00\xFE\xFF\x09\x00\x06"),
+    (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     b"\x00\x00\x00\x00\x00\x00\x3e\x00\x04\x00\xfe\xff\x0c\x00\x06"),
 )
 
-WIM_MAGIC_STRING = "MSWIM\0\0"
+WIM_MAGIC_STRING = b"MSWIM\0\0"
 
 
 class Magic(object):
@@ -54,7 +53,7 @@ class Magic(object):
 
 
 class ELF(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
         fullpath = basedir+path
         self.contents['stripped'] = elf.stripped(fullpath)
@@ -86,7 +85,7 @@ class ELF(Magic):
         except elf.error: pass
 
 class ar(ELF):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         ELF.__init__(self, path, basedir)
         # no point in looking for __.SYMDEF because GNU ar always keeps
         # symbol table up to date
@@ -95,50 +94,50 @@ class ar(ELF):
         # thus the two classes.
 
 class tar(Magic):
-    def __init__(self, path, basedir = '', buffer = ''):
+    def __init__(self, path, basedir = '', buffer = b''):
         Magic.__init__(self, path, basedir)
-        self.contents['GNU'] = (buffer[257:265] == 'ustar  \0')
+        self.contents['GNU'] = (buffer[257:265] == b'ustar  \0')
 
 class gzip(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
-        if buffer[3] == '\x08':
-            self.contents['name'] = _string(buffer[10:])
-        if buffer[8] == '\x02':
+        if buffer[3:4] == b'\x08':
+            self.contents['name'] = os.fsdecode(_string(buffer[10:]))
+        if buffer[8:9] == b'\x02':
             self.contents['compression'] = '9'
         else:
             self.contents['compression'] = '1'
 
 class tar_gz(gzip, tar):
-    def __init__(self, path, basedir = '', gzipBuffer = '', tarBuffer = ''):
+    def __init__(self, path, basedir = '', gzipBuffer = b'', tarBuffer = b''):
         gzip.__init__(self, path, basedir = basedir, buffer = gzipBuffer)
         tar.__init__(self, path, basedir = basedir, buffer = tarBuffer)
 
 class bzip(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
-        self.contents['compression'] = buffer[3]
+        self.contents['compression'] = chr(buffer[3])
 
 class tar_bz2(bzip, tar):
-    def __init__(self, path, basedir = '', bzipBuffer = '', tarBuffer = ''):
+    def __init__(self, path, basedir = '', bzipBuffer = b'', tarBuffer = b''):
         bzip.__init__(self, path, basedir = basedir, buffer = bzipBuffer)
         tar.__init__(self, path, basedir = basedir, buffer = tarBuffer)
 
 class xz(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
 
 class tar_xz(bzip, tar):
-    def __init__(self, path, basedir = '', bzipBuffer = '', tarBuffer = ''):
+    def __init__(self, path, basedir = '', bzipBuffer = b'', tarBuffer = b''):
         bzip.__init__(self, path, basedir = basedir, buffer = bzipBuffer)
         tar.__init__(self, path, basedir = basedir, buffer = tarBuffer)
 
 class lzo(Magic):
-    def __init__(self, path, basedir='', lzobuffer=''):
+    def __init__(self, path, basedir='', lzobuffer=b''):
         Magic.__init__(self, path, basedir=basedir)
 
 class changeset(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
 
 class deb(Magic):
@@ -226,7 +225,7 @@ class ZIP(Magic):
         Magic.__init__(self, path, basedir)
 
 class java(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
         fullpath = basedir+path
         prov, req = javadeps.getDeps(open(fullpath, 'rb').read())
@@ -238,23 +237,23 @@ class java(Magic):
 
 
 class script(Magic):
-    interpreterRe = re.compile(r'^#!\s*([^\s]*)')
-    lineRe = re.compile(r'^#!\s*(.*)')
-    def __init__(self, path, basedir='', buffer=''):
+    interpreterRe = re.compile(br'^#!\s*([^\s]*)')
+    lineRe = re.compile(br'^#!\s*(.*)')
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
         m = self.interpreterRe.match(buffer)
-        self.contents['interpreter'] = m.group(1)
+        self.contents['interpreter'] = os.fsdecode(m.group(1))
         m = self.lineRe.match(buffer)
-        self.contents['line'] = m.group(1)
+        self.contents['line'] = os.fsdecode(m.group(1))
 
 
 class ltwrapper(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
 
 
 class CIL(Magic):
-    def __init__(self, path, basedir='', buffer=''):
+    def __init__(self, path, basedir='', buffer=b''):
         Magic.__init__(self, path, basedir)
 
 class RPM(Magic):
@@ -299,9 +298,7 @@ class MSI(Magic):
     def __init__(self, path, basedir=''):
         Magic.__init__(self, path, basedir)
         self.version = '(unknown)'
-        try:
-            open(path)
-        except:
+        if not os.path.exists(path):
             return None
         # Convert list of objects to simple types
         for key, tagName, valType in self._tagMap:
@@ -311,18 +308,16 @@ class MSI(Magic):
 class WIM(Magic):
     def __init__(self, path, basedir=''):
         Magic.__init__(self, path, basedir)
-        try:
-            open(path)
-        except:
+        if not os.path.exists(path):
             return None
 
 def _javaMagic(b):
-    if len(b) > 4 and b[0:4] == "\xCA\xFE\xBA\xBE":
+    if len(b) > 4 and b[0:4] == b"\xCA\xFE\xBA\xBE":
         return True
     return False
 
 def _tarMagic(b):
-    return len(b) > 262 and b[257:262] == 'ustar'
+    return len(b) > 262 and b[257:262] == b'ustar'
 
 def magic(path, basedir=''):
     """
@@ -348,18 +343,18 @@ def magic(path, basedir=''):
     b = f.read(4096)
     f.close()
 
-    if len(b) > 4 and b[0] == '\x7f' and b[1:4] == "ELF":
+    if len(b) > 4 and b[0:1] == b'\x7f' and b[1:4] == b"ELF":
         return ELF(path, basedir, b)
-    elif len(b) > 14 and b[0:14] == '!<arch>\ndebian':
+    elif len(b) > 14 and b[0:14] == b'!<arch>\ndebian':
         return deb(path, basedir)
-    elif len(b) > 7 and b[0:7] == "!<arch>":
+    elif len(b) > 7 and b[0:7] == b"!<arch>":
         return ar(path, basedir, b)
-    elif len(b) > 2 and b[0] == '\x1f' and b[1] == '\x8b':
+    elif len(b) > 2 and b[0:2] == b'\x1f\x8b':
         try:
             uncompressedBuffer = gzip_module.GzipFile(n).read(4096)
             if _tarMagic(uncompressedBuffer):
                 return tar_gz(path, basedir, b, uncompressedBuffer)
-        except (IOError, zlib.error, struct.error):
+        except (IOError, EOFError, zlib.error, struct.error):
             # gzip sometimes raises lets through other errors instead
             # of any module-specific errors; in either error case just
             # do not consider this a gzip file.
@@ -367,23 +362,23 @@ def magic(path, basedir=''):
             # entire file has been tested to have no compression errors!
             pass
         return gzip(path, basedir, b)
-    elif len(b) > 3 and b[0:3] == "BZh":
+    elif len(b) > 3 and b[0:3] == b"BZh":
         try:
             uncompressedBuffer = bz2.BZ2File(n).read(4096)
             if _tarMagic(uncompressedBuffer):
                 return tar_bz2(path, basedir, b, uncompressedBuffer)
-        except IOError:
+        except (IOError, EOFError):
             # bz2 raises IOError instead of any module specific errors
             pass
         return bzip(path, basedir, b)
-    elif len(b) > 6 and b[0:6] == "\xFD\x37\x7A\x58\x5A\x00":
+    elif len(b) > 6 and b[0:6] == b"\xFD\x37\x7A\x58\x5A\x00":
         # http://tukaani.org/xz/xz-file-format.txt
         return xz(path, basedir, b)
-    elif len(b) > 9 and b[0:9] == "\x89\x4c\x5a\x4f\x00\x0d\x0a\x1a\x0a":
+    elif len(b) > 9 and b[0:9] == b"\x89\x4c\x5a\x4f\x00\x0d\x0a\x1a\x0a":
         return lzo(path, basedir, b)
-    elif len(b) > 4 and b[0:4] == "\xEA\x3F\x81\xBB":
+    elif len(b) > 4 and b[0:4] == b"\xEA\x3F\x81\xBB":
         return changeset(path, basedir, b)
-    elif len(b) > 4 and b[0:4] == "PK\x03\x04":
+    elif len(b) > 4 and b[0:4] == b"PK\x03\x04":
         # Zip file. Peek inside the file to extract the file list
         try:
             zf = zipfile.ZipFile(n)
@@ -411,21 +406,21 @@ def magic(path, basedir=''):
                 return ZIP(path, basedir, zipFileObj = zf, fileList = namelist)
     elif _javaMagic(b):
         return java(path, basedir, b)
-    elif len(b) > 4 and b[0:2] == "#!":
+    elif len(b) > 4 and b[0:2] == b"#!":
         if b.find(
-            '# This wrapper script should never be moved out of the build directory.\n'
-            '# If it is, it will not operate correctly.') > 0:
+            b'# This wrapper script should never be moved out of the build directory.\n'
+            b'# If it is, it will not operate correctly.') > 0:
             return ltwrapper(path, basedir, b)
         return script(path, basedir, _line(b))
     elif (len(b) > 130
-          and b[0:2] == 'MZ'
-          and b[78:117] == "This program cannot be run in DOS mode."
-          and b[128:130] == "PE"):
+          and b[0:2] == b'MZ'
+          and b[78:117] == b"This program cannot be run in DOS mode."
+          and b[128:130] == b"PE"):
         # FIXME - this is not sufficient to detect a CIL file this
         # will match all PE executables.  See ECMA-335, partition ii,
         # section 25
         return CIL(path, basedir, b)
-    elif (len(b) > 4 and b[:4] == "\xed\xab\xee\xdb"):
+    elif (len(b) > 4 and b[:4] == b"\xed\xab\xee\xdb"):
         return RPM(path, basedir)
     elif (len(b) > len(MSI_MAGIC_STRINGS[0]) and
             [ x for x in MSI_MAGIC_STRINGS if b[:len(x)] == x ]):
@@ -448,8 +443,14 @@ class magicCache(dict):
 
 # internal helpers
 
+def _findOrEnd(buffer, needle):
+    idx = buffer.find(needle)
+    if idx < 0:
+        return len(buffer)
+    return idx
+
 def _string(buffer):
-    return buffer[:string.find(buffer, '\0')]
+    return buffer[:_findOrEnd(buffer, b'\0')]
 
 def _line(buffer):
-    return buffer[:string.find(buffer, '\n')]
+    return buffer[:_findOrEnd(buffer, b'\n')]
