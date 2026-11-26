@@ -45,7 +45,7 @@ from conary.local import database
 from conary.repository import changeset, errors
 from conary.conaryclient import callbacks as client_callbacks
 from conary.conaryclient.cmdline import parseTroveSpec
-from conary.state import ConaryState, ConaryStateFromFile
+from conary.state import ConaryState, ConaryStateFromFile, stateFileExists
 
 CookError = builderrors.CookError
 RecipeFileError = builderrors.RecipeFileError
@@ -1851,7 +1851,7 @@ def guessSourceVersion(repos, name, versionStr, buildLabel, conaryState = None,
     """
     srcName = name + ':source'
 
-    if not conaryState and os.path.exists('CONARY'):
+    if not conaryState and stateFileExists('CONARY'):
         conaryState = ConaryStateFromFile('CONARY', repos)
 
     if conaryState and conaryState.hasSourceState():

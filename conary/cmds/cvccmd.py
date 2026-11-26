@@ -20,7 +20,6 @@ Provides the output for the "cvc" subcommands
 """
 
 import optparse
-import os
 import sys
 
 from conary import checkin
@@ -550,7 +549,7 @@ class CookCommand(CvcCommand):
         if not items:
             # if nothing was specified, try to build the package in the current
             # directory
-            if os.path.isfile('CONARY'):
+            if state.stateFileExists('CONARY'):
                 conaryState = state.ConaryStateFromFile('CONARY', repos)
                 items = [ conaryState ]
 

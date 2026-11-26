@@ -52,7 +52,8 @@ from conary.lib import util
 from conary.lib import graph
 from conary.local import update
 from conary.repository import changeset
-from conary.state import ConaryState, ConaryStateFromFile, SourceState
+from conary.state import (ConaryState, ConaryStateFromFile, SourceState,
+                          stateFileExists)
 
 nonCfgRe = re.compile(r'^.*\.(%s)$' % '|'.join((
     'bz2', 'ccs', 'data', 'eps', 'gif', 'gz', 'ico', 'img',
@@ -2057,7 +2058,7 @@ def setContext(cfg, contextName=None, ask=False, repos=None):
         cfg.displayContext()
         return
 
-    if os.path.exists('CONARY'):
+    if stateFileExists('CONARY'):
         state = ConaryStateFromFile('CONARY', repos)
     else:
         state = ConaryState()

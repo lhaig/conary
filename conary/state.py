@@ -269,6 +269,24 @@ class SourceState(trove.Trove):
         self.lastMerged = lastmerged
         self.fileInfo = {}
 
+def _exactEntry(path):
+    """True if the final component of path is listed, with exactly that
+    case, in its parent directory. Does not depend on the filesystem
+    being case sensitive."""
+    try:
+        parent = os.path.dirname(os.path.abspath(path))
+        return os.path.basename(path) in os.listdir(parent)
+    except OSError:
+        return False
+
+
+def stateFileExists(path='CONARY'):
+    """True if path names a regular file whose entry matches exactly, so
+    a directory or differently-cased entry (e.g. conary/) is not taken
+    for a state file."""
+    return _exactEntry(path) and os.path.isfile(path)
+
+
 class ConaryStateFromFile(ConaryState):
 
     __developer_api__ = True
@@ -309,11 +327,9 @@ class ConaryStateFromFile(ConaryState):
         return False
 
     def __init__(self, path, repos=None, parseSource=True):
-        if not os.path.exists(path):
-            raise CONARYFileMissing
-        if 'CONARY' not in os.listdir(os.path.dirname(os.path.abspath(path))):
-            # Must test for exact case otherwise files/directories called
-            # 'conary' will be interpreted as state files
+        # Must test for exact case otherwise files/directories called
+        # 'conary' will be interpreted as state files
+        if not _exactEntry(path):
             raise CONARYFileMissing
         if not os.path.isfile(path):
             raise CONARYNotFile
