@@ -22,6 +22,7 @@ SRC_ROOTS = (('conary', '/src/conary/'),
              ('testharness', '/src/testharness/'))
 
 CLASSES = ['missing binary', 'harness gap', 'timeout', 'unsupported arch',
+           'arch-specific expectation',
            'removed stdlib module/API', 'py2 code in tests',
            'bytes/str: streams/trove', 'bytes/str: file I/O',
            'bytes/str: hashing', 'bytes/str: network/xmlrpc',
@@ -135,6 +136,14 @@ def classify(sig, extra=''):
     # 3. unsupported architecture (container is aarch64)
     if 'No Such Arch' in msg:
         return 'unsupported arch'
+    # 3b. test expectation hardcodes x86/x86_64 and the container is another
+    # arch (native aarch64 run); not a port bug. Bytes mismatches stay in
+    # their own classes.
+    if "b'" not in msg and "b\"" not in msg and (
+            (exc == 'KeyError' and re.search(r"'(aarch64|x86_64|x86)'", msg))
+            or (exc == 'AssertionError' and re.search(
+                r"is: ?(x86|aarch64)", msg))):
+        return 'arch-specific expectation'
     # 4. removed module or stdlib API
     if exc in ('ModuleNotFoundError', 'ImportError'):
         return 'removed stdlib module/API'

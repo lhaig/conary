@@ -62,6 +62,12 @@ gcc $(python3-config --includes) "$T/t.c" -o "$T/t" \
 "$T/t" >/dev/null || fail "compiled test program did not run"
 ok "gcc builds and links Python.h, openssl, zlib, sqlite3, libelf"
 
+for bin in cpio rpmbuild rpm2cpio patch unzip lzma python; do
+    command -v "$bin" >/dev/null 2>&1 || fail "$bin not found"
+    ok "$bin at $(command -v "$bin")"
+done
+ok "machine $(uname -m), uid $(id -u) (information only)"
+
 command -v make >/dev/null 2>&1 || fail "make not found"
 ok "make $(make --version | head -1)"
 

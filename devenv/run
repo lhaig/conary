@@ -1,23 +1,34 @@
 #!/bin/bash
 # Run a command in the Conary Fedora dev container with the repo at /src.
 # Usage: devenv/run <command> [args...]   (no args: interactive bash)
+#   DEVENV_PLATFORM=linux/amd64  run the x86_64 image (emulated on arm64 hosts)
+#   DEVENV_ROOT=1                run as root instead of the invoking user
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 HASH=$(shasum -a 256 "$ROOT/devenv/Dockerfile" | cut -c1-12)
+PLATFORM=${DEVENV_PLATFORM:-}
 TAG="conary-devenv:$HASH"
+platform_args=()
+if [ -n "$PLATFORM" ]; then
+    # One tag per platform so native and emulated images never collide.
+    TAG="$TAG-${PLATFORM##*/}"
+    platform_args=(--platform "$PLATFORM")
+fi
 
 if ! docker image inspect "$TAG" >/dev/null 2>&1; then
     echo "devenv: building $TAG" >&2
-    docker build -t "$TAG" "$ROOT/devenv" >&2
+    docker build ${platform_args[@]+"${platform_args[@]}"} -t "$TAG" "$ROOT/devenv" >&2
 fi
 
 [ $# -gt 0 ] || set -- bash
 
 args=(--rm -i -v "$ROOT":/src -w /src)
 [ -t 0 ] && args+=(-t)
-# Native Linux Docker does not remap ownership; avoid root-owned files.
-if [ "$(uname)" = Linux ]; then
+args+=(${platform_args[@]+"${platform_args[@]}"})
+# Run as the invoking user so files written to the bind mount are not root-owned
+# (and permission tests do not silently skip as root).
+if [ "${DEVENV_ROOT:-}" != 1 ]; then
     args+=(--user "$(id -u):$(id -g)" -e HOME=/tmp)
 fi
 

@@ -13,11 +13,20 @@ case "$OUT" in
   /*|*..*|*[!A-Za-z0-9._/-]*) echo "outdir must be relative to the repo root, without spaces or '..': $OUT" >&2; exit 2;;
 esac
 mkdir -p "$OUT"
+# Recorded in env.txt. The host HEAD is passed in because a tree copy has no .git.
+HOST_HEAD=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+PLAT=${DEVENV_PLATFORM:-native}
+case "$PLAT" in *[!A-Za-z0-9._/-]*) echo "bad DEVENV_PLATFORM: $PLAT" >&2; exit 2;; esac
 rm -f "$OUT"/*.xml "$OUT"/*.log "$OUT"/rc.txt "$OUT"/crashed.txt
 exec devenv/run bash -c '
 OUT=/src/'"$OUT"'
 cd /src
-{ date -u +%FT%TZ; python3 -VV; git rev-parse HEAD; uname -m; id -u; } > $OUT/env.txt 2>&1
+{ date -u +%FT%TZ; python3 -VV
+  echo "host git HEAD: '"$HOST_HEAD"'"
+  echo "container git HEAD: $(git -c safe.directory=/src rev-parse HEAD 2>&1)"
+  echo "platform: '"$PLAT"'"
+  echo "uname -m: $(uname -m)"
+  echo "uid: $(id -u)"; } > $OUT/env.txt 2>&1
 run() { # run <name> <timeout> <pytest target...>
   local n=$1 t=$2; shift 2
   (cd /src && timeout -k 10 $t python3 -m pytest "$@" -p no:cacheprovider -q -rA --tb=native \
