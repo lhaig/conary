@@ -14,6 +14,23 @@
 # limitations under the License.
 #
 
+"""
+Digest helpers.
+
+Rule: sha1String, md5String and nonstandardSha256String take bytes unchanged
+and also accept str, which is encoded with C{encode('utf-8',
+'surrogateescape')} (the bytes os.fsencode gives on Linux).  Any other type
+raises TypeError.  Many callers hash text (paths, cache keys, joined
+fingerprints) and pathIds and fingerprints are persisted identities that
+Python 2 computed over the UTF-8 or on-disk bytes of that text, so this
+encoding reproduces the Python 2 digests, and surrogateescape keeps
+undecodable file names hashing the same as their on-disk bytes.  Callers that
+build the input with "%s" or str() must make sure no operand is bytes, since
+that renders as "b'...'".
+
+digestlib is a plain hashlib re-export and is not wrapped: its direct callers
+must pass bytes.
+"""
 
 import os
 import stat
@@ -41,9 +58,19 @@ def sha1FileBin(path):
 
     return m.digest()
 
+def toBytes(buf):
+    """Return buf as bytes under the module rule: str is UTF-8 encoded with
+    surrogateescape, bytes-like passes through, anything else is a TypeError."""
+    if isinstance(buf, str):
+        return buf.encode('utf-8', 'surrogateescape')
+    if isinstance(buf, (bytes, bytearray, memoryview)):
+        return buf
+    raise TypeError('cannot hash %s, expected bytes or str'
+                    % type(buf).__name__)
+
 def sha1String(buf):
     m = digestlib.sha1()
-    m.update(buf)
+    m.update(toBytes(buf))
     return m.digest()
 
 def sha1ToString(buf):
@@ -56,11 +83,11 @@ def sha1FromString(val):
                         int(val[ 8:16], 16), int(val[16:24], 16),
                         int(val[24:32], 16), int(val[32:40], 16))
 
-sha1Empty = '\xda9\xa3\xee^kK\r2U\xbf\xef\x95`\x18\x90\xaf\xd8\x07\t'
+sha1Empty = b'\xda9\xa3\xee^kK\r2U\xbf\xef\x95`\x18\x90\xaf\xd8\x07\t'
 
 
 def nonstandardSha256String(buf):
-    return digestlib.sha256_nonstandard(buf)
+    return digestlib.sha256_nonstandard(toBytes(buf))
 
 def sha256ToString(buf):
     assert(len(buf) == 32)
@@ -76,7 +103,7 @@ def sha256FromString(val):
 
 def md5String(buf):
     m = digestlib.md5()
-    m.update(buf)
+    m.update(toBytes(buf))
     return m.digest()
 
 def md5ToString(buf):

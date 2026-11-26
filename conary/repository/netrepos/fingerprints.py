@@ -21,6 +21,13 @@ from conary import trove
 from conary.lib import sha1helper
 from conary.server import schema
 
+def _joinFp(parts):
+    """NUL-join fingerprint parts, which are a mix of text and raw bytes.
+
+    Text is hashed as its UTF-8 bytes (the same bytes Python 2 hashed).
+    """
+    return b"\0".join(sha1helper.toBytes(x) for x in parts)
+
 def _troveFp(troveTup, sig, meta):
     if not sig and not meta:
         # we don't have sig or metadata info; just use the trove tuple
@@ -30,16 +37,17 @@ def _troveFp(troveTup, sig, meta):
         (sigPresent, sigBlock) = sig
         l = []
         if sigPresent >= 1:
-            l.append(base64.decodestring(sigBlock))
+            l.append(base64.decodebytes(sha1helper.toBytes(sigBlock)))
         (metaPresent, metaBlock) = meta
         if metaPresent >= 1:
-            l.append(base64.decodestring(metaBlock))
+            l.append(base64.decodebytes(sha1helper.toBytes(metaBlock)))
         if sigPresent or metaPresent:
             t = tuple(l)
         else:
             t = ("missing", ) + troveTup
 
-    return sha1helper.sha1String("\0".join(t))
+    # sigBlock/metaBlock decode to bytes while trove tuple elements are text.
+    return sha1helper.sha1String(_joinFp(t))
 
 def expandJobList(db, chgSetList, recurse):
     """

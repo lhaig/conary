@@ -18,7 +18,7 @@
 from testrunner import testhelp
 
 import os
-from io import StringIO
+from io import BytesIO
 import tempfile
 
 from conary.conaryclient import filetypes
@@ -48,7 +48,7 @@ class ClientNewTroveTest(testhelp.TestCase):
         requires = deps.ThawDependencySet('4#foo::runtime')
         provides = deps.ThawDependencySet('11#foo')
         flv = deps.parseFlavor('xen,domU is: x86')
-        bar = filetypes.RegularFile(contents = StringIO('bar'),
+        bar = filetypes.RegularFile(contents = BytesIO(b'bar'),
                 config = True, provides = provides, requires = requires,
                 flavor = flv, owner = 'foo', group = 'bar', perms = 0o700,
                 mtime = 12345, tags = ['tag1', 'tag2'])
@@ -77,7 +77,7 @@ class ClientNewTroveTest(testhelp.TestCase):
         self.assertEqual(fileObj.provides(), deps.parseDep(provStr))
 
     def testRegularFileContents(self):
-        foo = filetypes.RegularFile(contents = StringIO('foo1'))
+        foo = filetypes.RegularFile(contents = BytesIO(b'foo1'))
         fileObj = foo.get(pathId)
         f = foo.getContents()
         self.assertEqual(f.read(), 'foo1')

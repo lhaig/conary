@@ -3640,6 +3640,8 @@ class IncludeLicense(BuildAction):
         self.successiveLines = re.compile(r'\n\n+')
 
     def sha1sum(self, text):
+        if isinstance(text, str):
+            text = text.encode('utf-8', 'surrogateescape')
         shaObj = digestlib.sha1(text)
         return shaObj.hexdigest()
 

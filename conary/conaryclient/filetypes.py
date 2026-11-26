@@ -108,7 +108,7 @@ class _File(object):
         if self.needSha1:
             sha1 = digestlib.sha1()
             contents = self.contents.get()
-            devnull = open(os.devnull, 'w')
+            devnull = open(os.devnull, 'wb')
             util.copyfileobj(contents, devnull, digest = sha1)
             devnull.close()
 
@@ -284,6 +284,9 @@ class RegularFile(_File):
     def __init__(self, **kwargs):
         _File.__init__(self, **kwargs)
         if isinstance(self.contents, str):
+            self.contents = filecontents.FromString(
+                    self.contents.encode('utf-8', 'surrogateescape'))
+        elif isinstance(self.contents, bytes):
             self.contents = filecontents.FromString(self.contents)
         else:
             self.contents = filecontents.FromFile(self.contents)

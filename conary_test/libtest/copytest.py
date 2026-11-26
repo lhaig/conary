@@ -26,14 +26,14 @@ class CopyTest(testhelp.TestCase):
     def testCopyFileObjDigest(self):
        tmpDir = tempfile.mkdtemp()
        try:
-           buf = 'test data'
+           buf = b'test data'
 
            # rpepare source and destination files
            srcFn = os.path.join(tmpDir, 'srcfile')
            destFn = os.path.join(tmpDir, 'destfile')
-           open(srcFn, 'w').write(buf)
-           src = open(srcFn)
-           dest = open(destFn, 'w')
+           open(srcFn, 'wb').write(buf)
+           src = open(srcFn, 'rb')
+           dest = open(destFn, 'wb')
 
            # filter the digest through copyfileobj
            sha1 = digestlib.sha1()

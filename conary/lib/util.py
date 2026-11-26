@@ -2571,7 +2571,7 @@ class SystemIdFactory(object):
                 log.warning('SystemId script exited with %s', p.returncode)
                 return None
 
-            return base64.b64encode(stdout)
+            return base64.b64encode(stdout).decode('ascii')
         except OSError as e:
             err, msg = e.args
             log.warning('SystemId script failed with the following error: '
@@ -2586,8 +2586,9 @@ class SystemIdFactory(object):
             self.systemId = self._run()
         else:
             sha = hashlib.sha256()
-            sha.update(str(uuid.getnode()))
-            self.systemId = base64.b64encode(sha.hexdigest())
+            sha.update(str(uuid.getnode()).encode('ascii'))
+            self.systemId = base64.b64encode(
+                    sha.hexdigest().encode('ascii')).decode('ascii')
 
         return self.systemId
 

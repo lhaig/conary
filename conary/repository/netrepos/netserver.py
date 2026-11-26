@@ -1690,7 +1690,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
 
                 fpList.append(fp)
 
-            fp = sha1helper.sha1String("\0".join(fpList))
+            fp = sha1helper.sha1String(fingerprints._joinFp(fpList))
             finalFingerprints.append(sha1helper.sha1ToString(fp))
 
         return finalFingerprints

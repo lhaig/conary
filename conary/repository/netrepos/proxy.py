@@ -1089,10 +1089,12 @@ class Memcache(object):
         # Hash the common arguments separately to save a few cycles.
         # Microbenchmarks indicate that this adds effectively zero cost even
         # with only one item.
+        # This is only a memcache key, so it need not match Python 2 digests.
         common = digestlib.sha1(
-                str(authInfo + extraArgs + extraKwargs)
+                str(authInfo + extraArgs + extraKwargs).encode('utf-8')
                 ).digest()
-        return [digestlib.sha1(common + str(x)).hexdigest() for x in listArgs]
+        return [digestlib.sha1(common + str(x).encode('utf-8')).hexdigest()
+                for x in listArgs]
 
     def _coalesce(self, authToken, callable, listArg, *extraArgs, **kwargs):
         """Memoize a proxy repository call.

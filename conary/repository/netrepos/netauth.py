@@ -38,6 +38,17 @@ MAX_ENTITLEMENT_LENGTH = 255
 
 nameCharacterSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-\\@'
 
+def _text(x):
+    """Render a credential or cache key part as str, never as "b'...'"."""
+    if isinstance(x, bytes):
+        return x.decode('utf-8', 'surrogateescape')
+    return x
+
+def _toBytes(x):
+    if isinstance(x, str):
+        return x.encode('utf-8', 'surrogateescape')
+    return x
+
 class UserAuthorization:
 
     pwCache = {}
@@ -84,7 +95,7 @@ class UserAuthorization:
             return True
 
         if self.cacheTimeout:
-            cacheEntry = sha1helper.sha1String("%s%s" % (user, challenge))
+            cacheEntry = sha1helper.sha1String("%s%s" % (_text(user), _text(challenge)))
             timeout = self.pwCache.get(cacheEntry, None)
             if timeout is not None and time.time() < timeout:
                 return True
@@ -110,7 +121,7 @@ class UserAuthorization:
         else:
             m = digestlib.md5()
             m.update(salt)
-            m.update(challenge)
+            m.update(_toBytes(challenge))
             isValid = m.hexdigest() == password
 
         if isValid and self.cacheTimeout:
@@ -242,7 +253,7 @@ class EntitlementAuthorization:
         credentials authorize.
         """
         cacheEntry = sha1helper.sha1String("%s%s%s" % (
-            serverName, entitlementClass, entitlement))
+            _text(serverName), _text(entitlementClass), _text(entitlement)))
         roleIds, timeout, autoRetry = \
                 self.cache.get(cacheEntry, (None, None, None))
         if (timeout is not None) and time.time() < timeout:
@@ -721,7 +732,7 @@ class NetworkAuthorization:
         salt = os.urandom(4)
         m = digestlib.md5()
         m.update(salt)
-        m.update(password)
+        m.update(_toBytes(password))
 
         self.addUserByMD5(user, salt, m.hexdigest())
 
@@ -824,7 +835,7 @@ class NetworkAuthorization:
         salt = os.urandom(4)
         m = digestlib.md5()
         m.update(salt)
-        m.update(newPassword)
+        m.update(_toBytes(newPassword))
 
         cu = self.db.cursor()
         self.userAuth.changePassword(cu, user, salt, m.hexdigest())

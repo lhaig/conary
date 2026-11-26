@@ -15,10 +15,9 @@
 #
 
 
-try:
-    from io import StringIO
-except ImportError:
-    from io import StringIO
+from io import BytesIO
+
+from conary.lib.sha1helper import toBytes
 
 import errno, os
 
@@ -134,17 +133,19 @@ class FromString(FileContents):
         return self.__class__(self.str)
 
     def get(self):
-        return StringIO(self.str)
+        return BytesIO(self.str)
 
     def __eq__(self, other):
-        if type(other) is str:
-            return self.str == str
+        if isinstance(other, (str, bytes)):
+            return self.str == toBytes(other)
         if isinstance(other, FromString):
             return self.str == other.str
         return False
 
     def __init__(self, str, compressed = False):
-        self.str = str
+        # Contents are bytes; text is stored as its UTF-8 bytes, the same
+        # rule sha1helper uses.
+        self.str = toBytes(str)
         self.compressed = compressed
 
 
