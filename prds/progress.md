@@ -408,3 +408,11 @@ PATTERN: bytes/str - Text bound for the wire (XML-RPC base64, HTTP auth) goes th
 PATTERN: py3-port - `except X as e` unbinds e at the end of the block; code that inspects or re-raises e afterwards must save it first (raise err, not bare raise).
 PATTERN: harness - Opening a skip gate moves tests to the next gate; check what sits behind it (here the app server) before sizing the gain.
 PATTERN: testing - A scan test that skips inputs it cannot parse must report them, or a broken file silently drops out of coverage.
+
+## 2026-11-26 - new baseline after 3.14/3.15 (native, HEAD 7c01d5e, tmp/baseline-20261126-7c01d5e, 15 min)
+
+- 2810 ids: 856 pass, 1791 fail, 163 skip (was 757/177/1876). The sqlharness skip is gone; this replaces the old skip count.
+- Skips: rpm/chroot 91, other 65, SSL/memcache stand-ins 4, missing binary 2, M2Crypto 1.
+- Top signatures: filecontainer.py:__init__ text-mode write 977 (task 3.16), state.py CONARYFileMissing 432,
+  sha1helper.sha1ToString str 149, PolicyError SharedLibrary 39, conarycfg append 16, versionops 12.
+- 5 duplicate ids across files (new with this run); check before the next checkpoint.
