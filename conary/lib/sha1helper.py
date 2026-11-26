@@ -32,6 +32,7 @@ digestlib is a plain hashlib re-export and is not wrapped: its direct callers
 must pass bytes.
 """
 
+import base64
 import os
 import stat
 import struct
@@ -77,6 +78,15 @@ def toStr(buf):
         return bytes(buf).decode('utf-8', 'surrogateescape')
     raise TypeError('cannot decode %s, expected bytes or str'
                     % type(buf).__name__)
+
+def toBase64(buf):
+    """Wire form of binary data: base64 text (with the trailing newline
+    that the Python 2 encodestring produced) as str."""
+    return toStr(base64.encodebytes(toBytes(buf)))
+
+def fromBase64(buf):
+    """Inverse of toBase64; accepts str or bytes, returns bytes."""
+    return base64.decodebytes(toBytes(buf))
 
 def sha1String(buf):
     m = digestlib.sha1()

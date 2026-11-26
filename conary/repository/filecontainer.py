@@ -66,6 +66,12 @@ knowing the total size being stored as well as the dynamic compression making
 that size unknowable in advance. It does limit file storage size a bit, but
 leaves us with well over 63 bits of length.
 
+Names, tags (the "arbitrary file table data") and contents are all bytes.
+addFile does not coerce: a str name or tag raises TypeError, so a caller that
+missed a conversion fails loudly instead of writing a header whose length
+differs from the bytes written. Callers convert with sha1helper.toBytes.
+getNextFile and dumpIter hand back bytes names and bytes tags.
+
 This code is careful not to depend on the file pointer at all for reading
 (via pread). The file pointer is used while creating file containers.
 """
@@ -122,6 +128,11 @@ class FileContainer:
         self.file = None
 
     def addFile(self, fileName, contents, tableData, precompressed = False):
+        if not isinstance(fileName, bytes) or not isinstance(tableData, bytes):
+            raise TypeError('file container names and table data must be '
+                            'bytes, got %s and %s' % (
+                                type(fileName).__name__,
+                                type(tableData).__name__))
         assert(isinstance(contents, filecontents.FileContents))
         assert(self.mutable)
 

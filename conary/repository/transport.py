@@ -258,7 +258,7 @@ class Transport(xmlrpc.client.Transport):
                 not in self.contentTypes):
             raise xmlrpc.client.ResponseError(
                     "Response has invalid or missing Content-Type")
-        rpcBody = io.StringIO(rpcBody)
+        rpcBody = io.BytesIO(rpcBody)
         result = xmlrpc.client.Transport.parse_response(self, rpcBody)
 
         # Replace the URL in the XMLRPC response with a file-like object that
@@ -282,17 +282,20 @@ class MultipartDecoder(object):
         self.fobj = fobj
         self.boundary = boundary
 
-    def _getHeader(self):
+    def _readLine(self):
+        # the stream is bytes; the framing and headers are ASCII
         line = self.fobj.readline()
-        if '\n' not in line:
+        if b'\n' not in line:
             raise errors.TruncatedResponseError()
+        return line.decode('latin-1')
+
+    def _getHeader(self):
+        line = self._readLine()
         if line != "--%s\r\n" % (self.boundary,):
             raise MultipartDecodeError("Invalid multipart response")
         headers = {}
         while True:
-            line = self.fobj.readline()
-            if '\n' not in line:
-                raise errors.TruncatedResponseError()
+            line = self._readLine()
             line = line.rstrip('\r\n')
             if not line:
                 break
@@ -322,9 +325,7 @@ class MultipartDecoder(object):
             raise errors.TruncatedResponseError()
         body = self._decode(body, headers, 'content-transfer-encoding')
         body = self._decode(body, headers, 'content-encoding')
-        line = self.fobj.readline()
-        if '\n' not in line:
-            raise errors.TruncatedResponseError()
+        line = self._readLine()
         if line != '\r\n':
             raise MultipartDecodeError("Invalid multipart response")
         return headers, body
@@ -353,7 +354,7 @@ class MultipartResponseFile(object):
 
     def read(self, count=None):
         if self.eof:
-            return ''
+            return b''
         if count is None:
             count = self.remaining
         count = min(count, self.remaining)
@@ -362,9 +363,9 @@ class MultipartResponseFile(object):
         if self.remaining == 0:
             self.eof = True
             line = self.fobj.readline()
-            if '\n' not in line:
+            if b'\n' not in line:
                 raise errors.TruncatedResponseError()
-            if line != '\r\n':
+            if line != b'\r\n':
                 raise MultipartDecodeError("Invalid multipart response")
         return data
 
@@ -372,9 +373,9 @@ class MultipartResponseFile(object):
         if self.final:
             if self.eof:
                 line = self.fobj.readline()
-                if '\n' not in line:
+                if b'\n' not in line:
                     raise errors.TruncatedResponseError()
-                if line != "--%s--\r\n" % self.boundary:
+                if line != ("--%s--\r\n" % self.boundary).encode('latin-1'):
                     raise MultipartDecodeError("Invalid multipart response")
             self.fobj.close()
         self.fobj = None

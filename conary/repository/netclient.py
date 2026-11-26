@@ -32,7 +32,7 @@ from conary.cmds import metadata
 from conary import trove as trv_mod
 from conary import trovetup
 from conary import versions
-from conary.lib import util, api
+from conary.lib import util, api, sha1helper
 from conary.lib import httputils
 from conary.lib import log
 from conary.lib.http import proxy_map, request as req_mod
@@ -513,7 +513,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
 
     def addUserByMD5(self, label, user, salt, password):
         #Base64 encode salt
-        self.c[label].addUserByMD5(user, base64.encodestring(salt), password)
+        self.c[label].addUserByMD5(user, sha1helper.toBase64(salt), password)
 
     def addRole(self, label, role):
         if self.c[label].getProtocolVersion() < 61:
@@ -2493,7 +2493,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
                        (x[1][0], self.fromVersion(x[1][1]),
                         self.fromFlavor(x[1][2])) for x in l ])
             for (i, info), sig in zip(l, sigs):
-                results[i] = base64.decodestring(sig)
+                results[i] = sha1helper.fromBase64(sig)
         return results
 
     def setTroveSigs(self, itemList):
@@ -2508,7 +2508,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
             total += self.c[host].setTroveSigs(
                     [ ((x[0][0], self.fromVersion(x[0][1]),
                                  self.fromFlavor(x[0][2])),
-                       base64.encodestring(x[1])) for x in itemList ])
+                       sha1helper.toBase64(x[1])) for x in itemList ])
 
         return total
 
@@ -2585,10 +2585,10 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
                  ) for x in server.getNewTroveList(mark) ]
 
     def addPGPKeyList(self, host, keyList):
-        self.c[host].addPGPKeyList([ base64.encodestring(x) for x in keyList ])
+        self.c[host].addPGPKeyList([ sha1helper.toBase64(x) for x in keyList ])
 
     def getNewPGPKeys(self, host, mark):
-        return [ base64.decodestring(x) for x in
+        return [ sha1helper.fromBase64(x) for x in
                     self.c[host].getNewPGPKeys(mark) ]
 
     def getTimestamps(self, troveList):
@@ -2697,7 +2697,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
                     raise errors.TroveMissing(tup[0], tup[1])
                 if present  == 0:
                     continue
-                data = base64.decodestring(dataStr)
+                data = sha1helper.fromBase64(dataStr)
                 results[i] = trv_mod.TroveInfo.streamDict[infoType][1](data)
         return results
 
@@ -2836,7 +2836,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
                                      'a newer repository server.')
 
         url, hasStatus = server.prepareChangeSet(jobs, mirror)
-        inFile = open(fName)
+        inFile = open(fName, "rb")
         size = os.fstat(inFile.fileno()).st_size
 
         # use chunked transfer encoding to work around servers that do not

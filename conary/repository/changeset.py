@@ -18,15 +18,9 @@
 import struct
 import errno
 import gzip
+import io
 import itertools
 import os
-import sys
-
-try:
-    from io import StringIO as _StringIO
-    StringIO = _StringIO
-except ImportError:
-    from io import StringIO
 
 from conary import files, rpmhelper, streams, trove, versions
 from conary.lib import base85, enum, log, patch, sha1helper, util, api
@@ -48,6 +42,30 @@ from conary.repository import filecontainer, filecontents, errors
 # "file" means the file contents are stored normally
 ChangedFileTypes = enum.EnumeratedType("cft", "file", "diff", "ptr",
                                        "refr", "hldr")
+
+# name of the control entry (the frozen changeset) in a changeset container
+_CS_CONTROL_NAME = b'CONARYCHANGESET'
+
+
+# Container tags are bytes: b"<0|1> <type>", the first field marking config
+# contents (1) and the second the ChangedFileTypes name without its "cft-".
+def _csfTag(early, contType):
+    """Container tag for contents of C{contType}; early means config."""
+    return (b'1 ' if early else b'0 ') + sha1helper.toBytes(contType[4:])
+
+
+def _tagIsConfig(tag):
+    return tag[:1] == b'1'
+
+
+def _tagType(tag):
+    """The ChangedFileTypes (str) value named by a container tag."""
+    return 'cft-' + sha1helper.toStr(tag.split()[1])
+
+
+def _tagIs(tag, contType):
+    return tag[2:] == sha1helper.toBytes(contType[4:])
+
 
 _STREAM_CS_PRIMARY  = 1
 _STREAM_CS_TROVES     = 2
@@ -124,14 +142,16 @@ class ChangeSetFileDict(dict, streams.InfoStream):
 
     def freeze(self, skipSet = None):
         fileList = []
-        for ((oldFileId, newFileId), (csInfo)) in sorted(self.items()):
+        # a missing oldFileId sorts first, as it did under Python 2
+        for ((oldFileId, newFileId), (csInfo)) in sorted(
+                self.items(), key=lambda kv: (kv[0][0] or b'', kv[0][1])):
             if not oldFileId:
-                oldFileId = ""
+                oldFileId = b""
 
             s = FileInfo(oldFileId, newFileId, csInfo).freeze()
             fileList.append(struct.pack("!I", len(s)) + s)
 
-        return "".join(fileList)
+        return b"".join(fileList)
 
     def __getitem__(self, item):
         if item[0] is None:
@@ -171,10 +191,11 @@ class ChangeSetFileDict(dict, streams.InfoStream):
 
             newFileId = info.newFileId()
             oldFileId = info.oldFileId()
-            if oldFileId == "":
-                self[sys.intern(newFileId)] = info.csInfo()
+            # fileIds are bytes, which sys.intern does not accept
+            if oldFileId == b"":
+                self[newFileId] = info.csInfo()
             else:
-                self[(sys.intern(oldFileId), sys.intern(newFileId))] = info.csInfo()
+                self[(oldFileId, newFileId)] = info.csInfo()
 
     def __init__(self, data = None):
         if data:
@@ -382,17 +403,12 @@ class ChangeSet(streams.StreamSet):
 
         sizeCorrection = 0
 
-        if early:
-            tag = "1 "
-        else:
-            tag = "0 "
-
         # diffs come first, followed by plain files
 
         for hash in idList:
             (contType, f, compressed) = contents[hash]
             if contType == ChangedFileTypes.diff:
-                csf.addFile(hash, f, tag + contType[4:],
+                csf.addFile(hash, f, _csfTag(early, contType),
                             precompressed = compressed)
 
         for hash in idList:
@@ -402,7 +418,7 @@ class ChangeSet(streams.StreamSet):
                         isinstance(f, filecontents.CompressedFromDataStore):
                     sha1 = sha1helper.sha1ToString(f.getSha1())
                     realSize = os.stat(f.path()).st_size
-                    nameEntry = sha1 + ' ' + str(realSize)
+                    nameEntry = sha1helper.toBytes(sha1 + ' ' + str(realSize))
                     sizeCorrection += (realSize - len(nameEntry))
                     if realSize >= 0x100000000:
                         # add 4 bytes to store a 64-bit size
@@ -410,10 +426,10 @@ class ChangeSet(streams.StreamSet):
                     csf.addFile(hash,
                                 filecontents.FromString(nameEntry,
                                                         compressed = True),
-                                tag + ChangedFileTypes.refr[4:],
+                                _csfTag(early, ChangedFileTypes.refr),
                                 precompressed = True)
                 else:
-                    csf.addFile(hash, f, tag + contType[4:],
+                    csf.addFile(hash, f, _csfTag(early, contType),
                                 precompressed = compressed)
 
         return sizeCorrection
@@ -433,7 +449,7 @@ class ChangeSet(streams.StreamSet):
                                           append = True)
 
         str = self.freeze()
-        csf.addFile("CONARYCHANGESET", filecontents.FromString(str), "")
+        csf.addFile(_CS_CONTROL_NAME, filecontents.FromString(str), b"")
         correction = self.writeAllContents(csf,
                                            withReferences = withReferences)
         return (outFile.tell() - start) + correction
@@ -445,7 +461,7 @@ class ChangeSet(streams.StreamSet):
             outFileFd = os.open(outFileName,
                                 os.O_RDWR | os.O_CREAT | os.O_TRUNC, mode)
 
-            outFile = os.fdopen(outFileFd, "w+")
+            outFile = os.fdopen(outFileFd, "w+b")
 
             size = self.appendToFile(outFile, withReferences = withReferences,
                                      versionOverride = versionOverride)
@@ -1358,9 +1374,9 @@ class ReadOnlyChangeSet(ChangeSet):
         raise NotImplementedError
 
     def fileQueueCmp(a, b):
-        if a[1][0] == "1" and b[1][0] == "0":
+        if _tagIsConfig(a[1]) and not _tagIsConfig(b[1]):
             return -1
-        elif a[1][0] == "0" and b[1][0] == "1":
+        elif not _tagIsConfig(a[1]) and _tagIsConfig(b[1]):
             return 1
 
         if a[0] < b[0]:
@@ -1434,8 +1450,8 @@ class ReadOnlyChangeSet(ChangeSet):
                 #
                 # we check for both the key and the pathId here for backwards
                 # compatibility reading old change set formats
-                if name == key or name == pathId or tagInfo[0] == '1':
-                    tag = 'cft-' + tagInfo.split()[1]
+                if name == key or name == pathId or _tagIsConfig(tagInfo):
+                    tag = _tagType(tagInfo)
                     cont = filecontents.FromFile(f, compressed = compressed)
 
                     # we found the one we're looking for, break out
@@ -1643,11 +1659,12 @@ Cannot apply a relative changeset to an incomplete trove.  Please upgrade conary
         # write out the diffs. these are always in the cache
         for key in keyList:
             (tag, contents, compressed) = self.configCache[key]
-            if isinstance(contents, str):
-                contents = filecontents.FromString(contents)
+            if isinstance(contents, (str, bytes)):
+                contents = filecontents.FromString(
+                    sha1helper.toBytes(contents))
 
             if tag == ChangedFileTypes.diff:
-                csf.addFile(key, contents, "1 " + tag[4:])
+                csf.addFile(key, contents, _csfTag(True, tag))
 
         # Absolute change sets will have other contents which may or may
         # not be cached. For the ones which are cached, turn them into a
@@ -1681,9 +1698,9 @@ Cannot apply a relative changeset to an incomplete trove.  Please upgrade conary
                 continue
             last = name
 
-            if tagInfo[2:] == ChangedFileTypes.refr[4:]:
+            if _tagIs(tagInfo, ChangedFileTypes.refr):
                 entry = f.read()
-                sha1, realSize = entry.split(' ')
+                sha1, realSize = entry.split(b' ')
                 realSize = int(realSize)
                 correction += realSize - len(entry)
                 if realSize >= 0x100000000:
@@ -1792,7 +1809,7 @@ Cannot apply a relative changeset to an incomplete trove.  Please upgrade conary
             csf.reset()
             # skip the CONARYCHANGESET
             (name, tagInfo, control) = csf.getNextFile()
-            assert(name == "CONARYCHANGESET")
+            assert(name == _CS_CONTROL_NAME)
 
         for csf in self.csfWrappers:
             csf.reset()
@@ -1802,7 +1819,7 @@ Cannot apply a relative changeset to an incomplete trove.  Please upgrade conary
             # find the first non-config file
             entry = csf.getNextFile()
             while entry:
-                if entry[1][0] == '0':
+                if not _tagIsConfig(entry[1]):
                     break
 
                 entry = csf.getNextFile()
@@ -1827,7 +1844,7 @@ Cannot apply a relative changeset to an incomplete trove.  Please upgrade conary
             cont = files.frozenFileContentInfo(stream)
             unpack[newFileId] = cont.sha1()
 
-        want_tag = '0 ' + ChangedFileTypes.file[4:]
+        want_tag = _csfTag(False, ChangedFileTypes.file)
         while True:
             f = self._nextFile()
             if not f:
@@ -1858,7 +1875,7 @@ class ChangeSetFromFile(ReadOnlyChangeSet):
         try:
             if type(fileName) is str:
                 try:
-                    f = util.ExtendedFile(fileName, "r", buffering = False)
+                    f = util.ExtendedFile(fileName, "rb", buffering = False)
                 except IOError as err:
                     raise errors.ConaryError(
                                 "Error opening changeset '%s': %s" %
@@ -1875,7 +1892,7 @@ class ChangeSetFromFile(ReadOnlyChangeSet):
                     self.fileName = fileName.path
 
             (name, tagInfo, control) = csf.getNextFile()
-            assert(name == "CONARYCHANGESET")
+            assert(name == _CS_CONTROL_NAME)
         except filecontainer.BadContainer:
             raise filecontainer.BadContainer(
                         "File %s is not a valid conary changeset." % fileName)
@@ -1908,9 +1925,8 @@ class ChangeSetFromFile(ReadOnlyChangeSet):
         while nextFile:
             key, tagInfo, f = nextFile
 
-            (isConfig, tag) = tagInfo.split()
-            tag = 'cft-' + tag
-            isConfig = isConfig == "1"
+            tag = _tagType(tagInfo)
+            isConfig = _tagIsConfig(tagInfo)
 
             # cache all config files because:
             #   1. diffs are needed both to precompute a job and to store
@@ -2034,7 +2050,7 @@ class DictAsCsf:
     def addConfigs(self, contents):
         # this is like __init__, but it knows things are config files so
         # it tags them with a "1" and puts them at the front
-        l = [ (x[0], "1 " + x[1][0][4:], x[1][1], x[1][2])
+        l = [ (x[0], _csfTag(True, x[1][0]), x[1][1], x[1][2])
                         for x in contents.items() ]
         l.sort()
         self.items = l + self.items
@@ -2046,14 +2062,14 @@ class DictAsCsf:
         # convert the dict (which is a changeSet.fileContents object) to a
         # (name, contTag, contObj, compressed) list, where contTag is the same
         # kind of tag we use in csf files "[0|1] [file|diff]"
-        self.items = [ (x[0], "0 " + x[1][0][4:], x[1][1], x[1][2]) for x in
+        self.items = [ (x[0], _csfTag(False, x[1][0]), x[1][1], x[1][2]) for x in
                             contents.items() ]
         self.items.sort()
         self.next = 0
 
 def _convertChangeSetV2V1(inFc, outPath):
     assert(inFc.version == filecontainer.FILE_CONTAINER_VERSION_FILEID_IDX)
-    outFcObj = util.ExtendedFile(outPath, "w+", buffering = False)
+    outFcObj = util.ExtendedFile(outPath, "w+b", buffering = False)
     outFc = filecontainer.FileContainer(outFcObj,
             version = filecontainer.FILE_CONTAINER_VERSION_WITH_REMOVES)
 
@@ -2071,15 +2087,15 @@ def _convertChangeSetV2V1(inFc, outPath):
 
             size -= 20
 
-        if 'ptr' in tag:
+        if b'ptr' in tag:
             # I'm not worried about this pointing to the wrong file; that
             # can only happen if there are multiple files with the same
             # PathId, which would cause the conflict we test for above
             oldCompressed = f.read()
             old = gzip.GzipFile(None, "r",
-                                fileobj = StringIO(oldCompressed)).read()
+                                fileobj = io.BytesIO(oldCompressed)).read()
             new = old[0:16]
-            newCompressedF = StringIO()
+            newCompressedF = io.BytesIO()
             util.DeterministicGzipFile(None, "w", fileobj = newCompressedF).write(new)
             newCompressed = newCompressedF.getvalue()
             fc = filecontents.FromString(newCompressed, compressed = True)

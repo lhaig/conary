@@ -704,8 +704,7 @@ class _TroveListWrapper:
         cu.execute(sql, start_transaction = False)
 
     def __iter__(self):
-        while True:
-            yield next(self)
+        return self
 
     def append(self, item, recurse):
         self.new.append((item, recurse))

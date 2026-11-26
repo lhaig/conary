@@ -2031,7 +2031,12 @@ class SavedException(object):
         return self.getName() + ': ' + str(self.value)
 
     def throw(self):
-        raise self.type(self.value).with_traceback(self.tb)
+        value = self.value
+        if not isinstance(value, BaseException):
+            value = self.type(value)
+        # re-raise the saved instance; rebuilding it from its message fails
+        # for exceptions with a multi-argument constructor
+        raise value.with_traceback(self.tb)
 
     def clear(self):
         """Free the exception and traceback to avoid reference loops."""
@@ -2316,7 +2321,7 @@ class LockedFile(object):
         if self._lockfobj is not None:
             self.close()
 
-        fobj = fopenIfExists(self.fileName, "r")
+        fobj = fopenIfExists(self.fileName, "rb")
         if fobj is not None or not shouldLock:
             return fobj
 
@@ -2326,7 +2331,7 @@ class LockedFile(object):
         fcntl.lockf(self._lockfobj, fcntl.LOCK_EX)
         # If we got this far, we now have the lock. Check if the data file was
         # created
-        fobj = fopenIfExists(self.fileName, "r")
+        fobj = fopenIfExists(self.fileName, "rb")
         if fobj is not None:
             # The other process committed (and we probably hold a link to a
             # removed file).

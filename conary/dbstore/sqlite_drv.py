@@ -62,6 +62,16 @@ class Cursor(BaseCursor):
     # statements which must not implicitly open a transaction
     _NO_IMPLICIT_BEGIN = ('SELECT', 'VACUUM', 'DETACH', 'BEGIN')
 
+    def encode(self, string):
+        """str binds as TEXT natively; the base class would turn it into
+        bytes, which sqlite stores as a BLOB that never equals the TEXT."""
+        return string
+
+    def decode(self, string):
+        if isinstance(string, bytes):
+            return string.decode(self.encoding)
+        return string
+
     def binary(self, s):
         """Wrap a binary value for binding as a BLOB. None passes through;
         bytes-like objects become bytes; str is rejected so that str/bytes

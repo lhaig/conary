@@ -64,7 +64,7 @@ class AbstractDataStore:
             return realHash
         else:
             for fd in outFds:
-                outFileObj = os.fdopen(fd, "w")
+                outFileObj = os.fdopen(fd, "wb")
                 contentSha1 = digestlib.sha1()
                 if precompressed and computeSha1:
                     tee = Tee(fileObj, outFileObj)
@@ -184,7 +184,7 @@ class DataStore(AbstractDataStore):
     # returns a python file object for the file requested
     def openFile(self, hash, mode = "r"):
         path = self.hashToPath(hash)
-        f = open(path, "r")
+        f = open(path, "rb")
 
         gzfile = gzip.GzipFile(path, mode)
         return gzfile
@@ -192,7 +192,7 @@ class DataStore(AbstractDataStore):
     # returns a python file object for the file requested
     def openRawFile(self, hash):
         path = self.hashToPath(hash)
-        f = open(path, "r")
+        f = open(path, "rb")
         return f
 
     def removeFile(self, hash):

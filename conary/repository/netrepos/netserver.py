@@ -351,7 +351,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
             raise errors.InsufficientPermission
         self.log(2, authToken[0], user)
         #Base64 decode salt
-        self.auth.addUserByMD5(user, base64.decodestring(salt), newPassword)
+        self.auth.addUserByMD5(user, sha1helper.fromBase64(salt), newPassword)
         return True
 
     @accessReadWrite
@@ -1364,7 +1364,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
             if isPresent and not hasAccess:
                 raise errors.InsufficientPermission
 
-        pathList = [ base64.decodestring(x) for x in pathList ]
+        pathList = [ sha1helper.fromBase64(x) for x in pathList ]
         cu = self.db.cursor()
         schema.resetTable(cu, 'tmpFilePaths')
         for row, path in enumerate(pathList):
@@ -2401,7 +2401,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
             n,v,f = itemList[missing[0]][0]
             raise errors.TroveMissing(n, v)
         for (troveTup, item), (presence, existing) in zip(itemList, metadata):
-            m = trove.Metadata(base64.decodestring(existing))
+            m = trove.Metadata(sha1helper.fromBase64(existing))
             mi = trove.MetadataItem(base64.b64decode(item))
             # don't allow items which don't have digests
             if not list(itertools.chain(mi.oldSignatures, mi.signatures)):
@@ -2882,7 +2882,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         def _transform(l):
             i = trove.TroveInfo()
             for troveTuple, sig in l:
-                i.sigs = trove.TroveSignatures(base64.decodestring(sig))
+                i.sigs = trove.TroveSignatures(sha1helper.fromBase64(sig))
                 yield troveTuple, i.freeze()
         return self._setTroveInfo(authToken, clientVersion,
                                   list(_transform(infoList)),
@@ -2900,7 +2900,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         cu = self.db.cursor()
 
         cu.execute("select pgpKey from PGPKeys where changed >= ?", mark)
-        return [ base64.encodestring(x[0]) for x in cu ]
+        return [ sha1helper.toBase64(x[0]) for x in cu ]
 
     @accessReadWrite
     def addPGPKeyList(self, authToken, clientVersion, keyList):
@@ -2910,7 +2910,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
             raise errors.InsufficientPermission
 
         for encKey in keyList:
-            key = base64.decodestring(encKey)
+            key = sha1helper.fromBase64(encKey)
             # this ignores duplicate keys
             self.repos.troveStore.keyTable.addNewKey(None, key)
 
@@ -3228,7 +3228,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
                 md.thaw(data)
                 data = md.freeze(skipSet = trove.TroveInfo._newMetadataItems)
 
-            ret[i] = (1, base64.encodestring(data))
+            ret[i] = (1, sha1helper.toBase64(data))
         return ret
 
     @accessReadOnly
@@ -3403,7 +3403,9 @@ for attr, val in NetworkRepositoryServer.__dict__.items():
 class ManifestWriter(object):
 
     def __init__(self, tmpDir, resumeOffset=None):
-        self.fobj = tempfile.NamedTemporaryFile(dir=tmpDir, suffix='.cf-out')
+        self.fobj = tempfile.NamedTemporaryFile(mode='w+', dir=tmpDir,
+                                                suffix='.cf-out',
+                                                delete=False)
         if resumeOffset:
             self.fobj.write('resumeOffset=%d\n' % resumeOffset)
 
@@ -3413,7 +3415,6 @@ class ManifestWriter(object):
 
     def close(self):
         name = os.path.basename(self.fobj.name)[:-4]
-        self.fobj.delete = False
         self.fobj.close()
         return name
 

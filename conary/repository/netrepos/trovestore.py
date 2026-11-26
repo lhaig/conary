@@ -703,7 +703,7 @@ class TroveStore:
         self.newStreamsByFileId = dict()
 
         schema.resetTable(cu, 'tmpNewPaths')
-        l = [(cu.binary(x),) for x in dirNames]
+        l = [(cu.binary(os.fsencode(x)),) for x in dirNames]
         self.db.bulkload("tmpNewPaths", l, [ "path" ])
         cu.execute("""
             INSERT INTO Dirnames (dirName)
@@ -717,10 +717,10 @@ class TroveStore:
                     tmpNewPaths JOIN Dirnames ON
                         Dirnames.dirName = tmpNewPaths.path
         """)
-        self.dirMap = dict((cu.frombinary(x[0]), x[1]) for x in cu)
+        self.dirMap = dict((os.fsdecode(cu.frombinary(x[0])), x[1]) for x in cu)
 
         schema.resetTable(cu, 'tmpNewPaths')
-        l = [(cu.binary(x),) for x in baseNames]
+        l = [(cu.binary(os.fsencode(x)),) for x in baseNames]
         self.db.bulkload("tmpNewPaths", l, [ "path" ])
         cu.execute("""
             INSERT INTO Basenames (baseName)
@@ -734,7 +734,7 @@ class TroveStore:
                     tmpNewPaths JOIN Basenames ON
                         Basenames.baseName = tmpNewPaths.path
         """)
-        self.baseMap = dict((cu.frombinary(x[0]), x[1]) for x in cu)
+        self.baseMap = dict((os.fsdecode(cu.frombinary(x[0])), x[1]) for x in cu)
 
         schema.resetTable(cu, 'tmpNVF')
         self.db.bulkload("tmpNVF",
@@ -757,7 +757,7 @@ class TroveStore:
                 JOIN FilePaths USING (filePathId)
                 JOIN BaseNames USING (baseNameId)
         """)
-        self.baseMap.update(dict((cu.frombinary(x[0]), x[1]) for x in cu))
+        self.baseMap.update(dict((os.fsdecode(cu.frombinary(x[0])), x[1]) for x in cu))
 
         cu.execute("""
             SELECT DISTINCT dirName, dirNameId FROM tmpNVF
@@ -775,7 +775,7 @@ class TroveStore:
                 JOIN FilePaths USING (filePathId)
                 JOIN DirNames USING (dirNameId)
         """)
-        self.dirMap.update(dict((cu.frombinary(x[0]), x[1]) for x in cu))
+        self.dirMap.update(dict((os.fsdecode(cu.frombinary(x[0])), x[1]) for x in cu))
 
     def addTroveSetDone(self, callback=None):
         self.dirMap = None
@@ -1071,54 +1071,54 @@ class TroveStore:
                               setVersion = False)
 
             try:
-                next = next(troveTrovesCursor)
-                while next[0] == idx:
-                    idxA, name, version, flavor, flags, timeStamps = next
+                nxt = next(troveTrovesCursor)
+                while nxt[0] == idx:
+                    idxA, name, version, flavor, flags, timeStamps = nxt
                     version = versionCache.get(version, timeStamps)
                     flavor = flavorCache.get(flavor)
                     byDefault = (flags & schema.TROVE_TROVES_BYDEFAULT) != 0
                     weakRef = (flags & schema.TROVE_TROVES_WEAKREF) != 0
                     trv.addTrove(name, version, flavor, byDefault = byDefault,
                                  weakRef = weakRef)
-                    next = next(troveTrovesCursor)
+                    nxt = next(troveTrovesCursor)
 
-                troveTrovesCursor.push(next)
+                troveTrovesCursor.push(nxt)
             except StopIteration:
                 # we're at the end; that's okay
                 pass
 
             fileContents = {}
             try:
-                next = next(troveFilesCursor)
-                while next[0] == idx:
+                nxt = next(troveFilesCursor)
+                while nxt[0] == idx:
                     (idxA, pathId, dirname, basename, versionId, fileId,
-                     stream) = next
+                     stream) = nxt
                     fileId = cu.frombinary(fileId)
-                    path = os.path.join(cu.frombinary(dirname),
-                            cu.frombinary(basename))
+                    path = os.path.join(os.fsdecode(cu.frombinary(dirname)),
+                            os.fsdecode(cu.frombinary(basename)))
                     version = versions.VersionFromString(versionId)
                     trv.addFile(cu.frombinary(pathId), path, version, fileId)
                     if stream is not None:
                         fileContents[fileId] = stream
-                    next = next(troveFilesCursor)
+                    nxt = next(troveFilesCursor)
 
-                troveFilesCursor.push(next)
+                troveFilesCursor.push(nxt)
             except StopIteration:
                 # we're at the end; that's okay
                 pass
 
             try:
-                next = next(troveRedirectsCursor)
-                while next[0] == idx:
-                    idxA, targetName, targetBranch, targetFlavor = next
+                nxt = next(troveRedirectsCursor)
+                while nxt[0] == idx:
+                    idxA, targetName, targetBranch, targetFlavor = nxt
                     targetBranch = versions.VersionFromString(targetBranch)
                     if targetFlavor is not None:
                         targetFlavor = deps.ThawFlavor(targetFlavor)
 
                     trv.addRedirect(targetName, targetBranch, targetFlavor)
-                    next = next(troveRedirectsCursor)
+                    nxt = next(troveRedirectsCursor)
 
-                troveRedirectsCursor.push(next)
+                troveRedirectsCursor.push(nxt)
             except StopIteration:
                 # we're at the end; that's okay
                 pass
@@ -1175,8 +1175,8 @@ class TroveStore:
         versionCache = {}
         for (pathId, dirname, basename, fileId, versionId, stream) in cu:
             version = versionCache.get(versionId, None)
-            path = os.path.join(cu.frombinary(dirname),
-                    cu.frombinary(basename))
+            path = os.path.join(os.fsdecode(cu.frombinary(dirname)),
+                    os.fsdecode(cu.frombinary(basename)))
             if not version:
                 version = self.versionTable.getBareId(versionId)
                 versionCache[versionId] = version

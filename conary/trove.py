@@ -51,7 +51,7 @@ TROVE_VERSION=10
 TROVE_VERSION_1_1=11
 
 # files with this magic pathId are capsules
-CAPSULE_PATHID = '\0' * 16
+CAPSULE_PATHID = b'\0' * 16
 
 @api.developerApi
 def troveIsCollection(troveName):

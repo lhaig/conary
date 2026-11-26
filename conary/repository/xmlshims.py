@@ -45,25 +45,25 @@ class NetworkConvertors(object):
 
     def fromPathId(self, f):
         assert(len(f) == 16)
-        return base64.encodestring(f)
+        return sha1helper.toBase64(f)
 
     def toPathId(self, f):
         assert(len(f) == 25)
-        return base64.decodestring(f)
+        return sha1helper.fromBase64(f)
 
     def fromFileId(self, f):
         assert(len(f) == 20)
-        return base64.encodestring(f)
+        return sha1helper.toBase64(f)
 
     def toFileId(self, f):
         assert(len(f) == 29)
-        return base64.decodestring(f)
+        return sha1helper.fromBase64(f)
 
     def fromPath(self, path):
-        return base64.encodestring(path)
+        return sha1helper.toBase64(path)
 
     def toPath(self, path):
-        return base64.decodestring(path)
+        return sha1helper.fromBase64(path)
 
     def fromBranch(self, b):
         return b.asString()
@@ -84,11 +84,11 @@ class NetworkConvertors(object):
 
     def toFile(self, f):
         pathId = f[:25]
-        return files.ThawFile(base64.decodestring(f[25:]),
+        return files.ThawFile(sha1helper.fromBase64(f[25:]),
                               self.toPathId(pathId))
 
     def fromFile(self, f):
-        s = base64.encodestring(f.freeze())
+        s = sha1helper.toBase64(f.freeze())
         return self.fromPathId(f.pathId()) + s
 
     def toFileAsStream(self, f, rawPathId = False):
@@ -96,10 +96,10 @@ class NetworkConvertors(object):
         if not rawPathId:
             pathId = self.toPathId(pathId)
 
-        return pathId, base64.decodestring(stream)
+        return pathId, sha1helper.fromBase64(stream)
 
     def fromFileAsStream(self, pathId, stream, rawPathId = False):
-        s = base64.encodestring(stream)
+        s = sha1helper.toBase64(stream)
         if not rawPathId:
             pathId = self.fromPathId(pathId)
 

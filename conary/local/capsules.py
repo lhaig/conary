@@ -207,7 +207,7 @@ class MetaCapsuleOperations(CapsuleOperation):
                     fObj = fContents.get()
 
                 d = digestlib.sha1()
-                util.copyfileobj(fObj, os.fdopen(tmpfd, "w"), digest = d)
+                util.copyfileobj(fObj, os.fdopen(tmpfd, "wb"), digest = d)
                 actualSha1 = d.digest()
                 if actualSha1 != sha1:
                     raise files.Sha1Exception(path)

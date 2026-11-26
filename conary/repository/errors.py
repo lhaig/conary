@@ -15,7 +15,6 @@
 #
 
 
-import base64
 
 import conary.errors
 from conary.errors import ConaryError, FilesystemError, InternalConaryError
@@ -455,11 +454,11 @@ class PathsNotFound(RepositoryError):
         self.pathList = pathList
 
     def marshall(self, marshaller):
-        return tuple([ base64.encodestring(x) for x in self.pathList]), {}
+        return tuple([ sha1helper.toBase64(x) for x in self.pathList]), {}
 
     @staticmethod
     def demarshall(marshaller, tup, kwArgs):
-        return ([base64.decodestring(x) for x in tup],), {}
+        return ([sha1helper.fromBase64(x) for x in tup],), {}
 
     def __str__(self):
         return """The following paths were not found: %s""" % (self.pathList,)

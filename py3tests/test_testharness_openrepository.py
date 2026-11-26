@@ -1,7 +1,6 @@
 """conary_test.rephelp.openRepository against the SQLite + stdlib harness."""
 import os
 
-import pytest
 
 from conary_test import rephelp
 
@@ -33,9 +32,6 @@ class OpenRepositoryTest(rephelp.RepositoryHelper):
         cu.execute("select userName from Users where userName = 'test'")
         assert cu.fetchall() == [('test',)]
 
-    @pytest.mark.xfail(strict=True, raises=TypeError,
-                       reason='task 3.16: changeset file container still '
-                              'writes str names/tags to a binary file')
     def testCommitAndReadBack(self):
         repos = self.openRepository()
         self.addComponent('foo:runtime', '1.0',

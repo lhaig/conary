@@ -90,7 +90,7 @@ class FromFilesystem(FileContents):
 
     def get(self):
         try:
-            return open(self.path, "r")
+            return open(self.path, "rb")
         except IOError as e:
             if e.errno != errno.EACCES:
                 raise
@@ -98,7 +98,7 @@ class FromFilesystem(FileContents):
         mode = os.stat(self.path).st_mode & 0o777
         os.chmod(self.path, mode | 0o400)
         try:
-            f = open(self.path, "r")
+            f = open(self.path, "rb")
         finally:
             util.fchmod(f.fileno(), mode)
 

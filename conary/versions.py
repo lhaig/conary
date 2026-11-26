@@ -1424,10 +1424,10 @@ def _parseVersionString(ver, frozen):
     """
 
 def ThawVersion(ver):
+    if isinstance(ver, bytes):
+        ver = ver.decode('ascii')
     if ver == "@NEW@":
         return NewVersion()
-    elif isinstance(ver, bytes):
-        ver = ver.decode('ascii')
 
     v = thawedVersionCache.get(ver, None)
     if v is not None:
@@ -1440,10 +1440,10 @@ def ThawVersion(ver):
 
 @api.publicApi
 def VersionFromString(ver, defaultBranch = None, timeStamps = []):
+    if isinstance(ver, bytes):
+        ver = ver.decode('ascii')
     if ver == "@NEW@":
         return NewVersion()
-    elif isinstance(ver, bytes):
-        ver = ver.decode('ascii')
 
     if timeStamps:
         # timeStamped VFSs are not allowed in the cache

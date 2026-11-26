@@ -962,7 +962,7 @@ class ChangesetFilter(BaseProxy):
                     csInfo.offset = 0
                 else:
                     self.csCache.set((csInfo.fingerprint, iterV),
-                        (csInfo, open(path), None))
+                        (csInfo, open(path, "rb"), None))
             assert csInfo.version == neededCsVersion
 
         return changeSetList
@@ -998,7 +998,7 @@ class ChangesetFilter(BaseProxy):
                 # a file://, this is unnecessary :-(
                 (fd, tmpPath) = tempfile.mkstemp(dir = self.cfg.tmpDir,
                                               suffix = '.ccs-out')
-                outF = os.fdopen(fd, "w")
+                outF = os.fdopen(fd, "wb")
                 util.copyfileobj(inF, outF, sizeLimit = csInfo.rawSize)
                 outF.close()
                 csInfo.path = tmpPath
@@ -1252,7 +1252,7 @@ class FileCachingChangesetFilter(BaseCachingChangesetFilter):
         else:
             (fd, tmpPath) = tempfile.mkstemp(dir = self.cfg.tmpDir,
                                              suffix = '.tmp')
-            dest = util.ExtendedFile(tmpPath, "w+", buffering = False)
+            dest = util.ExtendedFile(tmpPath, "w+b", buffering = False)
             os.close(fd)
             os.unlink(tmpPath)
             headers = [('X-Conary-Servername', self._serverName)]
@@ -1367,7 +1367,7 @@ class ProxyRepositoryServer(Memcache, FileCachingChangesetFilter):
 
         (fd, tmpPath) = tempfile.mkstemp(dir = self.cfg.tmpDir,
                                          suffix = '.tmp')
-        dest = util.ExtendedFile(tmpPath, "w+", buffering = False)
+        dest = util.ExtendedFile(tmpPath, "w+b", buffering = False)
         os.close(fd)
         os.unlink(tmpPath)
         headers = [('X-Conary-Servername', self._serverName)]
@@ -1388,7 +1388,7 @@ class ProxyRepositoryServer(Memcache, FileCachingChangesetFilter):
             nestedF = util.SeekableNestedFile(dest, size, start)
             (fd, tmpPath) = tempfile.mkstemp(dir = self.cfg.tmpDir,
                                              suffix = '.tmp')
-            with os.fdopen(fd, 'w') as f_out:
+            with os.fdopen(fd, 'wb') as f_out:
                 size = util.copyfileobj(nestedF, f_out)
             totalSize -= size
             start += size
@@ -1631,14 +1631,15 @@ class ChangesetProducer(object):
 
     def _readNestedFile(self, name, tag, rawSize, subfile):
         """Use with ChangeSet.dumpIter to handle external file references."""
-        if changeset.ChangedFileTypes.refr[4:] == tag[2:]:
+        if changeset._tagIs(tag, changeset.ChangedFileTypes.refr):
             # this is a reference to a compressed file in the contents store
             entry = subfile.read()
-            sha1, expandedSize = entry.split(' ')
+            sha1, expandedSize = entry.split(b' ')
             expandedSize = int(expandedSize)
-            tag = tag[0:2] + changeset.ChangedFileTypes.file[4:]
+            tag = tag[0:2] + sha1helper.toBytes(
+                    changeset.ChangedFileTypes.file[4:])
             path = self.contentsStore.hashToPath(
-                    sha1helper.sha1FromString(sha1))
+                    sha1helper.sha1FromString(sha1helper.toStr(sha1)))
             fobj = open(path, 'rb')
             return tag, expandedSize, fobj
         else:

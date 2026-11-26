@@ -101,6 +101,10 @@ class IdTable(object):
         return "SELECT %s FROM %s WHERE %s=?" %(
             self.keyName, self.tableName, self.strName)
 
+    def __contains__(self, key):
+        # subclasses override has_key to translate the key
+        return self.has_key(key)
+
     def has_key(self, item):
         cu = self.db.cursor()
         cu.execute(self.__select(), (item,))
@@ -251,6 +255,10 @@ class IdPairMapping:
             return defValue
         return item[0]
 
+    def __contains__(self, key):
+        # subclasses override has_key to translate the key
+        return self.has_key(key)
+
     def has_key(self, key):
         (first, second) = key
         cu = self.db.cursor()
@@ -301,6 +309,10 @@ class IdMapping:
         if not item:
             return defValue
         return item[0]
+
+    def __contains__(self, key):
+        # subclasses override has_key to translate the key
+        return self.has_key(key)
 
     def has_key(self, key):
         cu = self.db.cursor()
