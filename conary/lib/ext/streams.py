@@ -16,7 +16,11 @@
 
 
 import struct
-from conary.lib.compat import namedtuple
+from conary.lib.compat import CmpMixin, cmp, namedtuple
+
+# bytes/str rule (same as the C extension, see conary/streams.py): frozen
+# data is bytes, StreamSet attribute names are str, and StringStream holds
+# bytes (str passed to its constructor or set() is stored UTF-8 encoded).
 
 
 SMALL               = 0
@@ -32,13 +36,13 @@ class _BaseStream(object):
     pass
 
 
-class _ValueStream(_BaseStream):
+class _ValueStream(CmpMixin, _BaseStream):
     _valueDefault = None
 
     def __init__(self, value=None):
         if value is None:
             self._value = self._valueDefault
-        elif type(value) is str:
+        elif type(value) is bytes:
             # This catches StringStream values, but conveniently its frozen
             # form is identical to its value.
             self.thaw(value)
@@ -97,15 +101,17 @@ class _ValueStream(_BaseStream):
 
 
 class StringStream(_ValueStream):
-    _valueDefault = ''
+    _valueDefault = b''
 
     def set(self, value):
+        if isinstance(value, str):
+            value = value.encode('utf-8')
         if value is None:
             # Technically this isn't compatible because cstreams would return
             # None on get later, but when freezing None is treated the same as
             # empty string by containers.
-            value = ''
-        elif not isinstance(value, str):
+            value = b''
+        elif not isinstance(value, bytes):
             raise TypeError("invalid type '%s' for string stream" %
                     type(value).__name__)
         self._value = value
@@ -126,7 +132,7 @@ class _NumericStream(_ValueStream):
 
     def freeze(self, skipSet=None):
         if self._value is None:
-            return ''
+            return b''
         else:
             return struct.pack(self._intFormat, self._value)
 
@@ -235,7 +241,7 @@ class StreamSet(_BaseStream):
             words.append(substream)
         if includeEmpty and not words:
             return None
-        return ''.join(words)
+        return b''.join(words)
 
     def freeze(self, skipSet=None, freezeKnown=True, freezeUnknown=True):
         out = []
@@ -259,8 +265,8 @@ class StreamSet(_BaseStream):
 
     @staticmethod
     def _readTag(frozen):
-        tagNum = ord(frozen[0])
-        if ord(frozen[1]) & 0x80:
+        tagNum = frozen[0]
+        if frozen[1] & 0x80:
             # 31 bit size
             size = struct.unpack('>I', frozen[1:5])[0] & 0x7fffffff
             sizeType = LARGE

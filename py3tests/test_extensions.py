@@ -135,16 +135,15 @@ def test_digest_uncompress(tmp_path):
 
 
 def test_pack_roundtrip():
-    # The C module works on bytes (format and data), unlike the str-based
-    # pure-Python fallback.
+    # Format strings are str, packed data is bytes (see pack.c).
     mod = _load('pack')
-    packed = mod.pack(b'!BSI', 1, b'abc')
+    packed = mod.pack('!BSI', 1, b'abc')
     assert packed == b'\x01\x00\x00\x00\x03abc'
-    off, vals = mod.unpack(b'!BSI', 0, packed)
+    off, vals = mod.unpack('!BSI', 0, packed)
     assert (off, list(vals)) == (8, [1, b'abc'])
-    packed = mod.pack(b'!SH', b'hello')
+    packed = mod.pack('!SH', b'hello')
     assert packed == b'\x00\x05hello'
-    off, vals = mod.unpack(b'!SH', 0, packed)
+    off, vals = mod.unpack('!SH', 0, packed)
     assert list(vals) == [b'hello']
 
 

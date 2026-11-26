@@ -15,6 +15,15 @@
  */
 
 
+/*
+ * bytes/str rule for this module (the same rule is documented in
+ * conary/streams.py):
+ *   - format strings are str (ASCII); a bytes format raises TypeError
+ *   - data for S and D, the data passed to unpack(), and everything
+ *     returned from pack(), unpack() and dynamicSize() is bytes
+ *   - passing str where bytes are expected raises TypeError
+ */
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <arpa/inet.h>
@@ -69,12 +78,15 @@ static PyObject * pack(PyObject * self, PyObject * args) {
     uint32_t fourBytes;
 
     formatArg = PyTuple_GET_ITEM(args, 0);
-    if (!PYBYTES_CheckExact(formatArg)) {
-        PyErr_SetString(PyExc_TypeError, "first argument must be a string");
+    if (!PyUnicode_Check(formatArg)) {
+        PyErr_SetString(PyExc_TypeError, "first argument must be a str");
         return NULL;
     }
 
-    formatPtr = format = PYBYTES_AS_STRING(formatArg);
+    formatPtr = format = (char *) PyUnicode_AsUTF8(formatArg);
+    if (format == NULL) {
+        return NULL;
+    }
 
     /* walk the format twice, first to figure out the length and the second
        to build the string */
@@ -101,12 +113,12 @@ static PyObject * pack(PyObject * self, PyObject * args) {
 
             case 'S':
                 arg = PyTuple_GET_ITEM(args, argNum++);
-                len = PYBYTES_GET_SIZE(arg);
                 if (!PYBYTES_CheckExact(arg)) {
                     PyErr_SetString(PyExc_TypeError,
-                                    "argument for S format must be a str");
+                                    "argument for S format must be bytes");
                     return NULL;
                 }
+                len = PYBYTES_GET_SIZE(arg);
                 s = PYBYTES_AS_STRING(arg);
 
                 if (*formatPtr == 'H') {
@@ -226,18 +238,21 @@ static PyObject * unpack(PyObject *self, PyObject *args) {
     offsetArg = PyTuple_GET_ITEM(args, 1);
     dataArg = PyTuple_GET_ITEM(args, 2);
 
-    if (!PYBYTES_CheckExact(formatArg)) {
-        PyErr_SetString(PyExc_TypeError, "first argument must be a string");
+    if (!PyUnicode_Check(formatArg)) {
+        PyErr_SetString(PyExc_TypeError, "first argument must be a str");
         return NULL;
     } else if (!PYINT_CheckExact(offsetArg)) {
         PyErr_SetString(PyExc_TypeError, "second argument must be an int");
         return NULL;
     } else if (!PYBYTES_CheckExact(dataArg)) {
-        PyErr_SetString(PyExc_TypeError, "third argument must be a string");
+        PyErr_SetString(PyExc_TypeError, "third argument must be bytes");
         return NULL;
     }
 
-    format = PYBYTES_AS_STRING(formatArg);
+    format = (char *) PyUnicode_AsUTF8(formatArg);
+    if (format == NULL) {
+        return NULL;
+    }
     offset = PYINT_AS_LONG(offsetArg);
     data = PYBYTES_AS_STRING(dataArg);
     dataLen = PYBYTES_GET_SIZE(dataArg);
@@ -435,7 +450,7 @@ static PyObject * dynamicSize(PyObject *self, PyObject *args) {
 
     sizeArg = PyTuple_GET_ITEM(args, 0);
     if (!PYINT_CheckExact(sizeArg)) {
-        PyErr_SetString(PyExc_TypeError, "second argument must be a string");
+        PyErr_SetString(PyExc_TypeError, "argument must be an int");
         return NULL;
     }
 

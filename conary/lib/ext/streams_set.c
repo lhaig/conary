@@ -15,6 +15,18 @@
  */
 
 
+/*
+ * bytes/str rule for stream sets (documented for Python callers in
+ * conary/streams.py):
+ *   - frozen/wire data is bytes. freeze(), diff() and the data handed to
+ *     member thaw() and twm() are bytes, and every parse of incoming wire
+ *     data here uses y# (or an explicit bytes check for optional data),
+ *     never s# or z#, which would silently accept or produce str.
+ *   - tag/attribute names are str.
+ *   - a member whose freeze() returns str (dependency and flavor streams,
+ *     which are text above the wire) is encoded as UTF-8 when frozen.
+ */
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <netinet/in.h>
@@ -118,7 +130,7 @@ static int StreamSetDef_Init(PyObject * self, PyObject * args,
 
         ssd->tags[i].tag = tag;
         ssd->tags[i].size = size;
-        ssd->tags[i].name = PYBYTES_FromString(name);
+        ssd->tags[i].name = PyUnicode_InternFromString(name);
         ssd->tags[i].type = streamType;
         Py_INCREF(streamType);
     }
@@ -205,6 +217,26 @@ static StreamSetDefObject * StreamSet_GetSSD(PyTypeObject *o) {
     return (StreamSetDefObject *) ssd;
 }
 
+/* Compare two stream set members. Python classes and nested stream sets take
+   an optional skipSet in __eq__, but under Python 3 the compiled streams'
+   __eq__ is the plain two-operand slot wrapper, so use the rich comparison
+   unless a skipSet needs to be passed along, and fall back to it if the
+   member's __eq__ does not take one. */
+static PyObject * memberEq(PyObject * attr, PyObject * otherAttr,
+                           PyObject * skipSet) {
+    PyObject * rc;
+
+    if (skipSet == Py_None)
+        return PyObject_RichCompare(attr, otherAttr, Py_EQ);
+
+    rc = PyObject_CallMethod(attr, "__eq__", "OO", otherAttr, skipSet);
+    if (rc == NULL && PyErr_ExceptionMatches(PyExc_TypeError)) {
+        PyErr_Clear();
+        rc = PyObject_RichCompare(attr, otherAttr, Py_EQ);
+    }
+    return rc;
+}
+
 static int _StreamSet_doEq(PyObject * self,
 			   PyObject * args,
 			   PyObject * kwargs) {
@@ -240,12 +272,12 @@ static int _StreamSet_doEq(PyObject * self,
 
 	attr = PyObject_GetAttr((PyObject *) self, ssd->tags[i].name);
 	otherAttr = PyObject_GetAttr((PyObject *) other, ssd->tags[i].name);
-	rc = PyObject_CallMethod(attr, "__eq__", "OO", otherAttr, skipSet);
+	rc = memberEq(attr, otherAttr, skipSet);
 	Py_DECREF(attr);
 	Py_DECREF(otherAttr);
 	if (!rc) return -1;
 
-	if (!PyLong_AsLong(rc)) {
+	if (!PyObject_IsTrue(rc)) {
 	    /* this is non zero if they are the same, zero if they are
 	       different */
 	    Py_DECREF(rc);
@@ -643,7 +675,7 @@ static PyObject * StreamSet_Find(PyObject * objClass, PyObject * args) {
     int ssdIdx;
     StreamSetDefObject * ssd;
 
-    if (!PyArg_ParseTuple(args, "is#", &targetStreamId, 
+    if (!PyArg_ParseTuple(args, "iy#", &targetStreamId, 
                           &data, &dataLen))
         return NULL;
 
@@ -673,7 +705,7 @@ static PyObject * StreamSet_Find(PyObject * objClass, PyObject * args) {
             continue;
         }
 
-        if (!(obj = PyObject_CallFunction(ssd->tags[ssdIdx].type, "s#",
+        if (!(obj = PyObject_CallFunction(ssd->tags[ssdIdx].type, "y#",
                                           chptr, (Py_ssize_t) size)))
             return NULL;
 
@@ -776,6 +808,21 @@ static PyObject * StreamSet_Freeze(StreamSetObject * self,
     return rc;
 }
 
+/* Accepts None (data is NULL) or bytes; anything else, str included, is a
+   TypeError. */
+static int optionalBytes(PyObject * obj, char ** data, Py_ssize_t * len) {
+    if (obj == Py_None) {
+        *data = NULL;
+        *len = 0;
+        return 0;
+    }
+    if (!PYBYTES_CheckExact(obj)) {
+        PyErr_SetString(PyExc_TypeError, "frozen data must be bytes or None");
+        return -1;
+    }
+    return PYBYTES_AsStringAndSize(obj, data, len);
+}
+
 static int StreamSet_Init(PyObject * o, PyObject * args,
 			  PyObject * kwargs) {
     static char * kwlist[] = { "data", "offset", NULL };
@@ -784,12 +831,15 @@ static int StreamSet_Init(PyObject * o, PyObject * args,
     int i;
     int offset = 0;
     char * data = NULL;
-    Py_ssize_t dataLen;
+    Py_ssize_t dataLen = 0;
+    PyObject * dataObj = Py_None;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|z#i", kwlist, &data, 
-				     &dataLen, &offset)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Oi", kwlist, &dataObj,
+				     &offset)) {
         return -1;
     }
+    if (optionalBytes(dataObj, &data, &dataLen))
+        return -1;
     ssd = StreamSet_GetSSD(Py_TYPE(o));
     if (!ssd)
 	return -1;
@@ -838,7 +888,7 @@ static PyObject * StreamSet_Thaw(PyObject * o, PyObject * args) {
     Py_ssize_t dataLen;
     StreamSetDefObject * ssd;
 
-    if (!PyArg_ParseTuple(args, "s#", &data, &dataLen))
+    if (!PyArg_ParseTuple(args, "y#", &data, &dataLen))
         return NULL;
 
     ssd = StreamSet_GetSSD(Py_TYPE(o));
@@ -906,7 +956,7 @@ static int Thaw_raw(PyObject * self, StreamSetDefObject * ssd,
         if (!attr) {
             return -1;
         }
-	ro = PyObject_CallMethod(attr, "thaw", "s#", streamData, (Py_ssize_t) size);
+	ro = PyObject_CallMethod(attr, "thaw", "y#", streamData, (Py_ssize_t) size);
 	Py_DECREF(attr);
 	if (!ro) {
 	    return -1;
@@ -1023,8 +1073,12 @@ static PyObject * StreamSet_Twm(StreamSetObject * self, PyObject * args,
     unsigned int streamId;
     PyObject * attr, * baseAttr, * ro;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "z#O!|O", kwlist, &diff,
-                &diffLen, Py_TYPE(self), (PyObject *) &base, &skipSet))
+    PyObject * diffObj;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO!|O", kwlist, &diffObj,
+                Py_TYPE(self), (PyObject *) &base, &skipSet))
+        return NULL;
+    if (optionalBytes(diffObj, &diff, &diffLen))
         return NULL;
 
     if (skipSet != Py_None && !PyDict_Check(skipSet)) {
@@ -1113,7 +1167,7 @@ static PyObject * StreamSet_Twm(StreamSetObject * self, PyObject * args,
 	attr = PyObject_GetAttr((PyObject *) self, ssd->tags[i].name);
 	baseAttr = PyObject_GetAttr((PyObject *) base,
 				    ssd->tags[i].name);
-	ro = PyObject_CallMethod(attr, "twm", "s#O", streamData, (Py_ssize_t) size,
+	ro = PyObject_CallMethod(attr, "twm", "y#O", streamData, (Py_ssize_t) size,
 				 baseAttr);
 	Py_DECREF(attr);
 	Py_DECREF(baseAttr);

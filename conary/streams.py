@@ -17,6 +17,27 @@
 
 """
 Defines the datastreams stored in a changeset
+
+bytes/str rule for streams (text above the wire, bytes on the wire):
+
+ - Frozen/wire data is bytes. freeze() and diff() return bytes, and thaw(),
+   twm() and the StreamSet constructor take bytes. The C code in
+   conary/lib/ext passes wire data with y#, never s#/z#, so a str reaching
+   a thaw raises TypeError instead of being silently decoded.
+ - StreamSet tag/attribute names are str. pack format strings are str, and
+   pack's S/D data and results are bytes (see conary/lib/ext/pack.c).
+ - StringStream holds bytes (it carries binary data such as sha1s and file
+   contents). Its constructor and set() accept str and store the UTF-8
+   encoding. Sha1Stream, Md5Stream and the other digest streams are bytes
+   only.
+ - Exception: DependenciesStream and FlavorsStream keep the text freeze()
+   of DependencySet/Flavor (dep_freeze works on str). Their thaw accepts
+   bytes (UTF-8) or str, and StreamSet encodes their text when it freezes.
+ - Streams of text values (FrozenVersionStream, StringVersionStream,
+   StringsStream, OrderedStringsStream, ReferencedTroveList,
+   OptionalFlavorStream) hold str and freeze() to UTF-8 bytes.
+   OrderedBinaryStringsStream holds bytes. StreamCollection and its
+   subclasses are bytes throughout.
 """
 
 import itertools
@@ -28,7 +49,6 @@ from conary.deps import deps
 from conary.lib import sha1helper
 from conary.lib.ext import pack
 from conary.lib.ext import streams as cstreams
-import sys
 
 IntStream = cstreams.IntStream
 ShortStream = cstreams.ShortStream
@@ -111,13 +131,13 @@ class Md5Stream(StringStream):
 
     def set(self, val):
         assert(len(val) == 16)
-        StringStream.set(val)
+        StringStream.set(self, val)
 
     def setFromString(self, val):
         s = struct.pack("!4I", int(val[ 0: 8], 16),
                                int(val[ 8:16], 16), int(val[16:24], 16),
                                int(val[24:32], 16))
-        StringStream.set(s)
+        StringStream.set(self, s)
 
 class Sha1Stream(StringStream):
     __slots__ = ()
@@ -199,11 +219,11 @@ class FrozenVersionStream(InfoStream):
         # at commit time, including them would make signing the to-be-committed
         # changeset impossible.
         if not self.v:
-            return ""
+            return b""
         elif skipSet and 'versionStrings' in skipSet:
-            return self.v.asString()
+            return self.v.asString().encode('utf-8')
         else:
-            return self.v.freeze()
+            return self.v.freeze().encode('utf-8')
 
     def diff(self, them):
         if self.v != them.v:
@@ -249,9 +269,9 @@ class StringVersionStream(FrozenVersionStream):
 
     def freeze(self, skipSet = {}):
         if not self.v:
-            return ""
+            return b""
         else:
-            return self.v.asString()
+            return self.v.asString().encode('utf-8')
 
 class DepsAttr(object):
 
@@ -302,21 +322,22 @@ class OptionalFlavorStream(InfoStream):
 
     def freeze(self, skipSet = None):
         if self.deps is None:
-            return '\0'
+            return b'\0'
 
-        return self.deps.freeze()
+        return self.deps.freeze().encode('utf-8')
 
     def thaw(self, s):
-        if s == '\0':
+        if s == b'\0':
             self.deps = None
         else:
             self.deps = FlavorsStream(s)
 
     def diff(self, other, skipSet = None):
         if self.deps is None and other.deps is None:
-            return ''
+            return b''
         elif self.deps is None:
-            return '\0';
+            return b'\0'
+
 
         return self.deps.diff(other)
 
@@ -328,7 +349,7 @@ class OptionalFlavorStream(InfoStream):
             self.deps = FlavorsStream(val.freeze())
 
     def twm(self, diff, base):
-        if diff == '\0':
+        if diff == b'\0':
             self.deps = None
         else:
             if self.deps is None:
@@ -338,7 +359,7 @@ class OptionalFlavorStream(InfoStream):
     def __init__(self, frz = None):
         if frz == None:
             self.deps = FlavorsStream('')
-        elif frz == '\0':
+        elif frz == b'\0':
             self.deps = None
         else:
             self.deps = FlavorsStream(frz)
@@ -359,8 +380,8 @@ class StringsStream(list, InfoStream):
 
     def freeze(self, skipSet = None):
         if not self:
-            return ''
-        return '\0'.join(self)
+            return b''
+        return '\0'.join(self).encode('utf-8')
 
     def diff(self, them):
         if self != them:
@@ -371,7 +392,7 @@ class StringsStream(list, InfoStream):
         del self[:]
 
         if len(frz) != 0:
-            for s in frz.split('\0'):
+            for s in frz.decode('utf-8').split('\0'):
                 self.set(s)
 
     def twm(self, diff, base):
@@ -381,7 +402,7 @@ class StringsStream(list, InfoStream):
     def __call__(self):
         return self
 
-    def __init__(self, frz = ''):
+    def __init__(self, frz = b''):
         self.thaw(frz)
 
 class OrderedStringsStream(StringsStream):
@@ -391,15 +412,20 @@ class OrderedStringsStream(StringsStream):
         # like StringsStream except not sorted
 
 class OrderedBinaryStringsStream(StringsStream):
-    # same as OrderedStringsStream, but stores length of each string
+    # same as OrderedStringsStream, but stores length of each string. The
+    # members are bytes.
+    def set(self, val):
+        assert(type(val) is bytes)
+        self.append(val)
+
     def freeze(self, skipSet = None):
         if not self:
-            return ''
+            return b''
         l = []
         for s in self:
             l.append(pack.dynamicSize(len(s)))
             l.append(s)
-        return ''.join(l)
+        return b''.join(l)
 
     def thaw(self, frz):
         del self[:]
@@ -425,13 +451,13 @@ class ReferencedTroveList(list, InfoStream):
             l.append(version)
             l.append(flavor)
 
-        return "\0".join(l)
+        return "\0".join(l).encode('utf-8')
 
     def thaw(self, data):
         del self[:]
         if not data: return
 
-        l = data.split("\0")
+        l = data.decode('utf-8').split("\0")
         i = 0
 
         while i < len(l):
@@ -488,9 +514,9 @@ class StreamCollection(InfoStream):
         l = []
         for typeId, itemDict in sorted(self._items.items()):
             itemList = sorted(itemDict)
-            if itemList and not hasattr(itemList[0], '__cmp__'):
+            if itemList and type(itemList[0]).__lt__ is object.__lt__:
                 raise AssertionError('Programming Error: %s type object '
-                                     'does not have a __cmp__ method - '
+                                     'does not have an ordering method - '
                                      'sorting will be unstable'
                                      % itemList[0].__class__.__name__)
 
@@ -500,10 +526,9 @@ class StreamCollection(InfoStream):
                     raise OverflowError
                 l.append(pack.pack("!BSH", typeId, s))
 
-        return "".join(l)
+        return b"".join(l)
 
     def thaw(self, data):
-        data = sys.intern(data)
         self._data = data
 
     def _thaw(self):
@@ -560,7 +585,7 @@ class StreamCollection(InfoStream):
             l.append(struct.pack("!BH", typeId, len(s)))
             l.append(s)
 
-        return "".join(l)
+        return b"".join(l)
 
     def twm(self, diff, base):
         assert(self == base)
@@ -582,7 +607,7 @@ class StreamCollection(InfoStream):
         if data is not None:
             self.thaw(data)
         else:
-            self.thaw('')
+            self.thaw(b'')
 
 class OrderedStreamCollection(StreamCollection):
     # same as StreamCollection, but ordered and can holder bigger stuff
@@ -603,7 +628,7 @@ class OrderedStreamCollection(StreamCollection):
                 l.append(pack.dynamicSize(len(s)))
                 l.append(s)
 
-        return "".join(l)
+        return b"".join(l)
 
     def _thaw(self):
         i = 0
@@ -667,7 +692,7 @@ class OrderedStreamCollection(StreamCollection):
                 l.append(pack.dynamicSize(len(s)))
                 l.append(s)
 
-        return "".join(l)
+        return b"".join(l)
 
     def twm(self, diff, base):
         assert(self == base)

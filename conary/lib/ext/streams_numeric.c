@@ -15,6 +15,11 @@
  */
 
 
+/*
+ * bytes/str rule: frozen numeric streams are bytes. thaw() and twm() take
+ * bytes only (y#), never str. See conary/streams.py and streams_set.c.
+ */
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <netinet/in.h>
@@ -505,7 +510,7 @@ static PyObject * NumericStream_Thaw(PyObject * self, PyObject * args) {
     char * frozen;
     Py_ssize_t frozenLen;
 
-    if (!PyArg_ParseTuple(args, "s#", &frozen, &frozenLen))
+    if (!PyArg_ParseTuple(args, "y#", &frozen, &frozenLen))
         return NULL;
 
     if (raw_NumericStream_Thaw((NumericStreamObject *) self, frozen, frozenLen))
@@ -521,7 +526,7 @@ static PyObject * NumericStream_Twm(PyObject * self, PyObject * args) {
     NumericStreamObject * other;
     PyObject * retVal;
 
-    if (!PyArg_ParseTuple(args, "s#O", &diff, &diffLen, &other,
+    if (!PyArg_ParseTuple(args, "y#O", &diff, &diffLen, &other,
                           NumericStreamType))
         return NULL;
 

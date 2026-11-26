@@ -17,8 +17,13 @@
 
 import struct
 
+# bytes/str rule (same as pack.c): format strings are str, S and D data and
+# everything returned is bytes. A bytes format or str data raises TypeError.
+
 
 def pack(pfmt, *args):
+    if not isinstance(pfmt, str):
+        raise TypeError("first argument must be a str")
     if pfmt[0] != '!':
         raise ValueError("format must begin with !")
     pfmt = pfmt[1:]
@@ -34,6 +39,8 @@ def pack(pfmt, *args):
         elif code == 'S':
             sizecode, pfmt = pfmt[0], pfmt[1:]
             string = pargs.pop(0)
+            if not isinstance(string, bytes):
+                raise TypeError("argument for S format must be bytes")
             if sizecode in 'HI':
                 sfmt += '%s%ds' % (sizecode, len(string))
                 sargs.extend([len(string), string])
@@ -51,6 +58,10 @@ def pack(pfmt, *args):
 
 
 def unpack(pfmt, offset, data):
+    if not isinstance(pfmt, str):
+        raise TypeError("first argument must be a str")
+    if not isinstance(data, bytes):
+        raise TypeError("third argument must be bytes")
     data = data[offset:]
     origLen = len(data)
     if pfmt[0] != '!':
@@ -60,7 +71,7 @@ def unpack(pfmt, offset, data):
     while pfmt:
         code, pfmt = pfmt[0], pfmt[1:]
         if code == 'B':
-            out.append(ord(data[:1]))
+            out.append(data[0])
             data = data[1:]
         elif code == 'H':
             out.append(struct.unpack('>H', data[:2])[0])
@@ -86,9 +97,9 @@ def unpack(pfmt, offset, data):
             out.append(data[:size])
             data = data[size:]
         elif code == 'D':
-            sizebits = ord(data[0]) & 0xc0
+            sizebits = data[0] & 0xc0
             if sizebits == 0x00:
-                size = ord(data[0])
+                size = data[0]
                 data = data[1:]
             elif sizebits == 0x40:
                 size = struct.unpack('!H', data[:2])[0] & 0x3fff
@@ -109,7 +120,7 @@ def unpack(pfmt, offset, data):
 
 def dynamicSize(size):
     if size < 0x40:
-        return chr(size)
+        return bytes([size])
     elif size < 0x4000:
         size |= 0x4000
         fmt = '!H'

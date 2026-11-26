@@ -15,6 +15,12 @@
  */
 
 
+/*
+ * bytes/str rule: a StringStream holds bytes. The constructor and set()
+ * accept str and store its UTF-8 encoding; thaw() and twm() take the wire
+ * form, which is bytes only (y#). See conary/streams.py and streams_set.c.
+ */
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <netinet/in.h>
@@ -185,14 +191,19 @@ static int StringStream_Init(PyObject * self, PyObject * args,
     }
 
     if (initObj) {
-	if (initObj != Py_None && !PYBYTES_Check(initObj)) {
+	if (initObj == Py_None || PYBYTES_Check(initObj)) {
+	    o->s = initObj;
+	    Py_INCREF(o->s);
+	} else if (PyUnicode_CheckExact(initObj)) {
+	    /* text is stored as its UTF-8 bytes, same as set() */
+	    o->s = PyUnicode_AsUTF8String(initObj);
+	    if (o->s == NULL)
+		return -1;
+	} else {
 	    PyErr_SetString(PyExc_TypeError, "frozen value must be "
-			    "None or a string");
+			    "None, bytes or str");
 	    return -1;
 	}
-	    
-	o->s = initObj;
-	Py_INCREF(o->s);
     } else {
 	o->s = PYBYTES_FromString("");
     }
@@ -248,7 +259,7 @@ static PyObject * StringStream_Twm(StringStreamObject * self, PyObject * args) {
        replacement of the value, as long we don't conflict with the other
        object that's participating in the twm.
     */
-    if (!PyArg_ParseTuple(args, "s#O", &diff, &diffLen, &other,
+    if (!PyArg_ParseTuple(args, "y#O", &diff, &diffLen, &other,
                           Py_TYPE(self)))
         return NULL;
 
