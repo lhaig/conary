@@ -15,6 +15,7 @@ toolchain_check: devenv/run devenv/check.sh
 2to3: devenv/run python3.11 -W ignore -m lib2to3 -w -n -j4 conary conary_test commands scripts
 build: devenv/run make -C conary/lib/ext   (needs Make.rules fixes from task 1.3)
 test: devenv/run python3 -m pytest <path>   (conary_test runner TBD in phase 2: testsuite.py or pytest)
+compile_gate: devenv/compile_check.sh   (run on the host: it needs shasum, which the container lacks)
 lint: devenv/run python3 -m compileall -q conary conary_test commands scripts ; devenv/run python3 -m pyflakes conary
 
 ## Subagent Defaults

@@ -115,3 +115,25 @@ PATTERN: bytes/str - Dependency/flavor strings are text everywhere above the wir
 
 PATTERN: verification - After a mechanical literal rewrite, compare ast.dump of HEAD vs working tree per file; only files with intended semantic edits may differ.
 PATTERN: testing - conary/constants.py defines lowercase `version`.
+
+## 2026-11-26 - task 2.1 DONE: testrunner harness rebuilt
+
+- Phase 2 planned (commit b74d4a5c6). The SAS harness (testrunner, testutils) is not in any branch or tag of the fork or of
+  sassoftware/conary, nor on GitHub or PyPI, so it is rebuilt in testharness/ from what conary_test uses.
+- testharness/testrunner/{testhelp,testcase,decorators,runner,suite}.py. SkipTestException subclasses unittest.SkipTest and
+  is one class in every module. context() appends to func._contexts. mock() saves the raw __dict__ entry, delattrs inherited
+  attributes and keeps staticmethod/classmethod wrapping. captureOutput captures at fd 1 and sys.stdout. mimicRoot logs
+  chown to self.chownLog and executes chmod while logging it to self.chmodLog.
+- Advisor plan: REVISE. It added self.logFilter/testcase.LogFilter (34 files, about 600 calls) and TestCaseWithWorkDir, dropped
+  assertContent (webunit's WebTestCase; webtest.py skips without webunit), and required descriptor-aware mock.
+- Review: REJECT, then MINOR after one fix round. Fixed: ignore() before add(), a str expected value is one record, and
+  compare(allowMissing=True). Orchestrator tightened the testhelptest subprocess check to assert returncode and the exact
+  summary line.
+- MINOR notes (not fixed): the resolve scan does not follow `testrunner.x.attr` after a plain `import testrunner.x` (no such
+  imports today); compile_check.sh roots do not include testharness/ (py3tests imports cover it).
+- Gates: py3tests 410 passed (41 new); compile_check 475 files, 0 failures; pyflakes clean on the new files.
+
+PATTERN: testing - Harness semantics must be checked against real call-site order (ignore() before add(), multi-line single log records, allowMissing=), not just self-consistent unit tests.
+PATTERN: testing - Subprocess pytest runs must assert returncode as well as the summary text.
+PATTERN: tooling - devenv/compile_check.sh runs on the host (it needs shasum, which the container lacks).
+PATTERN: harness - conary_test/__init__.py imports testrunner itself, so running any conary_test module needs testharness/ on PYTHONPATH before collection.
