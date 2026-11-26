@@ -13,8 +13,7 @@ import unittest
 
 from testrunner.testcase import (  # noqa: F401  (re-exports)
     LogFilter, SkipTestException, TestCaseWithWorkDir, safe_repr)
-
-_MISSING = object()
+from testutils import mock as testutils_mock
 
 
 def context(*names):
@@ -61,6 +60,10 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         self.logFilter.remove()
         self.unmock()
+        # Also undo testutils.mock.mock() patches: a separate stack, and some
+        # tests never call unmockAll (updatecmdtest) or only on success
+        # (rpmtest).
+        testutils_mock.unmockAll()
         self.realRoot()
 
     # -- mocking --------------------------------------------------------
@@ -70,28 +73,12 @@ class TestCase(unittest.TestCase):
         LIFO order.  The raw __dict__ entry is saved, so an attribute that
         was only inherited (or missing) is deleted again rather than pinned
         on obj.  A staticmethod/classmethod stays one (testhelptest.py)."""
-        d = getattr(obj, '__dict__', {})
-        saved = d.get(name, _MISSING)
-        if isinstance(saved, staticmethod) and \
-                not isinstance(value, staticmethod):
-            value = staticmethod(value)
-        elif isinstance(saved, classmethod) and \
-                not isinstance(value, classmethod):
-            value = classmethod(value)
-        self._undo.append((obj, name, saved))
-        setattr(obj, name, value)
+        self._undo.append(testutils_mock.patch(obj, name, value))
 
     def unmock(self):
         """Undo every mock() in reverse order."""
         while self._undo:
-            obj, name, saved = self._undo.pop()
-            if saved is _MISSING:
-                try:
-                    delattr(obj, name)
-                except AttributeError:
-                    pass
-            else:
-                setattr(obj, name, saved)
+            testutils_mock.restore(self._undo.pop())
 
     # -- output capture -------------------------------------------------
 

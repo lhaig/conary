@@ -137,3 +137,21 @@ PATTERN: testing - Harness semantics must be checked against real call-site orde
 PATTERN: testing - Subprocess pytest runs must assert returncode as well as the summary text.
 PATTERN: tooling - devenv/compile_check.sh runs on the host (it needs shasum, which the container lacks).
 PATTERN: harness - conary_test/__init__.py imports testrunner itself, so running any conary_test module needs testharness/ on PYTHONPATH before collection.
+
+## 2026-11-26 - task 2.2 DONE: testutils.mock
+
+- testharness/testutils/mock.py: MockObject, MockInstance, MockParams, mock, mockMethod, mockClass, unmockAll. The ast scan
+  of `<expr>._mock.<attr>` found the real API: set, assertCalled (consumes the matched call; updatecmdtest 1071/1082),
+  setDefaultReturn, setReturn, appendReturn (FIFO), enableMethod, assertNotCalled, raiseErrorOnAccess. The default return
+  is one stable child MockObject. mockClass builds a real subclass whose __new__ returns a MockInstance, because packagepolicy
+  isinstance-checks a patched magic.jar.
+- The 2.1 save/restore logic moved into testutils.mock (patch/restore) and is shared by TestCase.mock. TestCase.tearDown
+  also calls mock.unmockAll(), since rpmtest and updatecmdtest leak patches on failure paths. mock.py never imports testrunner.
+- Ran as a parallel batch with 2.3 in worktrees. Advisor plan PROCEED; review MINOR.
+- MINOR notes: test_testutils_mock.py has its own conary_test source walker, duplicating test_testharness_resolve._sources;
+  MockInstance mocks properties unless enabled (SystemModelFile.contents would be a MockObject), deliberate and tested.
+- Gates: py3tests 443 passed; compile_check 475 files, 0 failures; pyflakes clean.
+
+PATTERN: environment - Workflow worktrees are cut from garnet, not py3: reset the scratch branch to py3 first and copy the gitignored build outputs (conary/constants.py, conary/**/*.so) from the main checkout. Tell workers this up front.
+PATTERN: testing - Scan `<expr>._mock.<attr>` with ast to find the harness API a module-attribute scan cannot see; assert known names are found so the scan cannot pass vacuously.
+PATTERN: harness - testutils.mock must not import testrunner; testrunner.testhelp imports testutils.mock.
