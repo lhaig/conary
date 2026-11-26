@@ -34,6 +34,7 @@ import subprocess
 import sys
 import time
 import traceback
+import unittest
 
 try:
     from M2Crypto import SSL
@@ -537,6 +538,9 @@ class RepositoryHelper(testhelp.TestCase):
                         singleWorker=singleWorker,
                         sslCertAndKey=sslCertAndKey,
                         )
+            except unittest.SkipTest:
+                # a skip from sqlharness.start is final; do not retry it
+                raise
             except:
                 if count == 3:
                     raise
