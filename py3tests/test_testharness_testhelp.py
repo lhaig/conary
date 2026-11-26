@@ -473,3 +473,68 @@ def test_log_check2_verbosity_restored(tc, log):
     assert tc.logCheck2('+ detail', fn, verbosity=logging.DEBUG) == \
         logging.DEBUG
     assert log.getVerbosity() == old
+
+
+# ---- assertRaises ----------------------------------------------------
+
+class _Boom(Exception):
+    pass
+
+
+def _raiser(exc, *args, **kw):
+    raise exc(*args)
+
+
+def _kwraiser(**kw):
+    raise _Boom(kw)
+
+
+@pytest.mark.parametrize('excClass, raised', [
+    (_Boom, _Boom('a', 'b')),
+    ((KeyError, _Boom), _Boom('x')),
+    ((KeyError, _Boom), KeyError('k')),
+    (ValueError, ValueError()),
+])
+def test_assert_raises_callable_returns_instance(tc, excClass, raised):
+    def f():
+        raise raised
+    got = tc.assertRaises(excClass, f)
+    assert got is raised
+
+
+def test_assert_raises_callable_args_intact(tc):
+    got = tc.assertRaises(_Boom, _raiser, _Boom, 1, 'two')
+    assert isinstance(got, _Boom)
+    assert got.args == (1, 'two')
+
+
+def test_assert_raises_passes_kwargs_to_callable(tc):
+    got = tc.assertRaises(_Boom, _kwraiser, a=1, b=2)
+    assert got.args == ({'a': 1, 'b': 2},)
+
+
+def test_assert_raises_context_manager_form(tc):
+    with tc.assertRaises(_Boom) as cm:
+        raise _Boom('ctx')
+    assert cm.exception.args == ('ctx',)
+
+
+def test_assert_raises_context_manager_msg(tc):
+    with pytest.raises(tc.failureException, match='custom'):
+        with tc.assertRaises(_Boom, msg='custom'):
+            pass
+
+
+@pytest.mark.parametrize('excClass, text', [
+    (_Boom, '_Boom not raised'),
+    ((KeyError, _Boom), 'KeyError, _Boom not raised'),
+])
+def test_assert_raises_no_raise_fails(tc, excClass, text):
+    with pytest.raises(tc.failureException) as ei:
+        tc.assertRaises(excClass, lambda: None)
+    assert text in str(ei.value)
+
+
+def test_assert_raises_other_exception_propagates(tc):
+    with pytest.raises(KeyError):
+        tc.assertRaises(_Boom, _raiser, KeyError, 'k')

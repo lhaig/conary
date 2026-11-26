@@ -57,6 +57,23 @@ class TestCase(unittest.TestCase):
         self.chmodLog = []
         self.mknodLog = []
 
+    def assertRaises(self, excClass, *args, **kw):
+        """unittest's assertRaises, except that the callable form returns
+        the exception instance (callers inspect args and attributes).  The
+        context-manager form, with its msg= option, is unchanged."""
+        if not args:
+            return super().assertRaises(excClass, **kw)
+        func, args = args[0], args[1:]
+        try:
+            func(*args, **kw)
+        except excClass as e:
+            return e
+        if isinstance(excClass, tuple):
+            name = ', '.join(c.__name__ for c in excClass)
+        else:
+            name = excClass.__name__
+        self.fail('%s not raised' % name)
+
     def tearDown(self):
         self.logFilter.remove()
         self.unmock()

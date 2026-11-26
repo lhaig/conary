@@ -194,7 +194,10 @@ class Recipe(object):
                     classItem = getattr(class_, itemName, None)
                     if classItem is None:
                         continue
-                    if classItem.__func__ == item.__func__:
+                    # Py3: a function looked up on a class is a plain
+                    # function; a classmethod comes back bound.
+                    if (getattr(classItem, '__func__', classItem)
+                            == item.__func__):
                         className = class_.__name__
                 if className in ['Recipe', 'AbstractPackageRecipe',
                                  'SourcePackageRecipe',

@@ -37,7 +37,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import types
 import urllib.request, urllib.parse, urllib.error
 import uuid
 import weakref
@@ -812,7 +811,7 @@ def tupleListBsearchInsert(haystack, newItem, cmpFn):
     start = 0
     finish = len(haystack) - 1
     while start < finish:
-        i = (start + finish) / 2
+        i = (start + finish) // 2
 
         rc = cmpFn(haystack[i], newItem)
         if rc == 0:
@@ -1651,14 +1650,16 @@ class XMLRPCMarshaller(xmlrpc.client.Marshaller):
     """Marshaller for XMLRPC data"""
     dispatch = xmlrpc.client.Marshaller.dispatch.copy()
     def dump_string(self, value, write, escape=xmlrpc.client.escape):
-        try:
-            value = value.encode("ascii")
-        except UnicodeError:
-            sio = io.StringIO()
-            xmlrpc.client.Binary(value).encode(sio)
-            write(sio.getvalue())
-            return
-        return xmlrpc.client.Marshaller.dump_string(self, value, write, escape)
+        # ASCII goes out as <string>; anything else as base64 of its bytes
+        # under the project rule (sha1helper.toBytes: utf-8, surrogateescape),
+        # so a str decoded from raw bytes sends those same bytes, as Py2 did.
+        if value.isascii():
+            return xmlrpc.client.Marshaller.dump_unicode(
+                self, value, write, escape)
+        from conary.lib import sha1helper
+        sio = io.StringIO()
+        xmlrpc.client.Binary(sha1helper.toBytes(value)).encode(sio)
+        write(sio.getvalue())
 
     def dump(self, values, stream):
         write = stream.write
@@ -1699,7 +1700,7 @@ class XMLRPCMarshaller(xmlrpc.client.Marshaller):
             for type_ in type(value).__mro__:
                 if type_ in list(self.dispatch.keys()):
                     raise TypeError("cannot marshal %s objects" % type(value))
-            f = self.dispatch[types.InstanceType]
+            f = self.dispatch['_arbitrary_instance']
         f(self, value, write)
 
     dispatch[str] = dump_string
@@ -1749,30 +1750,30 @@ def xmlrpcDump(params, methodname=None, methodresponse=None, stream=None,
         xmlheader = "<?xml version='1.0'?>\n" # utf-8 is default
 
     if stream is None:
-        io = io.StringIO(stream)
+        out = io.StringIO()
     else:
-        io = stream
+        out = stream
 
     # standard XML-RPC wrappings
     if methodname:
         if not isinstance(methodname, str):
             methodname = methodname.encode(encoding)
-        io.write(xmlheader)
-        io.write("<methodCall>\n")
-        io.write("<methodName>%s</methodName>\n" % methodname)
-        m.dump(params, io)
-        io.write("</methodCall>\n")
+        out.write(xmlheader)
+        out.write("<methodCall>\n")
+        out.write("<methodName>%s</methodName>\n" % methodname)
+        m.dump(params, out)
+        out.write("</methodCall>\n")
     elif methodresponse:
-        io.write(xmlheader)
-        io.write("<methodResponse>\n")
-        m.dump(params, io)
-        io.write("</methodResponse>\n")
+        out.write(xmlheader)
+        out.write("<methodResponse>\n")
+        m.dump(params, out)
+        out.write("</methodResponse>\n")
     else:
         # Return as-is
-        m.dump(params, io)
+        m.dump(params, out)
 
     if stream is None:
-        return io.getvalue()
+        return out.getvalue()
     return ""
 
 def xmlrpcLoad(stream):

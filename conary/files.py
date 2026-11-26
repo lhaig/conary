@@ -989,6 +989,7 @@ class UserGroupIdCache:
                 except ValueError:
                     log.warning('%s %s does not exist - using root',
                                 self.name, name)
+                    theId = 0
             else:
                 try:
                     theId = self.nameLookupFn(name)[2]

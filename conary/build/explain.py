@@ -258,6 +258,17 @@ def _formatDoc(className, obj):
         docString = 'No documentation available.'
     _pageDoc('%s.%s' % (className, name), docString)
 
+def _instanceToClass(obj):
+    """Return the class of an arbitrary user-class instance (a policy
+    object), so its class docstring is shown.  Classes, functions, methods,
+    modules and values without a __dict__ are returned unchanged."""
+    if (isinstance(obj, (type, types.FunctionType, types.MethodType,
+                         types.BuiltinFunctionType, types.ModuleType))
+            or not hasattr(obj, '__dict__')):
+        return obj
+    return obj.__class__
+
+
 def _parentName(klass):
     if hasattr(klass, '_explainObjectName'):
         return klass._explainObjectName
@@ -304,8 +315,7 @@ def docObject(cfg, what):
             obj = obj.theobject
         elif hasattr(obj, 'theclass'):
             obj = obj.theclass
-        if isinstance(obj, types.InstanceType):
-            obj = obj.__class__
+        obj = _instanceToClass(obj)
         if (obj.__doc__ and obj.__doc__ not in foundDocs):
             # let the order in inspectList determine which class we
             # display if multiple classes provide this docstring

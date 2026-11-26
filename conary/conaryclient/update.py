@@ -3783,7 +3783,7 @@ conary erase '%s=%s[%s]'
                     # download thread.  Block for 10 seconds max
                     newCs = csQueue.get(True, 10)
                 except queue.Empty:
-                    if downloadThread.isAlive():
+                    if downloadThread.is_alive():
                         continue
 
                     raise UpdateError('error: download thread terminated'
@@ -3813,7 +3813,7 @@ conary erase '%s=%s[%s]'
             if self.getRepos():
                 self.getRepos()._clearHostCache()
 
-            if downloadThread.isAlive():
+            if downloadThread.is_alive():
                 self.updateCallback.warning('timeout waiting for '
                     'download thread to terminate -- closing '
                     'database and exiting')

@@ -378,7 +378,7 @@ class XmlLogWriter(LogWriter):
             key, val = args
         if key[0].isdigit() or \
                 not re.match(r'^\w[a-zA-Z0-9_.-]*$', key,
-                    flags = re.LOCALE | re.UNICODE):
+                    flags = re.UNICODE):
             raise RuntimeError("'%s' is not a legal XML name" % key)
         if isinstance(val, str):
             val = saxutils.escape(val)

@@ -189,6 +189,10 @@ class CMTroveSpec(trovetup.TroveSpec):
 
         return self[0:3] == other[0:3]
 
+    # Equal to plain tuples on the first three fields, so hash like them
+    def __hash__(self):
+        return hash(tuple(self[0:3]))
+
     # CMTroveSpec objects are pickled into the model cache, but there
     # only the TroveSpec parts are used
     def __getnewargs__(self):
@@ -836,10 +840,11 @@ class CML(CM):
         '''
         Serialize the current model, including preserved comments.
         '''
-        lastNoOpLine = max([x.index for x in self.noOps] + [1])
-        lastOpLine = max([x.index for x in self.modelOps] + [1])
+        lastNoOpLine = max([x.index for x in self.noOps if x.index is not None] + [1])
+        lastOpLine = max([x.index for x in self.modelOps if x.index is not None]
+                         + [1])
         # can only be one version
-        if self.version is not None:
+        if self.version is not None and self.version.index is not None:
             verLine = self.version.index
         else:
             verLine = 1

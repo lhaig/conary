@@ -82,7 +82,7 @@ class TroveTupleTest(testhelp.TestCase):
         self.assertEqual(repr(p(n, v, f)), expect)
         self.assertEqual(repr(p((n, v, f))), expect)
         self.assertEqual(repr(p(ex_str)), expect)
-        self.assertEqual(repr(p(ex_str.decode('ascii'))), expect)
+        self.assertEqual(repr(p(ex_str.encode('ascii'))), expect)
         self.assertEqual(repr(p(n, vo, fo)), expect)
         self.assertEqual(repr(p((n, vo, fo))), expect)
 

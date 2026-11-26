@@ -768,33 +768,33 @@ class UtilTest(testhelp.TestCase):
     def testDecompressStream(self):
         data = os.urandom(16 * 1024)
         compressed = zlib.compress(data)
-        fp = io.StringIO(compressed)
+        fp = io.BytesIO(compressed)
         dfo = util.decompressStream(fp)
         check = dfo.read()
         self.assertEqual(check, data)
-        fp = io.StringIO(compressed)
+        fp = io.BytesIO(compressed)
         dfo = util.decompressStream(fp)
         chunk = dfo.read(333)
         self.assertEqual(chunk,  data[:333])
 
         # test readline
-        data = 'hello world\nhello world line 2\n'
+        data = b'hello world\nhello world line 2\n'
         compressed = zlib.compress(data)
-        fp = io.StringIO(compressed)
+        fp = io.BytesIO(compressed)
         dfo = util.decompressStream(fp)
         line = dfo.readline()
-        self.assertEqual(line, 'hello world\n')
+        self.assertEqual(line, b'hello world\n')
         line = dfo.readline()
-        self.assertEqual(line, 'hello world line 2\n')
+        self.assertEqual(line, b'hello world line 2\n')
 
-        fp = io.StringIO(compressed)
+        fp = io.BytesIO(compressed)
         dfo = util.decompressStream(fp)
         line = dfo.readline(5)
-        self.assertEqual(line, 'hello')
+        self.assertEqual(line, b'hello')
         line = dfo.readline(5)
-        self.assertEqual(line, ' worl')
+        self.assertEqual(line, b' worl')
         line = dfo.readline()
-        self.assertEqual(line, 'd\n')
+        self.assertEqual(line, b'd\n')
 
 
     def testMassCloseFileDescriptors(self):

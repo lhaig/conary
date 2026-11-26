@@ -62,7 +62,7 @@ SMALL = streams.SMALL
 LARGE = streams.LARGE
 
 def makeKey(pathId, fileId):
-    return pathId + fileId
+    return sha1helper.toBytes(pathId) + sha1helper.toBytes(fileId)
 
 def parseKey(key):
     return key[0:16], key[16:]

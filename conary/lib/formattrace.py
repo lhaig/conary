@@ -116,12 +116,7 @@ class TraceRepr(Repr):
 
 
 def shouldSafeStr(obj):
-    if isinstance(obj, types.InstanceType):
-        # Old-style instances
-        cls = obj.__class__
-    else:
-        # New-style instances and non-instances
-        cls = type(obj)
+    cls = type(obj)
 
     if isinstance(obj, UNSAFE_TYPES):
         return False
@@ -182,10 +177,7 @@ def formatLocals(frame, stream):
         except Exception as error:
             # Failed to get a representation, but at least display what
             # type it was and what exception was raised.
-            if isinstance(obj, types.InstanceType):
-                typeName = obj.__class__.__name__
-            else:
-                typeName = type(obj).__name__
+            typeName = type(obj).__name__
             vstr = '** unrepresentable object of type %r (error: %s) **' % (
                 typeName, error.__class__.__name__)
 

@@ -166,7 +166,7 @@ class TroveTuple(_namedtuple('TroveTuple', 'name version flavor')):
     def fromString(cls, ttstr, withFrozenFlavor=False):
         try:
             ttstr = _cast(ttstr)
-        except UnicodeEncodeError:
+        except UnicodeError:
             raise errors.ParseError("Trove tuple must be ASCII safe")
 
         equals = ttstr.count('=')
@@ -261,7 +261,7 @@ class JobTuple(_namedtuple('JobTuple', 'name old new absolute')):
     def fromString(cls, val, absolute=None):
         try:
             val = _cast(val)
-        except UnicodeEncodeError:
+        except UnicodeError:
             raise errors.ParseError("Job tuple must be ASCII safe")
         name, val = val.split('=')
         if '--' in val:
@@ -280,7 +280,9 @@ class JobTuple(_namedtuple('JobTuple', 'name old new absolute')):
 
 
 def _cast(val):
-    "Return C{val.encode('ascii')} if it is a unicode, or C{val} otherwise."
-    if isinstance(val, str):
-        val = val.encode('ascii')
+    """Return C{val} as an ASCII-only str; bytes are decoded as ASCII.
+    Raises UnicodeError (Encode or Decode) on non-ASCII input."""
+    if isinstance(val, bytes):
+        return val.decode('ascii')
+    val.encode('ascii')
     return val
