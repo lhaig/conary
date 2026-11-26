@@ -395,3 +395,16 @@ PATTERN: bytes/str - Text bound for the wire (XML-RPC base64, HTTP auth) goes th
 - Classes: unknown 94 (38 are PolicyError at policy.loadPolicy: 'missing required policy SharedLibrary'), bytes/str other 32,
   streams/trove 26, network/xmlrpc 7, harness gap 7, file I/O 0, hashing 0, py2 in tests 0.
 - Skips: sqlharness 1720, rpm/chroot 91, other 61. Tasks 3.14 and 3.15 remain (repository milestone).
+
+## 2026-11-26 - tasks 3.14 and 3.15 DONE
+
+- 3.14 (scope extended by user decision: SQLite plus a stdlib app server instead of gunicorn/nginx): repository tests now open a
+  live repository. Getting requests through took server-side bytes fixes in netclient, netserver, netauth, reposlog, wsgi_hooks,
+  xmlshims and the sqlite driver. Commit is blocked in changeset/filecontainer text-mode I/O; that is new task 3.16, guarded by
+  a strict xfail. 17 measured modules: 12/11/306 -> 76/236/18 (pass/fail/skip).
+- 3.15: every embedded recipe string parses on Python 3 (scan of 1044 candidates, mutation-checked). Runtime gain waits on 3.16.
+- py3tests 1071 passed, 1 xfailed; compile gate clean; pyflakes no new warnings (8 netserver undefined-name warnings fixed).
+
+PATTERN: py3-port - `except X as e` unbinds e at the end of the block; code that inspects or re-raises e afterwards must save it first (raise err, not bare raise).
+PATTERN: harness - Opening a skip gate moves tests to the next gate; check what sits behind it (here the app server) before sizing the gain.
+PATTERN: testing - A scan test that skips inputs it cannot parse must report them, or a broken file silently drops out of coverage.
