@@ -442,3 +442,16 @@ PATTERN: tooling - Do not edit source while devenv/conary_test_baseline.sh runs;
 
 PATTERN: testing - A guard test for a case-insensitive-filesystem fix must fold case itself (monkeypatch os.path.exists/isfile), or it passes vacuously on Linux.
 PATTERN: testing - Removing a top failure signature can leave the pass count flat; check what the same tests hit next before sizing the gain.
+
+## 2026-11-27 - task 3.18 DONE
+
+- testhelp.captureOutput consumes `_printOnError` and `_removeBokenPipeErrors`; on error it echoes the capture to the real stdout
+  (flag set) after restoring fd 1, then re-raises the original exception. `_printOnError` signature 626 -> 0.
+- Run tmp/baseline-20261127-t318: 1041 pass / 1602 fail / 167 skip. Top signatures: 623 SystemExit at cook.cookObject (no conary
+  policy directory; conary-policy is not in the container), 397 sqlite CursorError bindings, 159 sha1ToString, 49 streams.diff,
+  41 PolicyError, 27 util.copyfileobj, 21 http OpenError, 20 sigprotect UnboundLocalError.
+- py3tests 1132 passed; compile gate clean; pyflakes clean. Review PASS; orchestrator removed an unused assignment.
+
+PATTERN: testing - When a harness helper must print after restoring redirected stdout, store the exception, restore, then print and re-raise the original object.
+PATTERN: tooling - A full baseline leaves testcase.recipe, testcase/ and a CONARY entry in the repo root; on the case-insensitive mount never rm -rf CONARY (it is conary/), check git status instead.
+PATTERN: harness - The cook tests need conary-policy on CONARY_POLICY_PATH; without it cook.cookObject calls sys.exit(1).
