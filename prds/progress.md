@@ -243,3 +243,26 @@ PATTERN: py3-port - Fixing cmp inside __cmp__ silences pyflakes but Python 3 nev
 PATTERN: py3-port - Positional comparators (sorted(x, f), x.sort(f)) are invisible to pyflakes; find them with an AST scan.
 PATTERN: bytes/str - Switching a reader to 'rb' without converting its literal comparisons to bytes turns a loud failure into silent wrong results; convert both together or add a strict xfail.
 PATTERN: py3-port - Removing the builtin `file` name surfaced real Py2 bugs (display.getBuildLog returned the file type).
+
+## 2026-11-26 - task 2.7 DONE: conary_test baseline and Phase 3 triage plan
+
+- prds/research/conary_test-baseline.md. On Apple silicon the container is aarch64 and conary/build/use.py has no aarch64
+  arch: 2303 of 2481 failures in the native run. The baseline (Run B) was made on linux/amd64 in a throwaway copy of the tree
+  (no .git, so env.txt has no HEAD); it can only be reproduced with committed tooling once Phase 3 task 2 adds a platform switch.
+- Run B: 2810 collected; 242 pass, 821 fail, 1653 skip, 0 xfail, 94 not run (91 requireChroot segfaults, 3 filestest leaving a
+  deleted cwd), 1 timeout. 81 minutes, nearly all openRepository retries on SkipTestException.
+- Classes (2819 failure/error elements): removed stdlib 2341 (util.rmtree os.path.walk in teardown, 2325), py3 semantics
+  110, bytes/str streams/trove 69, hashing 67, file I/O 64; unknown 42. Skips: sqlharness 1585, other 60, missing binary 6,
+  servers 1, M2Crypto 1. Run C (os.walk patched in the throwaway copy only): 199 fail->pass, 113 fail->skip.
+- Static scan: 198 of 1018 embedded recipe strings do not parse on Python 3.
+- Added python3-pytest-timeout (Dockerfile, check.sh), devenv/conary_test_baseline.sh, devenv/triage.py and py3tests/test_triage.py.
+- Review MINOR. Orchestrator fixed the doc's task cross-references, explained table order vs order of work, and made the
+  baseline script reject absolute or unsafe outdirs. Not changed: triage's harness-gap rule matches skip text anywhere in the
+  traceback tail and captured output (9 elements now); narrow it to the exception message once repository tests run.
+
+PATTERN: environment - On Apple-silicon Docker the devenv container is aarch64 and conary/build/use.py has no aarch64 Arch; conary_test needs linux/amd64 (or an aarch64 arch) to give meaningful results.
+PATTERN: environment - devenv/run only passes --user on Linux, so on macOS the tests run as uid 0 in the container.
+PATTERN: harness - util.rmtree still calls os.path.walk; rephelp tearDown raises on every test, so pytest records a skip plus an error for one id.
+PATTERN: harness - conary_test requireChroot segfaults (ctypes libcap without restype/argtypes) and kills the pytest process; run per file and fall back to per id.
+PATTERN: harness - rephelp.openRepository retries SkipTestException 4 times with sleeps, about 3 s per repository-backed test.
+PATTERN: bytes/str - hashlib callers (util.getId, util.copyfileobj, sha1helper.sha1String/md5String) still pass str.

@@ -30,6 +30,8 @@ for mod in rpm psycopg2 webob; do
 done
 
 python3 -m pytest --version >/dev/null 2>&1 || fail "pytest not runnable"
+python3 -c "import pytest_timeout" || fail "pytest-timeout not importable for python3"
+ok "pytest-timeout importable for python3"
 T=$(mktemp -d /tmp/devenv-check.XXXXXX)
 trap 'rm -rf "$T"' EXIT
 printf 'def test_ok():\n    assert 1 + 1 == 2\n' > "$T/test_smoke.py"
