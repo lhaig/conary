@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -15,55 +15,20 @@
 # limitations under the License.
 #
 
+"""Thin wrapper around ``pytest conary_test``.
+
+The environment setup that used to live in Suite.setupPaths (proxy
+variables, sqlite check, rpm lock override) now lives in
+conary_test/conftest.py, and sys.path is set up by pytest.ini.
+Build the C extensions first: make -C conary/lib/ext && make -C conary_test
+"""
+
 import os
-import warnings
 import sys
-from testrunner import suite
-import sqlite3
 
-from conary_test import resources
-
-
-class Suite(suite.TestSuite):
-    testsuite_module = sys.modules[__name__]
-    topLevelStrip = 0
-
-    def setupPaths(self):
-        # turn off rpm locking via a DSO override. We have to
-        # keep a reference to the handle or else dlclose() will be
-        # called on it. Yes, this is ugly, but for some reason RPM
-        # has a global variable for the location of the lock file
-        # that only gets filled in the first time you ask for the rpm
-        # database lock. Thus you can't use more than one root directory
-        # during any single execution of rpmlib code.
-        assert 'rpm._rpm' not in sys.modules
-        from conary_test import norpmlock
-        norpmlock.open(resources.get_path('conary_test', '_norpmlock.so'))
-        if sqlite3.sqlite_version_info < (3,7,0):
-            warnings.warn("the system sqlite3 is linked against a too-old system "
-                    "sqlite that is known to have bugs affecting the "
-                    "repository.")
-        # Some transport tests are affected by proxy environment settings
-        for transport in ('http', 'https', 'ftp', 'all', 'no'):
-            name = '%s_proxy' % transport
-            os.environ.pop(name, None)
-            os.environ.pop(name.upper(), None)
-
-    def getCoverageExclusions(self, handler, environ):
-        return ['scripts/.*', 'epdb.py', 'stackutil.py']
-
-    def getCoverageDirs(self, handler, environ):
-        # TODO: policy
-        return  [ resources.get_path('conary') ]
-
-    def sortTests(self, tests):
-        # Only collect conary_test modules
-        return [x for x in tests if x.startswith('conary_test')]
-
-
-_s = Suite()
-setup = _s.setup
-main = _s.main
 
 if __name__ == '__main__':
-    _s.run()
+    import pytest
+    sys.exit(pytest.main(
+        [os.path.join(os.path.dirname(os.path.abspath(__file__)), 'conary_test')]
+        + sys.argv[1:]))

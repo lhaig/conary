@@ -171,3 +171,30 @@ PATTERN: harness - testutils.mock must not import testrunner; testrunner.testhel
   DBStoreTestBase.setUp). A SQLite-only sqlharness is likely the biggest unlock in Phase 3.
 
 PATTERN: harness - Stand-ins that skip must still satisfy the teardown paths that touch them (errorLog is opened by checkForTracebacks); grep the callers of every attribute a stand-in sets.
+
+## 2026-11-26 - task 2.4 DONE: pytest runner for conary_test
+
+- Repo-root pytest.ini: `pythonpath = . testharness`, `python_files = test_*.py *test.py`, and markers for each CONTEXTS name.
+  conary_test/conftest.py pops the proxy env vars, warns on old sqlite, loads _norpmlock.so through norpmlock.open, and maps
+  `_contexts` on the function and class to markers, registered dynamically.
+- Collection: 112 module errors -> 0, and 2810 tests collect. Causes: rephelp `import new` (111 modules; new.instancemethod
+  became setattr); M2Crypto and conary.server.server.SecureHTTPServer imported unguarded (M2Crypto has no Fedora 45 /
+  Python 3.15 package, so both are guarded and HTTPServerController skips SSL); a genuine conary bug in versions.py, where
+  ThawVersion/VersionFromString encoded str to bytes (a 2to3 unicode->str inversion), which broke every str version parse.
+- C: conary_test/pycompat.h was missing the `&` on PyModule_Create; norpmlockmodule.c needed PY_SSIZE_T_CLEAN. The Makefile
+  builds norpmlock.so (Python 3 cannot import `<name>module.so`) and no longer links libpython.
+- testsuite.py is now a thin `pytest conary_test` wrapper anchored to its own directory. The setupPaths logic lives in
+  conary_test/conftest.py.
+- Review MINOR. Orchestrator added the rpm/installed_conarydb wrapper marker test and anchored the wrapper path.
+  Not fixed: the synthetic marker test writes a temporary file into conary_test/ (removed in finally); transporttest SSL
+  tests fail rather than skip without M2Crypto (for 2.7 triage).
+- For 2.6, other encode-str spots to review: trovetup.py:284, lib/pydeps.py:207, dbstore/psycopg2_drv.py:391,
+  dbstore/base_drv.py:113, lib/openpgpkey.py:119, lib/openpgpfile.py:272, lib/http/request.py:204, lib/util.py:1753.
+- Gates: py3tests 477 passed; collect-only 2810, 0 errors; compile_check 476 files, 0 failures; pyflakes clean on new files.
+
+PATTERN: harness - pytest.ini `pythonpath` is the only reliable place for sys.path; conary_test/conftest.py is imported after conary_test/__init__.py already needs testrunner.
+PATTERN: py3-port - 2to3 left `isinstance(x, str): x.encode(...)` inversions (from unicode); they break str callers. Check each hit.
+PATTERN: c-api - Python 3 cannot import `<name>module.so`; build `<name>.so`, and extension modules must not link libpython.
+PATTERN: environment - M2Crypto has no Fedora 45 / Python 3.15 package; SSL test paths skip or fail.
+PATTERN: build - Build conary_test C extensions explicitly with `make -C conary_test`, never from a conftest.
+PATTERN: testing - Re-measure any count an advisor gives before asserting it (acltest has 9 entitlements tests, not 4).

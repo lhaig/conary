@@ -61,8 +61,7 @@ def test_scan_finds_the_known_names():
                      ('testrunner.runner', 'SkipTestException'),
                      ('testrunner.testcase', 'LogFilter'),
                      ('testrunner.testcase', 'TestCaseWithWorkDir'),
-                     ('testrunner.testhelp', 'findPorts'),
-                     ('testrunner.suite', 'TestSuite')]:
+                     ('testrunner.testhelp', 'findPorts')]:
         assert expected in names
 
 

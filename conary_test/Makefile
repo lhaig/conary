@@ -15,21 +15,22 @@
 #
 
 
-bins = _norpmlock.so norpmlockmodule.so
+bins = _norpmlock.so norpmlock.so
 
 all: $(bins)
 
 clean:
-	rm -f $(bins)
+	rm -f $(bins) *.o
 
-%.so: %.o
-	$(CC) $(LDFLAGS) -shared -rdynamic -o $@ $^ -lpython$(PYVER) $(LIBS)
+# _norpmlock.so is a plain DSO preloaded to override rpm locking; it does not
+# link against libpython.
+_norpmlock.so: _norpmlock.o
+	$(CC) $(LDFLAGS) -shared -rdynamic -o $@ $^ $(LIBS)
 
-#_norpmlock.so: norpmlock.c
-#	$(CC) $(CFLAGS) -shared -rdynamic -o $@ $^
-
-#norpmlockmodule.so: norpmlockmodule.c
-#	$(CC) $(CFLAGS) -shared -rdynamic -o $@ $^
+# Python 3 does not accept the <name>module.so suffix, so the extension
+# module is named norpmlock.so.  Extension modules do not link libpython.
+norpmlock.so: norpmlockmodule.o
+	$(CC) $(LDFLAGS) -shared -rdynamic -o $@ $^ $(LIBS)
 
 include ../Make.rules
 CFLAGS:=-Wall -std=c99 -I$(PYINCLUDE) -fPIC $(CFLAGS) -g -D_FILE_OFFSET_BITS=64

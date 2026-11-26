@@ -68,7 +68,7 @@
 # define PYMODULE_DECLARE(name, fullname, doc, methods) \
     static PyModuleDef _module_def = { PyModuleDef_HEAD_INIT, \
         fullname, doc, -1, methods }; \
-    PYMODULE_INIT(name) { return PyModule_Create(_module_def); }
+    PYMODULE_INIT(name) { return PyModule_Create(&_module_def); }
 
 #endif
 

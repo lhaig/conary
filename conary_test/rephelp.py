@@ -22,7 +22,6 @@ import copy
 import errno
 import inspect
 import itertools
-import new
 import os
 import re
 import shutil
@@ -35,9 +34,11 @@ import subprocess
 import sys
 import time
 import traceback
-import testsuite
 
-from M2Crypto import SSL
+try:
+    from M2Crypto import SSL
+except ImportError:
+    SSL = None
 
 #conary
 from conary.cmds import branch
@@ -69,7 +70,11 @@ from conary.lib import util
 from conary.local import database
 from conary.repository import changeset, filecontents, trovesource
 from conary.repository import searchsource
-from conary.server.server import SecureHTTPServer
+try:
+    from conary.server.server import SecureHTTPServer
+except ImportError:
+    # conary.server.server only defines it when M2Crypto is available
+    SecureHTTPServer = None
 #test
 from testrunner import testhelp
 from testrunner.testcase import safe_repr
@@ -2658,8 +2663,7 @@ class RepositoryHelper(testhelp.TestCase):
                 class_ = sys.modules[fnModule].__dict__[className]
                 origFn = getattr(class_, fnName)
 
-                setattr(class_,
-                        fnName, new.instancemethod(_placeHolder, None,  class_))
+                setattr(class_, fnName, _placeHolder)
         try:
             rv = testFn(*args, **kw)
             if fn is not None:
@@ -3044,6 +3048,8 @@ class HTTPServerController(base_server.BaseServer):
         # this is racy :-(
         self.port = testhelp.findPorts(num = 1)[0]
         self.ssl = ssl
+        if ssl and (SSL is None or SecureHTTPServer is None):
+            raise testhelp.SkipTestException('M2Crypto is not installed')
 
         self.childPid = os.fork()
         if self.childPid > 0:

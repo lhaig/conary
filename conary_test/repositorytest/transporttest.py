@@ -33,7 +33,10 @@ from conary.repository.netrepos import netserver
 from conary.lib import httputils
 from conary.lib import networking
 from conary.lib import util
-from M2Crypto import SSL
+try:
+    from M2Crypto import SSL
+except ImportError:
+    SSL = None
 from testrunner import testhelp
 from testutils import sock_utils
 from conary_test import resources
