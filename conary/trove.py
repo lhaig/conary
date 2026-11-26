@@ -101,7 +101,7 @@ class TroveTuple(CmpMixin, streams.StreamSet):
 
     ignoreUnknown = True
     streamDict = {
-        _SINGLE_TROVE_TUP_NAME    : (SMALL, streams.StringStream,        'name'    ),
+        _SINGLE_TROVE_TUP_NAME    : (SMALL, streams.TextStream,          'name'    ),
         _SINGLE_TROVE_TUP_VERSION : (SMALL, streams.StringVersionStream, 'version' ),
         _SINGLE_TROVE_TUP_FLAVOR  : (SMALL, streams.FlavorsStream,       'flavor'  )
     }
@@ -120,7 +120,7 @@ class TroveMtimes(list, streams.InfoStream):
 
     def thaw(self, frz):
         del self[:]
-        count = len(frz) / 4
+        count = len(frz) // 4
         self.extend(struct.unpack("!" + ("I" * count), frz))
 
     def freeze(self, skipSet = None):
@@ -174,7 +174,7 @@ class VersionListStream(streams.OrderedStreamCollection):
 class SearchPathItem(TroveTuple):
     _SEARCH_PATH_LABEL  = 10
     streamDict = TroveTuple.streamDict.copy()
-    streamDict[_SEARCH_PATH_LABEL] =  (SMALL, streams.StringStream, 'label'  )
+    streamDict[_SEARCH_PATH_LABEL] =  (SMALL, streams.TextStream, 'label'  )
 
     def __cmp__(self, other):
         return cmp(self.name(), other.name()) or \
@@ -216,7 +216,7 @@ class SingleTroveRedirect(CmpMixin, streams.StreamSet):
     ignoreUnknown = True
     streamDict = {
         _SINGLE_REDIRECT_NAME   :
-                (SMALL, streams.StringStream,        'name'    ),
+                (SMALL, streams.TextStream,          'name'    ),
         _SINGLE_REDIRECT_BRANCH :
                 (SMALL, streams.StringVersionStream, 'branch' ),
         _SINGLE_REDIRECT_FLAVOR :
@@ -248,7 +248,7 @@ class TroveRedirectList(streams.StreamCollection):
         self.delStream(1, tup)
 
     def reset(self):
-        self.thaw("")
+        self.thaw(b"")
 
     def iter(self):
         return ( x[1] for x in self.iterAll() )
@@ -285,7 +285,7 @@ class PathHashes(set, streams.InfoStream):
 
     def thaw(self, s):
         self.clear()
-        items = struct.unpack("8s" * (len(s) / 8), s)
+        items = struct.unpack("8s" * (len(s) // 8), s)
         for item in items:
             self.add(item)
 
@@ -299,7 +299,7 @@ class PathHashes(set, streams.InfoStream):
 
     def twm(self, diff, base):
         assert(self == base)
-        items = struct.unpack("!I" + "8s" * ((len(diff) - 4) / 8), diff)
+        items = struct.unpack("!I" + "8s" * ((len(diff) - 4) // 8), diff)
         additions = items[1:items[0] + 1]
         removals = items[items[0] + 1:]
 
@@ -328,7 +328,7 @@ _DIGSIG_TIMESTAMP     = 2
 class DigitalSignature(CmpMixin, streams.StreamSet):
     __slots__ = ('fingerprint', 'signature', 'timestamp')
     streamDict = {
-        _DIGSIG_FINGERPRINT  : (SMALL, streams.StringStream,   'fingerprint' ),
+        _DIGSIG_FINGERPRINT  : (SMALL, streams.TextStream,     'fingerprint' ),
         _DIGSIG_SIGNATURE    : (SMALL, streams.StringStream,   'signature'   ),
         _DIGSIG_TIMESTAMP    : (SMALL, streams.IntStream,      'timestamp'   ),
     }
@@ -338,21 +338,21 @@ class DigitalSignature(CmpMixin, streams.StreamSet):
                    (other.fingerprint, other.signature, other.timestamp))
 
     def _mpiToLong(self, data):
-        length = ((ord(data[0]) << 8) + ord(data[1]) + 7) / 8
+        length = ((data[0] << 8) + data[1] + 7) // 8
         if len(data) != length + 2:
             raise IndexError
 
         frontSize = length & ~3
 
         r = 0
-        ints = struct.unpack("!" + "I" * (frontSize / 4), data[2:2 + frontSize])
+        ints = struct.unpack("!" + "I" * (frontSize // 4), data[2:2 + frontSize])
         for i in ints:
             r <<= 32;
             r += i
 
         for i in range(2 + frontSize, 2 + length):
             r <<= 8
-            r += ord(data[i])
+            r += data[i]
 
         return r
 
@@ -360,12 +360,12 @@ class DigitalSignature(CmpMixin, streams.StreamSet):
         bits = data
         l = 0
         while bits:
-            bits /= 2
+            bits //= 2
             l += 1
-        r = chr((l >> 8) & 0xFF) + chr(l & 0xFF)
-        buf = ''
+        r = bytes([(l >> 8) & 0xFF, l & 0xFF])
+        buf = b''
         while data:
-            buf = chr(data & 0xFF) + buf
+            buf = bytes([data & 0xFF]) + buf
             data = data >> 8
         return r + buf
 
@@ -373,20 +373,20 @@ class DigitalSignature(CmpMixin, streams.StreamSet):
         self.fingerprint.set(val[0])
         self.timestamp.set(val[1])
         numMPIs = len(val[2])
-        buf = ''
+        buf = b''
         for i in range(0,len(val[2])):
             buf += self._longToMpi(val[2][i])
-        self.signature.set(chr(numMPIs) + buf)
+        self.signature.set(bytes([numMPIs]) + buf)
 
     def get(self):
         data = self.signature()
-        numMPIs = ord(data[0])
+        numMPIs = data[0]
         index = 1
         mpiList = []
         for i in range(0,numMPIs):
             try:
-                lengthMPI = ((ord(data[index]) * 256) +
-                             (ord(data[index + 1]) + 7)) / 8 + 2
+                lengthMPI = ((data[index] * 256) +
+                             (data[index + 1] + 7)) // 8 + 2
                 mpiList.append(self._mpiToLong(data[index:index + lengthMPI]))
             except IndexError:
                 # handle truncated signature data by setting this MPI to 0
@@ -669,8 +669,8 @@ class KeyValueItemsStream(streams.OrderedStreamCollection):
     __slots__ = [ '_map' ]
 
     streamDict = {
-        1 : streams.StringStream,
-        2 : streams.StringStream,
+        1 : streams.TextStream,
+        2 : streams.TextStream,
     }
 
     def __init__(self, data = None):
@@ -710,8 +710,8 @@ class KeyValueItemsStream(streams.OrderedStreamCollection):
         self._reset()
 
         for key, val in sorted(self._map.items()):
-            self.addStream(1, streams.StringStream(key))
-            self.addStream(2, streams.StringStream(val))
+            self.addStream(1, streams.TextStream(key))
+            self.addStream(2, streams.TextStream(val))
 
         self._data = None
         return streams.OrderedStreamCollection.freeze(self, skipSet = skipSet)
@@ -732,19 +732,19 @@ class MetadataItem(streams.StreamSet):
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = {
         _METADATA_ITEM_TAG_ID:
-                (DYNAMIC, streams.StringStream,   'id'           ),
+                (DYNAMIC, streams.StringStream, 'id'           ),
         _METADATA_ITEM_TAG_SHORTDESC:
-                (DYNAMIC, streams.StringStream,   'shortDesc'    ),
+                (DYNAMIC, streams.TextStream,   'shortDesc'    ),
         _METADATA_ITEM_TAG_LONGDESC:
-                (DYNAMIC, streams.StringStream,   'longDesc'     ),
+                (DYNAMIC, streams.TextStream,   'longDesc'     ),
         _METADATA_ITEM_TAG_LICENSES:
                 (DYNAMIC, OBSS,                   'licenses'     ),
         _METADATA_ITEM_TAG_CRYPTO:
                 (DYNAMIC, OBSS,                   'crypto'       ),
         _METADATA_ITEM_TAG_URL:
-                (DYNAMIC, streams.StringStream,   'url'          ),
+                (DYNAMIC, streams.TextStream,   'url'          ),
         _METADATA_ITEM_TAG_LANGUAGE:
-                (DYNAMIC, streams.StringStream,   'language'     ),
+                (DYNAMIC, streams.TextStream,   'language'     ),
         _METADATA_ITEM_TAG_CATEGORIES:
                 (DYNAMIC, OBSS,                   'categories'   ),
         _METADATA_ITEM_TAG_BIBLIOGRAPHY:
@@ -1315,9 +1315,9 @@ class TroveInfo(streams.StreamSet):
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = {
         _TROVEINFO_TAG_SIZE          : (SMALL, streams.LongLongStream,'size'        ),
-        _TROVEINFO_TAG_SOURCENAME    : (SMALL, streams.StringStream,  'sourceName'  ),
+        _TROVEINFO_TAG_SOURCENAME    : (SMALL, streams.TextStream,  'sourceName'  ),
         _TROVEINFO_TAG_BUILDTIME     : (SMALL, streams.LongLongStream,'buildTime'   ),
-        _TROVEINFO_TAG_CONARYVER     : (SMALL, streams.StringStream, 'conaryVersion'),
+        _TROVEINFO_TAG_CONARYVER     : (SMALL, streams.TextStream, 'conaryVersion'),
         _TROVEINFO_TAG_BUILDDEPS     : (LARGE, BuildDependencies,    'buildReqs'    ),
         _TROVEINFO_TAG_LOADEDTROVES  : (LARGE, LoadedTroves,         'loadedTroves' ),
         _TROVEINFO_TAG_FLAGS         : (SMALL, TroveFlagsStream,     'flags'        ),
@@ -1336,7 +1336,7 @@ class TroveInfo(streams.StreamSet):
         _TROVEINFO_TAG_BUILD_FLAVOR  : (LARGE, OptionalFlavorStream, 'buildFlavor'    ),
         _TROVEINFO_TAG_COPIED_FROM   : (DYNAMIC, TroveCopiedFrom,    'troveCopiedFrom' ),
         _TROVEINFO_TAG_IMAGE_GROUP   : (DYNAMIC, streams.ByteStream, 'imageGroup' ),
-        _TROVEINFO_TAG_FACTORY       : (DYNAMIC, streams.StringStream, 'factory' ),
+        _TROVEINFO_TAG_FACTORY       : (DYNAMIC, streams.TextStream, 'factory' ),
         _TROVEINFO_TAG_SEARCH_PATH   : (DYNAMIC, SearchPath,          'searchPath'),
         _TROVEINFO_TAG_PKGCREATORDATA: (DYNAMIC, streams.StringStream,'pkgCreatorData'),
         _TROVEINFO_TAG_DERIVEDFROM   : (DYNAMIC, LoadedTroves,        'derivedFrom' ),
@@ -1402,8 +1402,9 @@ class TroveRefsTrovesStream(dict, streams.InfoStream):
         """
         l = []
         for ((name, version, flavor), byDefault) in self.items():
-            v = version.asString()
-            f = flavor.freeze()
+            name = sha1helper.toBytes(name)
+            v = sha1helper.toBytes(version.asString())
+            f = sha1helper.toBytes(flavor.freeze())
             s = (struct.pack("!H", len(name)) + name +
                  struct.pack("!H", len(v)) + v +
                  struct.pack("!H", len(f)) + f +
@@ -1412,7 +1413,7 @@ class TroveRefsTrovesStream(dict, streams.InfoStream):
 
         l.sort()
 
-        return "".join(l)
+        return b"".join(l)
 
     def copy(self):
         new = TroveRefsTrovesStream()
@@ -1451,9 +1452,10 @@ class TroveRefsFilesStream(dict, streams.InfoStream):
         """
         l = []
         for (pathId, (dirName, baseName, fileId, version)) in self.items():
-            v = version.asString()
+            v = sha1helper.toBytes(version.asString())
             s = pack.pack("!S16S20SHSH", pathId, fileId,
-                          os.path.join(dirName, baseName), v);
+                          sha1helper.toBytes(os.path.join(dirName, baseName)),
+                          v)
             l.append((len(s), s))
 
         l.sort()
@@ -1505,7 +1507,7 @@ class Trove(streams.StreamSet):
     """
     streamDict = {
         _STREAM_TRV_NAME          :
-                    (SMALL, streams.StringStream,        "name"         ),
+                    (SMALL, streams.TextStream,          "name"         ),
         _STREAM_TRV_VERSION       :
                     (SMALL, streams.FrozenVersionStream, "version"      ),
         _STREAM_TRV_FLAVOR        :
@@ -3270,7 +3272,7 @@ class Trove(streams.StreamSet):
         return self.troveInfo.installTime()
 
     def setSubPackages(self, names):
-        self.troveInfo.subPackages.thaw('')
+        self.troveInfo.subPackages.thaw(b'')
         for name in sorted(names):
             self.troveInfo.subPackages.set(name)
 
@@ -3361,13 +3363,13 @@ class ReferencedTroveSet(dict, streams.InfoStream):
             l += subL
             l.append("")
 
-        return "\0".join(l)
+        return sha1helper.toBytes("\0".join(l))
 
     def thaw(self, data):
         if not data: return
         self.clear()
 
-        l = data.split("\0")
+        l = sha1helper.toStr(data).split("\0")
         i = 0
 
         while i < len(l):
@@ -3404,7 +3406,7 @@ class ReferencedTroveSet(dict, streams.InfoStream):
 class OldFileStream(list, streams.InfoStream):
 
     def freeze(self, skipSet = {}):
-        return "".join(self)
+        return b"".join(self)
 
     def thaw(self, data):
         i = 0
@@ -3427,28 +3429,28 @@ class ReferencedFileList(list, streams.InfoStream):
         for (pathId, dirName, baseName, fileId, version) in self:
             l.append(pathId)
             if baseName is None:
-                path = ""
+                path = b""
             else:
-                path = os.path.join(dirName, baseName)
+                path = sha1helper.toBytes(os.path.join(dirName, baseName))
 
             l.append(struct.pack("!H", len(path)))
             l.append(path)
 
             if not fileId:
-                fileId = ""
+                fileId = b""
 
             l.append(struct.pack("!H", len(fileId)))
             l.append(fileId)
 
             if version:
-                version = version.asString()
+                version = sha1helper.toBytes(version.asString())
             else:
-                version = ""
+                version = b""
 
             l.append(struct.pack("!H", len(version)))
             l.append(version)
 
-        return "".join(l)
+        return b"".join(l)
 
     def thaw(self, data):
         del self[:]
@@ -3466,19 +3468,17 @@ class ReferencedFileList(list, streams.InfoStream):
                 dirName = None
                 baseName = None
             else:
-                dirName, baseName = os.path.split(path)
+                dirName, baseName = os.path.split(sha1helper.toStr(path))
                 dirName = sys.intern(dirName)
                 baseName = sys.intern(baseName)
 
             if not fileId:
                 fileId = None
-            else:
-                fileId = sys.intern(fileId)
 
             if verStr == lastVerStr:
                 version = lastVer
             elif verStr:
-                version = versions.VersionFromString(verStr)
+                version = versions.VersionFromString(sha1helper.toStr(verStr))
                 lastVer = version
                 lastVerStr = verStr
             else:
@@ -3520,7 +3520,7 @@ _TCS_TYPE_RELATIVE = 2
 class AbstractTroveChangeSet(CmpMixin, streams.StreamSet):
 
     streamDict = {
-        _STREAM_TCS_NAME        : (SMALL, streams.StringStream, "name"       ),
+        _STREAM_TCS_NAME        : (SMALL, streams.TextStream,   "name"       ),
         _STREAM_TCS_OLD_VERSION : (SMALL, FrozenVersionStream,  "oldVersion" ),
         _STREAM_TCS_NEW_VERSION : (SMALL, FrozenVersionStream,  "newVersion" ),
         _STREAM_TCS_REQUIRES    : (LARGE, DependenciesStream,   "requires"   ),

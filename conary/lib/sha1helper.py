@@ -68,6 +68,16 @@ def toBytes(buf):
     raise TypeError('cannot hash %s, expected bytes or str'
                     % type(buf).__name__)
 
+def toStr(buf):
+    """Inverse of toBytes: return buf as str, decoding bytes-like values as
+    UTF-8 with surrogateescape so that toBytes(toStr(b)) == b for any b."""
+    if isinstance(buf, str):
+        return buf
+    if isinstance(buf, (bytes, bytearray, memoryview)):
+        return bytes(buf).decode('utf-8', 'surrogateescape')
+    raise TypeError('cannot decode %s, expected bytes or str'
+                    % type(buf).__name__)
+
 def sha1String(buf):
     m = digestlib.sha1()
     m.update(toBytes(buf))

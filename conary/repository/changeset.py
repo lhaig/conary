@@ -946,9 +946,9 @@ class ChangeSet(streams.StreamSet):
         Reset the newTroves and oldTroves list for this changeset. File
         information is preserved.
         """
-        self.primaryTroveList.thaw("")
-        self.newTroves.thaw("")
-        self.oldTroves.thaw("")
+        self.primaryTroveList.thaw(b"")
+        self.newTroves.thaw(b"")
+        self.oldTroves.thaw(b"")
 
     def removeCommitted(self, repos):
         """
@@ -1192,7 +1192,7 @@ class ChangeSet(streams.StreamSet):
                     oldFileId, oldFileVersion, oldPath = filesNeeded.pop(0)[1:4]
                     diff = self.getFileChange(oldFileId, fileId)
                     # check if new and old files are of the same type
-                    if fileObj.lsTag == diff[1]:
+                    if fileObj.lsTagBytes == diff[1:2]:
                         fileObj.twm(diff, fileObj)
                     else:
                         fileObj = troveSource.getFileVersion(

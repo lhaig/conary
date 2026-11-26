@@ -30,6 +30,28 @@ bytes/str rule for streams (text above the wire, bytes on the wire):
    contents). Its constructor and set() accept str and store the UTF-8
    encoding. Sha1Stream, Md5Stream and the other digest streams are bytes
    only.
+ - TextStream is a StringStream whose call returns str (sha1helper.toStr:
+   UTF-8 with surrogateescape, so any bytes round-trip). set() and the
+   constructor take str or bytes; freeze, diff, twm and == are inherited,
+   so the wire bytes are identical to a StringStream holding the same
+   value. Fields whose value is text above the stream layer use it, and
+   their attribute API is str:
+     files.py: InodeStream owner, group; SymbolicLink target.
+     changelog.py: name, contact, message.
+     trove.py: SingleTroveTup and TroveTupStream names, search path label,
+       MetadataItem shortDesc/longDesc/url/language, the metadata
+       key/value pair, troveinfo sourceName, conaryVersion and factory, DigitalSignature
+       fingerprint (hex text; openpgp lookups take str).
+   Still bytes (StringStream), because readers hash, pack or write them:
+   file contents, LinkGroupStream, Sha1/Md5 digest streams, DigitalSignature
+   signature, MetadataItem id (a sha1), the trove.py digest stream, pkgCreatorData,
+   script bodies, capsule/MSI/RPM obsolete fields, property streams, and the
+   troveinfo diff payloads in TroveChangeSet. Their readers were not audited
+   for this change; switch them one by one when they are.
+   Netrepos SQL storage of troveinfo and changelog values has not been
+   exercised against the str API (it runs after the repository phase).
+ - File freeze/diff/twm use bytes tags (lsTag stays str for display and
+   journal calls; File.lsTagBytes is the wire form).
  - Exception: DependenciesStream and FlavorsStream keep the text freeze()
    of DependencySet/Flavor (dep_freeze works on str). Their thaw accepts
    bytes (UTF-8) or str, and StreamSet encodes their text when it freezes.
@@ -66,6 +88,26 @@ DYNAMIC = cstreams.DYNAMIC
 
 SKIP_UNKNOWN = cstreams.SKIP_UNKNOWN
 PRESERVE_UNKNOWN = cstreams.PRESERVE_UNKNOWN
+
+class TextStream(StringStream):
+    """StringStream whose value is text: str in, str out, bytes on the wire."""
+
+    def __init__(self, frz = None):
+        if frz is None:
+            StringStream.__init__(self)
+        else:
+            StringStream.__init__(self, sha1helper.toBytes(frz))
+
+    def set(self, val):
+        if val is not None:
+            val = sha1helper.toBytes(val)
+        StringStream.set(self, val)
+
+    def __call__(self):
+        val = StringStream.__call__(self)
+        if val is None:
+            return None
+        return sha1helper.toStr(val)
 
 class InfoStream(object):
 
@@ -333,13 +375,19 @@ class OptionalFlavorStream(InfoStream):
             self.deps = FlavorsStream(s)
 
     def diff(self, other, skipSet = None):
-        if self.deps is None and other.deps is None:
-            return b''
-        elif self.deps is None:
+        # None means "no change"; b'\0' means the flavor became None
+        if self.deps is None:
+            if other.deps is None:
+                return None
             return b'\0'
 
+        if other.deps is None:
+            return self.deps.freeze().encode('utf-8')
 
-        return self.deps.diff(other)
+        d = self.deps.diff(other.deps)
+        if d is None:
+            return None
+        return d.encode('utf-8')
 
     def set(self, val):
         # None is okay
@@ -413,10 +461,11 @@ class OrderedStringsStream(StringsStream):
 
 class OrderedBinaryStringsStream(StringsStream):
     # same as OrderedStringsStream, but stores length of each string. The
-    # members are bytes.
+    # members are bytes; set() takes str (UTF-8 encoded) as well, like
+    # StringStream.
     def set(self, val):
-        assert(type(val) is bytes)
-        self.append(val)
+        assert(type(val) in (bytes, str))
+        self.append(sha1helper.toBytes(val))
 
     def freeze(self, skipSet = None):
         if not self:

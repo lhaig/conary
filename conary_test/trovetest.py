@@ -489,9 +489,9 @@ Some changes just are.
         keyCache.getPrivateKey('F94E405E', '111111')
         keyCache.getPrivateKey('90B1E477', '111111')
         t.addDigitalSignature('90B1E477')
-        assert(t.verifyDigitalSignatures() > 0)
+        assert(t.verifyDigitalSignatures()[0] > 0)
         t.addDigitalSignature('F94E405E')
-        assert(t.verifyDigitalSignatures() > 0)
+        assert(t.verifyDigitalSignatures()[0] > 0)
         t.name.set('foo2')
 
         # verifying shouldn't change the stored sha1
@@ -507,7 +507,7 @@ Some changes just are.
 
         # add a file to the trove, which ensures that file
         # information is included in the data that was signed
-        t.addFile('0' * 16, "/path", t.getVersion(), '0' * 20)
+        t.addFile(b'0' * 16, "/path", t.getVersion(), b'0' * 20)
         t.computeDigests()
         try:
             t.verifyDigitalSignatures()
@@ -533,7 +533,7 @@ Some changes just are.
         ph = PathHashes()
         ph.addPath("/first")
         ph.addPath("/second")
-        assert(ph.freeze() == 'Y9\xde\xb7{\xeb\xbd\x88\xa7\xd5K\xb8\ns@\xd3')
+        assert(ph.freeze() == b'Y9\xde\xb7{\xeb\xbd\x88\xa7\xd5K\xb8\ns@\xd3')
         assert(ph == PathHashes(ph.freeze()))
 
         ph2 = PathHashes()
@@ -543,7 +543,7 @@ Some changes just are.
 
         diff = ph.diff(ph2)
         assert(diff == \
-            '\x00\x00\x00\x01Y9\xde\xb7{\xeb\xbd\x88\xcf\x97\xd5J>\xbdd\xf5')
+            b'\x00\x00\x00\x01Y9\xde\xb7{\xeb\xbd\x88\xcf\x97\xd5J>\xbdd\xf5')
         ph2.twm(diff, ph2)
         assert(ph == ph2)
 
@@ -552,9 +552,9 @@ Some changes just are.
         f = parseFlavor('is:x86')
         t = trove.Trove('name', v, f)
 
-        t.addFile('0' * 16, '/bin/ls', v, '0' * 20)
-        t.addFile('1' * 16, '/etc/cfg', v, '1' * 20)
-        t.addFile('2' * 16, '/bin/cat', v, '2' * 20)
+        t.addFile(b'0' * 16, '/bin/ls', v, b'0' * 20)
+        t.addFile(b'1' * 16, '/etc/cfg', v, b'1' * 20)
+        t.addFile(b'2' * 16, '/bin/cat', v, b'2' * 20)
         t.computePathHashes()
         t.computeDigests()
 
@@ -647,9 +647,9 @@ Some changes just are.
     def testRefFileStream(self):
         # check that changing the path w/o changing the fileId works
         rfl = trove.ReferencedFileList()
-        rfl.append(("1234567890123456", "/dir1", "path1",
-                    "12345678901234567890", None))
-        rfl.append(("1234567890123456", "/dir2", "path2", None, None))
+        rfl.append((b"1234567890123456", "/dir1", "path1",
+                    b"12345678901234567890", None))
+        rfl.append((b"1234567890123456", "/dir2", "path2", None, None))
 
         newRfl = trove.ReferencedFileList(rfl.freeze())
         assert(rfl == newRfl)
@@ -940,12 +940,12 @@ Some changes just are.
         f = parseFlavor('is:x86')
 
         t = trove.Trove('some:name', v, f)
-        t.addFile('0' * 16, '/path', v, '0' * 20)
+        t.addFile(b'0' * 16, '/path', v, b'0' * 20)
         t.computeDigests()
         digests = self._gatherDigests(t)
         assert(len(digests) == 2)
         assert(digests[0] == 
-                  '\xa8\x8bdD^\xceo\xbc\x98\xc1\xb7\xf7@e\xf1(\xd6\xb2hF')
+                  b'\xa8\x8bdD^\xceo\xbc\x98\xc1\xb7\xf7@e\xf1(\xd6\xb2hF')
 
         t.computePathHashes()
         t.computeDigests()
@@ -1031,7 +1031,7 @@ Some changes just are.
         # apply the diff to the origional OtherTrove object and make
         # sure the change is reflected
         t.applyChangeSet(diff)
-        self.assertEqual(t.troveInfo.unknown(), '-----UNKNOWN 2-----')
+        self.assertEqual(t.troveInfo.unknown(), b'-----UNKNOWN 2-----')
 
         # now create a diff where the unknown troveinfo changes and
         # we're diffing against two different versions of Trove
@@ -1050,8 +1050,8 @@ Some changes just are.
         diff = t2.diff(oldTrove)[0]
         # apply it and verify
         t.applyChangeSet(diff)
-        self.assertEqual(t.troveInfo.unknown(), '')
-        self.assertEqual(t.troveInfo.scripts.unknown2(), '')
+        self.assertEqual(t.troveInfo.unknown(), b'')
+        self.assertEqual(t.troveInfo.scripts.unknown2(), b'')
 
     def testMissingRawTroveInfo(self):
         v1 = ThawVersion("/conary.rpath.com@test:trunk/10:1.2-3")
@@ -1102,7 +1102,7 @@ Some changes just are.
         t = Trove("trvname", v, f, None)
 
         # check the frozen trove without metadata
-        expected = '\x00\x00\x07trvname\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x00\x0b\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\t\x00\x01\x00'
+        expected = b'\x00\x00\x07trvname\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x00\x0b\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\t\x00\x01\x00'
         frozen = t.freeze()
         self.assertEqual(frozen, expected)
 
@@ -1121,7 +1121,7 @@ Some changes just are.
         for ver in trove._TROVESIG_VER_ALL:
             self.assertTrue(sha1s[ver] == t._sigString(ver))
         # check the frozen form with metadata
-        expected = "\x00\x00\x07trvname\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x01\x90\t\x80\x00\x00F\x00\x00\x14\x0c,!eT\x97\x85~\x81vF!\xf0$\xc4\xd3\xef\x8e\xad\x84\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xd4\xab\xdc\xf3\xcaU\xd2\x19`\xfe\xe6\x00\x86\xb5\xecC\x90\x18&\xb8\x90/\x18*\xa6\x8c4[P>\xe2\xa8\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x11\x017\x01A4\x00\x00\x14'\x14\xc7\x97mBF\xd1B\x9e\xf6/\xc9\n\xb6w\x0f\x84F\xe8\x01\x00(This is the short description of trvname\x02\x00'This is the long description of trvname\x03\x00w:Copyright License :: OSI Approved :: Common Public License;Copyright License :: OSI Approved :: General Public License\x04\x00\x1e\x1dblowfish, symmetric, 512 bits\x08\x00*\x01\x00'\x00\x00\x01\x00\x01\x00 \x87\x9c\xa5ae\xa5\xd2w\x7f\xdc\xe7\xb4\xc0\xa4\xd9\xc8\xd7\x0c\xbc`\xcd\xa9\x14\xc3\x19\x0f\xe2\xa6^\xdfs\xa8\t\x00\x01\x00"
+        expected = b"\x00\x00\x07trvname\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x01\x90\t\x80\x00\x00F\x00\x00\x14\x0c,!eT\x97\x85~\x81vF!\xf0$\xc4\xd3\xef\x8e\xad\x84\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xd4\xab\xdc\xf3\xcaU\xd2\x19`\xfe\xe6\x00\x86\xb5\xecC\x90\x18&\xb8\x90/\x18*\xa6\x8c4[P>\xe2\xa8\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x11\x017\x01A4\x00\x00\x14'\x14\xc7\x97mBF\xd1B\x9e\xf6/\xc9\n\xb6w\x0f\x84F\xe8\x01\x00(This is the short description of trvname\x02\x00'This is the long description of trvname\x03\x00w:Copyright License :: OSI Approved :: Common Public License;Copyright License :: OSI Approved :: General Public License\x04\x00\x1e\x1dblowfish, symmetric, 512 bits\x08\x00*\x01\x00'\x00\x00\x01\x00\x01\x00 \x87\x9c\xa5ae\xa5\xd2w\x7f\xdc\xe7\xb4\xc0\xa4\xd9\xc8\xd7\x0c\xbc`\xcd\xa9\x14\xc3\x19\x0f\xe2\xa6^\xdfs\xa8\t\x00\x01\x00"
         frozen = t.freeze()
         self.assertEqual(frozen, expected)
 
@@ -1186,7 +1186,7 @@ Some changes just are.
         oldSig = ds.signature()
         # tamper with the signature
         ds.signature.set(ds.signature()[:-1] +
-                         chr((ord(ds.signature()[-1]) + 1) %255))
+                         bytes([(ds.signature()[-1] + 1) % 255]))
         try:
             t.verifyDigitalSignatures(keyCache=keyCache)
         except DigitalSignatureVerificationError as e:
@@ -1349,7 +1349,7 @@ Some changes just are.
                     (2, sha256FromString('ed7daba3caaffc4da0de41d5a90ba6d2f364daf205bbf7b00ed1c125abea2276'), None)]
         self.assertEqual(sigs, expected)
         frz = g.freeze()
-        expected = '\x00\x00\x03foo\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x00\x7f\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00\'\x00\x00\x01\x02\x01\x00 \xed}\xab\xa3\xca\xaf\xfcM\xa0\xdeA\xd5\xa9\x0b\xa6\xd2\xf3d\xda\xf2\x05\xbb\xf7\xb0\x0e\xd1\xc1%\xab\xea"v\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00&\x02\x00#\x00\x00\x03foo\x02\x00\x1a\x01\x00\n\x00\x00\x02\x00\x01\x01\x00\x02\x00\x00\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\t\x00\x01\x00'
+        expected = b'\x00\x00\x03foo\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x00\x7f\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00\'\x00\x00\x01\x02\x01\x00 \xed}\xab\xa3\xca\xaf\xfcM\xa0\xdeA\xd5\xa9\x0b\xa6\xd2\xf3d\xda\xf2\x05\xbb\xf7\xb0\x0e\xd1\xc1%\xab\xea"v\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00&\x02\x00#\x00\x00\x03foo\x02\x00\x1a\x01\x00\n\x00\x00\x02\x00\x01\x01\x00\x02\x00\x00\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\t\x00\x01\x00'
         self.assertEqual(frz, expected)
 
         # make sure it passes digest check
@@ -1373,13 +1373,13 @@ Some changes just are.
         self.assertEqual(sigs, expected)
 
         frz = g.freeze()
-        expected2 = "\x00\x00\x03foo\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x00r\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc7\xb9d\xf5\xc1}\x81V\x8a\x85\xad\xads\xe2\xacCIk\x9f\xf1\xfb\xe1)q\xaf\xbc!\x8e\xce\xba)O\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00\x19\x02\x00\x16\x00\x00\x03foo\x02\x00\r\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\t\x00\x01\x00"
+        expected2 = b"\x00\x00\x03foo\x01\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x02\x80\x00\x00\x051#x86\x04\x80\x00\x00r\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc7\xb9d\xf5\xc1}\x81V\x8a\x85\xad\xads\xe2\xacCIk\x9f\xf1\xfb\xe1)q\xaf\xbc!\x8e\xce\xba)O\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00\x19\x02\x00\x16\x00\x00\x03foo\x02\x00\r\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\t\x00\x01\x00"
         self.assertEqual(frz, expected2)
 
         # this is an old trove changeset that has a vSig entry, and also
         # has more than one conversion on a script.  We need to ignore
         # the vSig.
-        frztcs = "\x00\x00\x03foo\x02\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x07\x00\x04\x00\x00\x00\x02\x0c\x00\x051#x86\r\x00\x01\x00\x0e\x80\x00\x00\x7f\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc5\x86\xa9\xa5p\xf4>\xcb\x13\x13\xd4m\xf6\xe0\x8b\n/\xe2\xa2\x8e\xd8J\x00\xa3:\xd8\x98\x14\xe6U5?\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00&\x02\x00#\x00\x00\x03foo\x02\x00\x1a\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\x01\x00\n\x00\x00\x02\x00\x01\x01\x00\x02\x00\x00\x10\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc5\x86\xa9\xa5p\xf4>\xcb\x13\x13\xd4m\xf6\xe0\x8b\n/\xe2\xa2\x8e\xd8J\x00\xa3:\xd8\x98\x14\xe6U5?\x13\x80\x00\x00\x7f\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc5\x86\xa9\xa5p\xf4>\xcb\x13\x13\xd4m\xf6\xe0\x8b\n/\xe2\xa2\x8e\xd8J\x00\xa3:\xd8\x98\x14\xe6U5?\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00&\x02\x00#\x00\x00\x03foo\x02\x00\x1a\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\x01\x00\n\x00\x00\x02\x00\x01\x01\x00\x02\x00\x00"
+        frztcs = b"\x00\x00\x03foo\x02\x00)/conary.rpath.com@test:trunk/10.000:1.2-3\x07\x00\x04\x00\x00\x00\x02\x0c\x00\x051#x86\r\x00\x01\x00\x0e\x80\x00\x00\x7f\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc5\x86\xa9\xa5p\xf4>\xcb\x13\x13\xd4m\xf6\xe0\x8b\n/\xe2\xa2\x8e\xd8J\x00\xa3:\xd8\x98\x14\xe6U5?\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00&\x02\x00#\x00\x00\x03foo\x02\x00\x1a\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\x01\x00\n\x00\x00\x02\x00\x01\x01\x00\x02\x00\x00\x10\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc5\x86\xa9\xa5p\xf4>\xcb\x13\x13\xd4m\xf6\xe0\x8b\n/\xe2\xa2\x8e\xd8J\x00\xa3:\xd8\x98\x14\xe6U5?\x13\x80\x00\x00\x7f\t\x80\x00\x00F\x00\x00\x14J\x96\xa1s\xf3\x04\xe4\x08\xbb\x19%\xf7\x8d.\xdf9iuR\x8d\x02\x80\x00\x00*\x01\x00'\x00\x00\x01\x01\x01\x00 \xc5\x86\xa9\xa5p\xf4>\xcb\x13\x13\xd4m\xf6\xe0\x8b\n/\xe2\xa2\x8e\xd8J\x00\xa3:\xd8\x98\x14\xe6U5?\r\x00\x04\x00\x00\x00\n\x0e\x00\x01\x00\x10\x00&\x02\x00#\x00\x00\x03foo\x02\x00\x1a\x01\x00\n\x00\x00\x02\x00\x02\x01\x00\x02\x00\x00\x01\x00\n\x00\x00\x02\x00\x01\x01\x00\x02\x00\x00"
         logFilter = testcase.LogFilter()
         logFilter.add()
         try:
@@ -1514,8 +1514,8 @@ class TroveTest2(rephelp.RepositoryHelper):
         m = trove.Metadata()
         mi1 = trove.MetadataItem()
         mi1.language.set('lang')
-        mi1.licenses.set('l1')
-        mi1.licenses.set('l2')
+        mi1.licenses.set(b'l1')
+        mi1.licenses.set(b'l2')
 
         mi2 = trove.MetadataItem()
         mi2.language.set('lang')
@@ -1528,13 +1528,13 @@ class TroveTest2(rephelp.RepositoryHelper):
         # We want to make sure that only the last list of strings is visible
         m.addItems([mi1, mi2])
         licenses = m.get('lang')['licenses']
-        self.assertEqual(licenses, ['l3'])
+        self.assertEqual(licenses, [b'l3'])
 
         # Make sure after we flatten the metadata we still get the item on the
         # top of the stack
         items = m.flatten(filteredKeyValues = ['a'])
         self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].licenses, ['l3'])
+        self.assertEqual(items[0].licenses, [b'l3'])
         self.assertEqual(list(items[0].keyValue.items()),
             [('b', 'b')])
 
@@ -1594,8 +1594,8 @@ class TroveTest2(rephelp.RepositoryHelper):
                             trove._STREAM_TCS_ABSOLUTE_TROVEINFO, frzTrv)()
         frzMetadata = trove.TroveInfo.find(
                             trove._TROVEINFO_TAG_METADATA, frzTroveInfo)
-        assert('first' not in frzMetadata)
-        assert('first' in trvCs.extendedMetadata())
+        assert(b'first' not in frzMetadata)
+        assert(b'first' in trvCs.extendedMetadata())
 
         thawedTrvCs = ThawTroveChangeSet(frzTrv)
         thawedTrv = Trove(thawedTrvCs)
@@ -1678,12 +1678,12 @@ class TroveTest2(rephelp.RepositoryHelper):
 
     def testTroveMtimes(self):
         l = trove.TroveMtimes()
-        self.assertEqual(l.freeze(), '')
+        self.assertEqual(l.freeze(), b'')
         l.append(0x20)
         l.append(0x3000)
         l.append(0x400000)
         l.append(0x80000000)
-        self.assertEqual(l.freeze(), '\x00\x00\x00 \x00\x000\x00\x00@\x00\x00\x80\x00\x00\x00')
+        self.assertEqual(l.freeze(), b'\x00\x00\x00 \x00\x000\x00\x00@\x00\x00\x80\x00\x00\x00')
 
         l2 = trove.TroveMtimes(l.freeze())
         self.assertEqual(l, l2)

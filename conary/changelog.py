@@ -21,11 +21,11 @@ Implements changelog entries for repository commits.
 
 import os
 import sys
-import string
 import subprocess
 import tempfile
 
 from conary import streams
+from conary.lib import sha1helper
 
 _CHANGELOG_NAME    = 1
 _CHANGELOG_CONTACT = 2
@@ -37,9 +37,9 @@ LARGE = streams.LARGE
 class ChangeLog(streams.StreamSet):
 
     streamDict = {
-        _CHANGELOG_NAME    : (SMALL, streams.StringStream, "name"    ),
-        _CHANGELOG_CONTACT : (SMALL, streams.StringStream, "contact" ),
-        _CHANGELOG_MESSAGE : (SMALL, streams.StringStream, "message" )
+        _CHANGELOG_NAME    : (SMALL, streams.TextStream, "name"    ),
+        _CHANGELOG_CONTACT : (SMALL, streams.TextStream, "contact" ),
+        _CHANGELOG_MESSAGE : (SMALL, streams.TextStream, "message" )
         }
 
     __slots__ = [ 'name', 'contact', 'message' ]
@@ -69,7 +69,7 @@ class ChangeLog(streams.StreamSet):
         if not prompt:
             prompt = 'Enter your change log message.'
         msg = "\n-----\n%s\n" % prompt
-        os.write(fd, msg)
+        os.write(fd, sha1helper.toBytes(msg))
         os.close(fd)
 
         def _getMessageNoEditor():
@@ -110,7 +110,8 @@ class ChangeLog(streams.StreamSet):
             self.message.set(msg)
             return True
 
-        newMsg = open(name).read()
+        with open(name, 'rb') as f:
+            newMsg = sha1helper.toStr(f.read())
         os.unlink(name)
 
         if newMsg == msg:
@@ -119,7 +120,7 @@ class ChangeLog(streams.StreamSet):
         if newMsg[-len(msg):]:
             newMsg = newMsg[:-len(msg)]
 
-        newMsg = string.strip(newMsg)
+        newMsg = newMsg.strip()
         newMsg += '\n'
         self.setMessage(newMsg)
         return True

@@ -32,7 +32,7 @@ class ClientNewTroveTest(testhelp.TestCase):
         foo = filetypes.RegularFile(contents = 'foo1')
         fileObj = foo.get(pathId)
         f = foo.getContents()
-        self.assertEqual(f.read(), 'foo1')
+        self.assertEqual(f.read(), b'foo1')
         self.assertEqual(fileObj.flags(), 0)
         self.assertEqual(fileObj.flavor(), deps.Flavor())
         self.assertEqual(fileObj.provides(), deps.DependencySet())
@@ -43,7 +43,7 @@ class ClientNewTroveTest(testhelp.TestCase):
         self.assertEqual(fileObj.lsTag, '-')
         self.assertEqual(fileObj.linkGroup(), None)
         self.assertEqual(fileObj.fileId(),
-              '(\x01\x9a\xcbz\xbb\x93\x15\x01c\xcf\xd5\x14\xef\xf7,S\xbb\xf8p')
+              b'(\x01\x9a\xcbz\xbb\x93\x15\x01c\xcf\xd5\x14\xef\xf7,S\xbb\xf8p')
 
         requires = deps.ThawDependencySet('4#foo::runtime')
         provides = deps.ThawDependencySet('11#foo')
@@ -80,7 +80,7 @@ class ClientNewTroveTest(testhelp.TestCase):
         foo = filetypes.RegularFile(contents = BytesIO(b'foo1'))
         fileObj = foo.get(pathId)
         f = foo.getContents()
-        self.assertEqual(f.read(), 'foo1')
+        self.assertEqual(f.read(), b'foo1')
 
         tmpDir = tempfile.mkdtemp()
         try:
@@ -160,7 +160,7 @@ class ClientNewTroveTest(testhelp.TestCase):
     def testLinkGroup(self):
         foo = filetypes.RegularFile(linkGroup = '12345')
         fileObj = foo.get(pathId)
-        self.assertEqual(fileObj.linkGroup(), '12345')
+        self.assertEqual(fileObj.linkGroup(), b'12345')
 
     def testTags(self):
         # tags is a list. ensure nothing sloppy is done wrt class attributes

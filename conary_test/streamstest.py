@@ -58,9 +58,9 @@ class StreamsTest(testhelp.TestCase):
         s2 = ShortStream(0x1)
         assert(s != s2)
         diff = s.diff(s2)
-        assert(diff == "\x12\x34")
+        assert(diff == b"\x12\x34")
         diff2 = s2.diff(s)
-        assert(diff2 == "\0\1")
+        assert(diff2 == b"\0\1")
         assert(not s2.twm(diff, s2))
         assert(s == s2)
 
@@ -70,7 +70,7 @@ class StreamsTest(testhelp.TestCase):
         # test diffs against None
         s4 = ShortStream(None)
         diff3 = s4.diff(s3)
-        assert(diff3 == '')
+        assert(diff3 == b'')
         # test that merging a value back to None works
         assert(not s3.twm(diff3, s3))
         assert(s3() == None)
@@ -78,11 +78,11 @@ class StreamsTest(testhelp.TestCase):
 
         s4.set(1)
         s4.set(None)
-        assert(s4.freeze() == '')
+        assert(s4.freeze() == b'')
 
         s4.set(1)
         s4.thaw('')
-        assert(s4.freeze() == '')
+        assert(s4.freeze() == b'')
         
     def testIntStream(self):
         s = IntStream(0x12345678)
@@ -92,9 +92,9 @@ class StreamsTest(testhelp.TestCase):
         s2 = IntStream(0x1)
         assert(s != s2)
         diff = s.diff(s2)
-        assert(diff == "\x12\x34\x56\x78")
+        assert(diff == b"\x12\x34\x56\x78")
         diff2 = s2.diff(s)
-        assert(diff2 == "\0\0\0\1")
+        assert(diff2 == b"\0\0\0\1")
         assert(not s2.twm(diff, s2))
         assert(s == s2)
 
@@ -104,14 +104,14 @@ class StreamsTest(testhelp.TestCase):
         # test diffs against None
         s4 = IntStream(None)
         diff3 = s4.diff(s3)
-        assert(diff3 == '')
+        assert(diff3 == b'')
         # test that merging a value back to None works
         assert(not s3.twm(diff3, s3))
         assert(s3() == None)
 
         s4.set(1)
         s4.set(None)
-        assert(s4.freeze() == '')
+        assert(s4.freeze() == b'')
 
         s.set(1)
         assert(s() == 1)
@@ -126,9 +126,9 @@ class StreamsTest(testhelp.TestCase):
         s2 = LongLongStream(0x1)
         assert(s != s2)
         diff = s.diff(s2)
-        assert(diff == "\0\0\0\0\x12\x34\x56\x78")
+        assert(diff == b"\0\0\0\0\x12\x34\x56\x78")
         diff2 = s2.diff(s)
-        assert(diff2 == "\0\0\0\0\0\0\0\1")
+        assert(diff2 == b"\0\0\0\0\0\0\0\1")
         assert(not s2.twm(diff, s2))
         assert(s == s2)
 
@@ -138,7 +138,7 @@ class StreamsTest(testhelp.TestCase):
         # test diffs against None
         s4 = LongLongStream(None)
         diff3 = s4.diff(s3)
-        assert(diff3 == '')
+        assert(diff3 == b'')
         # test that merging a value back to None works
         assert(not s3.twm(diff3, s3))
         assert(s3() == None)
@@ -150,7 +150,7 @@ class StreamsTest(testhelp.TestCase):
         assert(s() == 0x8765432187654321)
 
         s.set(None)
-        assert(s.freeze() == '')
+        assert(s.freeze() == b'')
 
         s.set(1)
         s.thaw('')
@@ -164,9 +164,9 @@ class StreamsTest(testhelp.TestCase):
         s2 = StringStream("another")
         assert(s != s2)
         diff = s.diff(s2)
-        assert(diff == "test")
+        assert(diff == b"test")
         diff2 = s2.diff(s)
-        assert(diff2 == "another")
+        assert(diff2 == b"another")
         # after the merge, s2 will be "test"
         assert(not s2.twm(diff, s2))
         assert(s == s2)
@@ -195,52 +195,52 @@ class StreamsTest(testhelp.TestCase):
         try:
             StringStream(1)
         except TypeError as e:
-            assert (str(e) == 'frozen value must be None or a string')
+            assert (str(e) == 'frozen value must be None, bytes or str')
         else:
             raise
 
     def testStrings(self):
-        s = StringsStream("test1\0test2")
+        s = StringsStream(b"test1\0test2")
         s2 = StringsStream(s.freeze())
         assert(s == s2)
         assert(s == ['test1', 'test2'])
 
-        s2 = StringsStream('another1\0another2')
+        s2 = StringsStream(b'another1\0another2')
         assert(s != s2)
         diff = s.diff(s2)
-        assert(diff == 'test1\0test2')
+        assert(diff == b'test1\0test2')
         diff2 = s2.diff(s)
-        assert(diff2 == 'another1\0another2')
+        assert(diff2 == b'another1\0another2')
         assert(not s2.twm(diff, s2))
         assert(s == s2)
 
         # there cannot be conflicts in a StringsStream twm
-        s3 = StringsStream('yet one more\0last one')
+        s3 = StringsStream(b'yet one more\0last one')
         assert(s2.twm(diff2, s3) == False)
         assert(s2 == ['another1', 'another2'])
 
         # test diffs to an empty list
-        s4 = StringsStream("test1\0test2")
+        s4 = StringsStream(b"test1\0test2")
         s5 = StringsStream()
         diff = s5.diff(s4)
-        assert (diff == '')
+        assert (diff == b'')
         assert (s4.twm(diff, s4) == False)
         assert (s4 == [])
 
         # test diffs from an empty list
-        s4 = StringsStream('test1\0test2')
+        s4 = StringsStream(b'test1\0test2')
         s5 = StringsStream()
         diff = s4.diff(s5)
-        assert (diff == 'test1\0test2')
+        assert (diff == b'test1\0test2')
         assert (s5.twm(diff, s5) == False)
         assert (s5 == ['test1', 'test2'])
 
     def testOrderedBinaryStrings(self):
         s = OrderedBinaryStringsStream()
-        s.append('hello')
-        s.append('world\0!')
+        s.append(b'hello')
+        s.append(b'world\0!')
         frz = s.freeze()
-        self.assertEqual(frz, '\x05hello\x07world\x00!')
+        self.assertEqual(frz, b'\x05hello\x07world\x00!')
 
         s2 = OrderedBinaryStringsStream(frz)
         self.assertEqual(s, s2)
@@ -249,7 +249,7 @@ class StreamsTest(testhelp.TestCase):
         for x in ((1 << 5), (1 << 6), (1 << 7),
                   (1 << 14), (1 << 15), (1 << 16),
                   (1 << 20)):
-            s.append('1' * x)
+            s.append(b'1' * x)
         frz = s.freeze()
         s2 = OrderedBinaryStringsStream(frz)
         self.assertEqual(s, s2)
@@ -307,27 +307,27 @@ class StreamsTest(testhelp.TestCase):
         assert(d2.freeze() != '')
         assert(d.freeze() == '')
         diff = d.diff(d2)
-        assert(diff == '')
+        assert(diff == b'')
         d2.twm(diff, d2)
         assert(d == d2)
-        assert(d2.freeze() == '')
+        assert(d2.freeze() == b'')
 
     def testOptionalFlavor(self):
         depSet = deps.ThawFlavor('is:x86(i486 i586)')
         fs = OptionalFlavorStream()
-        assert(fs.freeze() == '')
+        assert(fs.freeze() == b'')
         fs.set(None)
-        assert(fs.freeze() == '\0')
-        fs.thaw('')
-        assert(fs.freeze() == '')
-        fs.thaw('\0')
-        assert(fs.freeze() == '\0')
+        assert(fs.freeze() == b'\0')
+        fs.thaw(b'')
+        assert(fs.freeze() == b'')
+        fs.thaw(b'\0')
+        assert(fs.freeze() == b'\0')
 
         fs.set(depSet)
-        assert(fs.freeze() == 'is:x86(i486 i586)')
-        fs2 = OptionalFlavorStream('\0')
+        assert(fs.freeze() == b'is:x86(i486 i586)')
+        fs2 = OptionalFlavorStream(b'\0')
 
-        assert(fs2.freeze() == '\0')
+        assert(fs2.freeze() == b'\0')
         diff = fs2.diff(fs)
         newfs = fs.copy()
         newfs.twm(diff, newfs)
@@ -360,9 +360,9 @@ class StreamsTest(testhelp.TestCase):
         stream.name.set('thename')
         stream.number.set(31459)
         frz = stream.freeze()
-        expected = '\x01\x00\x07thename\x02\x00\x04\x00\x00z\xe3'
+        expected = b'\x01\x00\x07thename\x02\x00\x04\x00\x00z\xe3'
         assert(frz == expected)
-        assert(stream.find(1, frz)() == "thename")
+        assert(stream.find(1, frz)() == b"thename")
         assert(stream.find(2, frz)() == 31459)
         assert(stream.find(3, frz) == None)
 
@@ -378,7 +378,7 @@ class StreamsTest(testhelp.TestCase):
 
         frz = stream2.freeze()
         split = splitFrozenStreamSet(frz)
-        self.assertEqual(split, [(1, 'thename'), (2, '\x00\x00z\xe4')])
+        self.assertEqual(split, [(1, b'thename'), (2, b'\x00\x00z\xe4')])
 
         # test ignoreUnknown for thawing
         self.assertRaises(ValueError, Rigid, frz)
@@ -499,16 +499,16 @@ class StreamsTest(testhelp.TestCase):
         c.addStream(1, StringStream("second"))
         c.addStream(1, StringStream("third"))
         assert(sorted([x() for x in c.getStreams(1) ]) == 
-                [ "first", "second", "third" ])
+                [ b"first", b"second", b"third" ])
         assert(sorted([x[1]() for x in c.iterAll() ]) == 
-                [ "first", "second", "third" ])
+                [ b"first", b"second", b"third" ])
 
         c.addStream(2, IntStream(1))
         c.addStream(2, IntStream(2))
         c.addStream(2, IntStream(3))
         assert(sorted([x() for x in c.getStreams(2) ]) == [ 1, 2, 3] )
         assert(sorted([x[1]() for x in c.iterAll() ]) == 
-                    [1, 2, 3, 'first', 'second', 'third'] )
+                    [1, 2, 3, b'first', b'second', b'third'] )
 
         c2 = Collection(c.freeze())
         assert(c == c2)
@@ -545,7 +545,7 @@ class StreamsTest(testhelp.TestCase):
         c2.addStream(2, IntStream(4))
         c2.delStream(2, IntStream(3))
         d = c2.diff(c)
-        assert(d == '\x01\x00\x05first\x01\x00\x06second\x01\x00\x05third\x02\x00\x04\x00\x00\x00\x01\x02\x00\x04\x00\x00\x00\x02\x02\x00\x04\x00\x00\x00\x04')
+        assert(d == b'\x01\x00\x05first\x01\x00\x06second\x01\x00\x05third\x02\x00\x04\x00\x00\x00\x01\x02\x00\x04\x00\x00\x00\x02\x02\x00\x04\x00\x00\x00\x04')
         
         c.twm(d, c)
         assert(c == c2)
@@ -563,14 +563,14 @@ class StreamsTest(testhelp.TestCase):
         s = ' ' * (1 << 17)
         c.addStream(1, StringStream(s))
         frz = c.freeze()
-        self.assertEqual(frz, '\x01\x80\x02\x00\x00' + s)
+        self.assertEqual(frz, b'\x01\x80\x02\x00\x00' + s.encode())
 
         c = Collection()
         # make sure we can store smaller stuff
         s = ' ' * 63
         c.addStream(1, StringStream(s))
         frz = c.freeze()
-        self.assertEqual(frz, '\x01?' + s)
+        self.assertEqual(frz, b'\x01?' + s.encode())
 
         s2 = ' ' * 64
         c.addStream(1, StringStream(s2))
@@ -606,16 +606,16 @@ class StreamsTest(testhelp.TestCase):
         s2 = Sha1Stream()
         s2.set('2' * 20)
         d = s1.diff(s2)
-        assert(d == '1' * 20)
+        assert(d == b'1' * 20)
         s2.twm(d, s2)
-        assert(s2() == '1' * 20)
-        assert(s1.freeze() == '1' * 20)
+        assert(s2() == b'1' * 20)
+        assert(s1.freeze() == b'1' * 20)
 
         # make sure that a diff against the same thing yields None
         assert(s1.diff(s2) == None)
 
         s1.setFromString('61' * 20)
-        assert (s1() == 'a' * 20)
+        assert (s1() == b'a' * 20)
 
         try:
             s1.set('a' * 21)
@@ -644,16 +644,16 @@ class StreamsTest(testhelp.TestCase):
         s2 = AbsoluteSha1Stream()
         s2.set('2' * 20)
         d = s1.diff(s2)
-        assert(d == '1' * 20)
+        assert(d == b'1' * 20)
         s2.twm(d, s2)
-        assert(s2() == '1' * 20)
-        assert(s1.freeze() == '1' * 20)
+        assert(s2() == b'1' * 20)
+        assert(s1.freeze() == b'1' * 20)
 
         # make sure that a diff against the same thing yields s1()
-        assert(s1.diff(s2) == '1' * 20)
+        assert(s1.diff(s2) == b'1' * 20)
 
         s1.setFromString('61' * 20)
-        assert (s1() == 'a' * 20)
+        assert (s1() == b'a' * 20)
 
         try:
             s1.set('a' * 21)
@@ -663,14 +663,14 @@ class StreamsTest(testhelp.TestCase):
             assert(0)
 
         s1.set('')
-        assert(s1.diff(s2) == '')
+        assert(s1.diff(s2) == b'')
 
     def testSha256Stream(self):
         s1 = NonStandardSha256Stream()
         s1.set('1' * 32)
-        assert(s1() == '1' * 32)
+        assert(s1() == b'1' * 32)
         s2 = NonStandardSha256Stream(s1.freeze())
-        assert(s1.freeze() == '1' * 32)
+        assert(s1.freeze() == b'1' * 32)
 
         s1 = NonStandardSha256Stream()
         s1.compute('hello')
@@ -693,9 +693,9 @@ class StreamsTest(testhelp.TestCase):
         v1 = StringVersionStream()
         v2 = StringVersionStream()
         v1.set(versions.ThawVersion('/a@b:c/15:1.1-1'))
-        assert(v1.freeze() == '/a@b:c/1.1-1')
+        assert(v1.freeze() == b'/a@b:c/1.1-1')
         v1.twm(v2.diff(v1), v1)
-        assert(v1.freeze() == '')
+        assert(v1.freeze() == b'')
 
         # make sure that twm works properly
         v1.set(versions.ThawVersion('/a@b:c/15:1.1-1'))
@@ -712,7 +712,7 @@ class StreamsTest(testhelp.TestCase):
 
         # sanity check on regular non-unicode string
         ss.set(ns)
-        assert(ss.freeze() == ns)
+        assert(ss.freeze() == ns.encode())
 
         # now for the unicode string
         ss.set(us)
@@ -746,7 +746,7 @@ class StreamsTest(testhelp.TestCase):
 
         sub = Subset(super.freeze())
         assert(sub.freeze() == super.freeze())
-        assert(sub.freeze(freezeUnknown = False) == '\x01\x00\x04test')
+        assert(sub.freeze(freezeUnknown = False) == b'\x01\x00\x04test')
         known = sub.freeze(freezeUnknown = False)
         unknown = sub.freeze(freezeKnown = False)
         assert(sub.freeze() == known + unknown)
@@ -794,9 +794,9 @@ class StreamsTest(testhelp.TestCase):
         frz = new.freeze()
         split = splitFrozenStreamSet(frz)
 
-        self.assertEqual(split, [(1, 'world'),
-                                     (2, '\x00\x00\x00\n'),
-                                     (3, '\x00\x00\x00\x14')])
+        self.assertEqual(split, [(1, b'world'),
+                                     (2, b'\x00\x00\x00\n'),
+                                     (3, b'\x00\x00\x00\x14')])
 
     def testDerivedStreamSet(self):
         # make sure _streamDict doesn't get honored through inheritance
@@ -822,4 +822,4 @@ class StreamsTest(testhelp.TestCase):
         b = Blah()
         b.blah.set('blah')
         frz = b.freeze()
-        self.assertEqual(Blah2.find(1, frz)(), 'blah')
+        self.assertEqual(Blah2.find(1, frz)(), b'blah')

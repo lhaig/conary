@@ -22,7 +22,6 @@ import os
 import pwd
 import socket
 import stat
-import string
 import struct
 import subprocess
 import tempfile
@@ -83,14 +82,14 @@ SMALL = streams.SMALL
 LARGE = streams.LARGE
 DYNAMIC = streams.DYNAMIC
 
-FILE_TYPE_DIFF = '\x01'
+FILE_TYPE_DIFF = b'\x01'
 
 PRELINK_CMD = ("/usr/sbin/prelink",)
 _havePrelink = None
 
 
 def fileStreamIsDiff(fileStream):
-    return fileStream[0] == FILE_TYPE_DIFF
+    return fileStream[0:1] == FILE_TYPE_DIFF
 
 class DeviceStream(streams.StreamSet):
 
@@ -160,8 +159,8 @@ class InodeStream(streams.StreamSet):
     ignoreUnknown = streams.PRESERVE_UNKNOWN
     streamDict = { INODE_STREAM_PERMS : (SMALL, streams.ShortStream,  "perms"),
                    INODE_STREAM_MTIME : (SMALL, streams.MtimeStream,  "mtime"),
-                   INODE_STREAM_OWNER : (SMALL, streams.StringStream, "owner"),
-                   INODE_STREAM_GROUP : (SMALL, streams.StringStream, "group") }
+                   INODE_STREAM_OWNER : (SMALL, streams.TextStream, "owner"),
+                   INODE_STREAM_GROUP : (SMALL, streams.TextStream, "group") }
     __slots__ = [ "perms", "mtime", "owner", "group" ]
 
     def compatibleWith(self, other):
@@ -299,6 +298,11 @@ class File(streams.StreamSet):
     __slots__ = [ "thePathId", "inode", "flags", "tags",
                   'provides', 'requires', 'flavor' ]
 
+    @property
+    def lsTagBytes(self):
+        # the file type tag as it appears on the wire
+        return self.lsTag.encode('ascii')
+
     def __deepcopy__(self, mem):
         return ThawFile(self.freeze(), self.thePathId)
 
@@ -314,16 +318,16 @@ class File(streams.StreamSet):
         if other is None or self.lsTag != other.lsTag:
             return self.freeze()
 
-        rc = [ FILE_TYPE_DIFF, self.lsTag ]
+        rc = [ FILE_TYPE_DIFF, self.lsTagBytes ]
         streamDiff = streams.StreamSet.diff(self, other)
         if streamDiff is not None:
             rc.append(streamDiff)
 
-        return "".join(rc)
+        return b"".join(rc)
 
     def modeString(self):
         l = self.inode.permsString()
-        return self.lsTag + string.join(l, "")
+        return self.lsTag + "".join(l)
 
     def timeString(self):
         return self.inode.timeString()
@@ -393,12 +397,11 @@ class File(streams.StreamSet):
         self.chmod(target, mask)
 
     def twm(self, diff, base, skip = None):
-        sameType = struct.unpack("B", diff[0])
-        if not sameType:
+        if not fileStreamIsDiff(diff):
             # XXX file type changed -- we don't support this yet
             raise AssertionError
         assert(self.lsTag == base.lsTag)
-        assert(self.lsTag == diff[1])
+        assert(self.lsTagBytes == diff[1:2])
 
         return streams.StreamSet.twm(self, diff[2:], base, skip = skip)
 
@@ -416,7 +419,7 @@ class File(streams.StreamSet):
     eq = __eq__
 
     def freeze(self, skipSet = None):
-        return self.lsTag + streams.StreamSet.freeze(self, skipSet = skipSet)
+        return self.lsTagBytes + streams.StreamSet.freeze(self, skipSet = skipSet)
 
     def __init__(self, pathId, streamData = None):
         assert(self.__class__ is not File)
@@ -443,7 +446,7 @@ class SymbolicLink(File):
     lsTag = "l"
     statType = stat.S_IFLNK
     streamDict = {
-        FILE_STREAM_TARGET :   (SMALL, streams.StringStream, "target"),
+        FILE_STREAM_TARGET :   (SMALL, streams.TextStream, "target"),
     }
     streamDict.update(File.streamDict)
     # chmod() on a symlink follows the symlink
@@ -623,7 +626,7 @@ class RegularFile(File):
                 tmpfd, tmpname = tempfile.mkstemp(name, '.ct', path)
                 try:
                     d = digestlib.sha1()
-                    f = os.fdopen(tmpfd, 'w')
+                    f = os.fdopen(tmpfd, 'wb')
                     util.copyfileobj(src, f, digest = d)
                     f.close()
                     actualSha1 = d.digest()
@@ -784,21 +787,22 @@ def FileFromFilesystem(path, pathId, possibleMatch = None, inodeInfo = False,
     return f
 
 def ThawFile(frz, pathId):
-    if frz[0] == "-":
+    tag = frz[0:1]
+    if tag == b"-":
         return RegularFile(pathId, streamData = frz)
-    elif frz[0] == "d":
+    elif tag == b"d":
         return Directory(pathId, streamData = frz)
-    elif frz[0] == "p":
+    elif tag == b"p":
         return NamedPipe(pathId, streamData = frz)
-    elif frz[0] == "s":
+    elif tag == b"s":
         return Socket(pathId, streamData = frz)
-    elif frz[0] == "l":
+    elif tag == b"l":
         return SymbolicLink(pathId, streamData = frz)
-    elif frz[0] == "b":
+    elif tag == b"b":
         return BlockDevice(pathId, streamData = frz)
-    elif frz[0] == "c":
+    elif tag == b"c":
         return CharacterDevice(pathId, streamData = frz)
-    elif frz[0] == "m":
+    elif tag == b"m":
         return MissingFile(pathId, streamData = frz)
 
     raise AssertionError
@@ -815,11 +819,11 @@ class FilesError(errors.ConaryError):
         return repr(self)
 
 def contentsChanged(diff):
-    if diff[0] == 0:
+    if not fileStreamIsDiff(diff):
         return False
 
-    type = diff[1]
-    if type != "-": return False
+    type = diff[1:2]
+    if type != b"-": return False
 
     i = 2
     while i < len(diff):
@@ -835,7 +839,7 @@ def contentsChanged(diff):
 
 # shortcuts to get items directly from frozen files
 def frozenFileHasContents(frz):
-    return frz[0] == '-'
+    return frz[0:1] == b'-'
 
 def frozenFileFlags(frz):
     return File.find(FILE_STREAM_FLAGS, frz[1:])
@@ -850,27 +854,26 @@ def frozenFileRequires(frz):
     return File.find(FILE_STREAM_REQUIRES, frz[1:])
 
 def fieldsChanged(diff):
-    sameType = struct.unpack("B", diff[0])
-    if not sameType:
+    if not fileStreamIsDiff(diff):
         return [ "type" ]
-    type = diff[1]
+    type = diff[1:2]
     i = 2
 
-    if type == "-":
+    if type == b"-":
         cl = RegularFile
-    elif type == "d":
+    elif type == b"d":
         cl = Directory
-    elif type == "b":
+    elif type == b"b":
         cl = BlockDevice
-    elif type == "c":
+    elif type == b"c":
         cl = CharacterDevice
-    elif type == "s":
+    elif type == b"s":
         cl = Socket
-    elif type == "l":
+    elif type == b"l":
         cl = SymbolicLink
-    elif type == "p":
+    elif type == b"p":
         cl = NamedPipe
-    elif type == "m":
+    elif type == b"m":
         cl = MissingFile
     else:
         raise AssertionError
