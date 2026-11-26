@@ -15,7 +15,8 @@
 #
 
 
-arch_files =	alpha	\
+arch_files =	aarch64	\
+		alpha	\
 		ia64	\
 		ppc	\
 		ppc64	\
