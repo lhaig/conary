@@ -455,3 +455,16 @@ PATTERN: testing - Removing a top failure signature can leave the pass count fla
 PATTERN: testing - When a harness helper must print after restoring redirected stdout, store the exception, restore, then print and re-raise the original object.
 PATTERN: tooling - A full baseline leaves testcase.recipe, testcase/ and a CONARY entry in the repo root; on the case-insensitive mount never rm -rf CONARY (it is conary/), check git status instead.
 PATTERN: harness - The cook tests need conary-policy on CONARY_POLICY_PATH; without it cook.cookObject calls sys.exit(1).
+
+## 2026-11-27 - task 3.19 DONE
+
+- User decision: conary-policy comes from the fork lhaig/conary-policy, cloned next to this repo, ported on its own py3 branch
+  (commit 47638e8, pushed). devenv/run mounts it read-only at /policy and sets CONARY_POLICY_PATH; the baseline records its describe.
+- 22 policy modules (not 23) parse and import on Python 3; policy.loadPolicy loads them with SharedLibrary.
+- Run tmp/baseline-20261127-t319: 1134 pass / 1509 fail + 13 errors / 167 skip (t318 1041/1602/167). SystemExit 623 -> 0,
+  PolicyError 41 -> 0. Top signatures, all in conary/: sqlite CursorError 491, cook._cookPackageObjWrap UnsupportedOperation 471,
+  sha1ToString 159, streams.diff 49, util.copyfileobj 27, sigprotect UnboundLocalError 21, http OpenError 21.
+- py3tests 1186 passed; compile gate clean; pyflakes clean. Review MINOR; orchestrator added the pyflakes undefined-name test.
+
+PATTERN: py3-port - On Python 3.14+ (PEP 758) `except X, e:` parses as a tuple of types; parse/import tests miss it, pyflakes undefined-name catches it.
+PATTERN: tooling - Commit a sibling repo before a baseline that depends on it, so env.txt records a clean hash.
