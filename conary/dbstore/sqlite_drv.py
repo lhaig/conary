@@ -15,6 +15,7 @@
 #
 
 
+import collections.abc
 import os
 import re
 
@@ -33,6 +34,24 @@ class KeywordDict(BaseKeywordDict):
         'PATHTYPE'      : 'TEXT',
         'STRING'        : 'TEXT',
         })
+
+def _normalizeRows(paramList):
+    """Yield each executemany row in a shape the stdlib sqlite3 accepts.
+
+    The old driver bound a scalar row to the single placeholder; stdlib would
+    treat a str as a sequence of characters and reject an int. Rows are
+    consumed lazily.
+    """
+    for row in paramList:
+        if isinstance(row, (tuple, list)):
+            yield row
+        elif isinstance(row, (sqllib.Row, sqlite3.Row)):
+            yield tuple(row)
+        elif isinstance(row, collections.abc.Mapping):
+            yield dict((k.lstrip(':'), v) for (k, v) in row.items())
+        else:
+            yield (row,)
+
 
 # implement the regexp function for sqlite
 def _regexp(pattern, item):
@@ -129,7 +148,9 @@ class Cursor(BaseCursor):
         self._executeCheck(sql)
         st = kw.pop("start_transaction", True)
         self._maybeBegin(sql, st)
-        ret = self._tryExecute(self._cursor.executemany, sql, paramList)
+        # values are bound untouched, exactly as execute() does
+        ret = self._tryExecute(self._cursor.executemany, sql,
+                               _normalizeRows(paramList))
         if ret is self._cursor:
             return self
         return ret

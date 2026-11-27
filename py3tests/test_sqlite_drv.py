@@ -256,3 +256,177 @@ def test_compile_and_execstmt(db):
     cu.execute("SELECT a, b FROM p ORDER BY a")
     assert [tuple(r) for r in cu.fetchall()] == [(1, 2), (2, 4), (3, 6)]
     db.commit()
+
+
+# -- executemany row shapes ---------------------------------------------------
+
+class _NoLen:
+    """Iterable with no __len__ or __getitem__."""
+
+    def __init__(self, items):
+        self._items = items
+
+    def __iter__(self):
+        return iter(self._items)
+
+
+def _gen(items):
+    for i in items:
+        yield i
+
+
+def _row(*vals):
+    from conary.dbstore import sqllib
+    return sqllib.Row(list(vals), ['c%d' % i for i in range(len(vals))])
+
+
+_SCALAR_CASES = [
+    # id, rows, expected stored values (rowid order), expected typeofs
+    ('list-str', lambda: ['foo', 'bar:runtime', 'group-dist'],
+     ['foo', 'bar:runtime', 'group-dist'], ['text'] * 3),
+    ('generator-str', lambda: _gen(['foo', 'bar:runtime']),
+     ['foo', 'bar:runtime'], ['text'] * 2),
+    ('nolen-iterable', lambda: _NoLen(['alpha', 'beta']),
+     ['alpha', 'beta'], ['text'] * 2),
+    ('bytes', lambda: [b'\xff\x00\x80', b'abc'],
+     [b'\xff\x00\x80', b'abc'], ['blob'] * 2),
+    ('bytearray-memoryview', lambda: [bytearray(b'xyz'), memoryview(b'uvw')],
+     [b'xyz', b'uvw'], ['blob'] * 2),
+    ('ints', lambda: [10, 20, 30], [10, 20, 30], ['integer'] * 3),
+    ('int-generator', lambda: _gen([7, 8]), [7, 8], ['integer'] * 2),
+    ('none', lambda: [None, None], [None, None], ['null'] * 2),
+    ('1-tuples', lambda: [('foo',), ('bar',)], ['foo', 'bar'], ['text'] * 2),
+    ('1-lists', lambda: [['foo'], ['bar']], ['foo', 'bar'], ['text'] * 2),
+    ('sqllib-row', lambda: [_row('foo'), _row('bar')],
+     ['foo', 'bar'], ['text'] * 2),
+    ('dict-plain', lambda: [{'v': 'foo'}, {'v': 'bar'}],
+     ['foo', 'bar'], ['text'] * 2),
+    ('dict-colon', lambda: [{':v': 'foo'}, {':v': 'bar'}],
+     ['foo', 'bar'], ['text'] * 2),
+]
+
+
+@pytest.mark.parametrize('rows,want,types',
+                         [c[1:] for c in _SCALAR_CASES],
+                         ids=[c[0] for c in _SCALAR_CASES])
+def test_executemany_single_placeholder(db, rows, want, types):
+    cu = db.cursor()
+    cu.execute("CREATE TABLE s (v)")
+    if isinstance(next(iter(rows())), dict):
+        sql = "INSERT INTO s VALUES (:v)"
+    else:
+        sql = "INSERT INTO s VALUES (?)"
+    cu.executemany(sql, rows())
+    cu.execute("SELECT v, typeof(v) FROM s ORDER BY rowid")
+    got = cu.fetchall()
+    assert [r[0] for r in got] == want
+    assert [r[1] for r in got] == types
+    assert [type(r[0]) for r in got] == [type(w) for w in want]
+
+
+def test_executemany_set(db):
+    cu = db.cursor()
+    cu.execute("CREATE TABLE s (v TEXT)")
+    cu.executemany("INSERT INTO s VALUES (?)", {'foo', 'bar:runtime', 'zed'})
+    cu.execute("SELECT v FROM s")
+    assert sorted(r[0] for r in cu.fetchall()) == ['bar:runtime', 'foo', 'zed']
+
+
+def test_executemany_int_set(db):
+    cu = db.cursor()
+    cu.execute("CREATE TABLE s (v INTEGER)")
+    cu.executemany("INSERT INTO s VALUES (?)", {5, 6, 7},
+                   start_transaction=False)
+    cu.execute("SELECT v FROM s")
+    assert sorted(r[0] for r in cu.fetchall()) == [5, 6, 7]
+
+
+@pytest.mark.parametrize('rows', [
+    [(1, 'a'), (2, 'b')],
+    [[1, 'a'], [2, 'b']],
+    [_row(1, 'a'), _row(2, 'b')],
+    [{'i': 1, 't': 'a'}, {':i': 2, ':t': 'b'}],
+], ids=['tuples', 'lists', 'sqllib-row', 'dicts'])
+def test_executemany_multi_placeholder(db, rows):
+    cu = db.cursor()
+    cu.execute("CREATE TABLE m (i INTEGER, t TEXT)")
+    if isinstance(rows[0], dict):
+        sql = "INSERT INTO m VALUES (:i, :t)"
+    else:
+        sql = "INSERT INTO m VALUES (?, ?)"
+    cu.executemany(sql, iter(rows))
+    cu.execute("SELECT i, t FROM m ORDER BY rowid")
+    assert [tuple(r) for r in cu.fetchall()] == [(1, 'a'), (2, 'b')]
+
+
+def test_executemany_four_placeholders(db):
+    cu = db.cursor()
+    cu.execute("CREATE TABLE q (a, b, c, d)")
+    cu.executemany("INSERT INTO q VALUES (?, ?, ?, ?)",
+                   [(1, 'x', b'y', None), [2, 'w', b'z', 3]])
+    cu.execute("SELECT a, b, c, d FROM q ORDER BY rowid")
+    assert [tuple(r) for r in cu.fetchall()] == [
+        (1, 'x', b'y', None), (2, 'w', b'z', 3)]
+
+
+def test_executemany_is_lazy(db):
+    cu = db.cursor()
+    cu.execute("CREATE TABLE s (v)")
+    seen = []
+    inserted_when_pulled = []
+
+    def gen():
+        for n in ('aa', 'bb', 'cc'):
+            cu2 = db.cursor()
+            cu2.execute("SELECT count(*) FROM s")
+            inserted_when_pulled.append(cu2.fetchone()[0])
+            seen.append(n)
+            yield n
+        seen.append('done')
+
+    cu.executemany("INSERT INTO s VALUES (?)", gen())
+    assert seen == ['aa', 'bb', 'cc', 'done']
+    # rows are pulled one at a time, interleaved with the inserts
+    assert inserted_when_pulled == [0, 1, 2]
+    cu.execute("SELECT count(*) FROM s")
+    assert cu.fetchone()[0] == 3
+
+
+def test_executemany_unsupported_type_wrapped_not_iterated(db):
+    # a str must bind as ONE value, not as a sequence of characters
+    cu = db.cursor()
+    cu.execute("CREATE TABLE s (v)")
+    cu.executemany("INSERT INTO s VALUES (?)", ['abc'])
+    cu.execute("SELECT v FROM s")
+    assert cu.fetchall()[0][0] == 'abc'
+
+
+# -- getCompleteTroveSet on a real local database ------------------------------
+
+def test_get_complete_trove_set_multichar_names(tmp_path):
+    from conary import trove, versions
+    from conary.deps import deps
+    from conary.local import sqldb
+
+    ldb = sqldb.Database(str(tmp_path / 'local.db'))
+    try:
+        v = versions.VersionFromString('/localhost@rpl:linux/1.0-1-1',
+                                        timeStamps=[1000000000.0])
+        fl = deps.Flavor()
+        sub = trove.Trove('foo:runtime', v, fl)
+        top = trove.Trove('foo', v, fl)
+        top.addTrove('foo:runtime', v, fl)
+        top.addTrove('foo:missing', v, fl)
+        for t in (sub, top):
+            info = ldb.addTrove(t)
+            ldb.addTroveDone(info)
+        ldb.commit()
+
+        notRef, ref, strong, weak = ldb.getCompleteTroveSet(
+            ['foo', 'foo:runtime', 'foo:missing', 'nothere'])
+        assert notRef == {('foo', v, fl)}
+        assert ref == {('foo:runtime', v, fl)}
+        assert strong == {('foo:missing', v, fl)}
+        assert weak == set()
+    finally:
+        ldb.close()
