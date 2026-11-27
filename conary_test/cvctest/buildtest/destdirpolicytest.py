@@ -1282,7 +1282,12 @@ class TestNormalizePythonInterpreterVersion(PackageRecipe):
         """
         Test that /usr/bin/python-config is not an interpreter (CNP-194)
         """
-        import normalize
+        oldPath = list(sys.path)
+        try:
+            sys.path[0:0] = self.cfg.policyDirs
+            import normalize
+        finally:
+            sys.path[:] = oldPath
         p = normalize.NormalizePythonInterpreterVersion(None)
         p.versionMap = {}
         p.preProcess()
