@@ -480,3 +480,14 @@ PATTERN: tooling - Commit a sibling repo before a baseline that depends on it, s
 
 PATTERN: py3-port - Save and restore the literal fds (os.dup(0)), not sys.stdin.fileno(): sys.std* may be a pseudofile under pytest or embedding.
 PATTERN: testing - A fd 0 redirect test under pytest must point fd 0 at a pipe first; capture already makes it /dev/null, so a devnull check is vacuous.
+
+## 2026-11-27 - task 3.22 DONE
+
+- sqlite_drv.Cursor.executemany normalizes rows lazily (scalar -> 1-tuple, Row -> tuple, ':key' dicts stripped), as the old
+  pysqlite3 driver did. CursorError bindings 491 -> 0. Run tmp/baseline-20261127-t322: 1270 pass / 1373 fail + 12 errors / 167 skip.
+- Top signatures now: sigprotect.call UnboundLocalError 388, policy.doProcess RuntimeError 297 (conary-policy libraries.py:301,
+  task 3.20), sha1ToString 159, cook._callSetup CookError 107, streams.diff 49, util.copyfileobj 27.
+- py3tests 1215 passed; compile gate clean; pyflakes no new warnings. Review MINOR.
+
+PATTERN: testing - stdlib sqlite3 binds a sqllib.Row and a plain dict without help, so those cases do not guard a row-normalization fix; str, int and ':'-dict rows do.
+PATTERN: testing - A mutation check can monkeypatch the module attribute inside one pytest run instead of editing source.
