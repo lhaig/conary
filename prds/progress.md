@@ -503,3 +503,16 @@ PATTERN: testing - A fix that stops hiding exceptions moves tests to a new signa
 PATTERN: py3-port - signal.__dict__ scans break on Python 3 (enum members compare equal to ints); use signal.Signals(num).name.
 PATTERN: testing - Signal tests use SIGUSR1/SIGUSR2 with a recording handler, never SIGTERM/SIGINT under pytest.
 PATTERN: tooling - A baseline started while Docker Desktop restarts dies after one file; check for rc.txt and rerun.
+
+## 2026-11-27 - task 3.20 DONE
+
+- conary-policy aacdc08: dict-view snapshots (libraries, enforcebuildreqs, badpathnames), normalize rewrites in binary, `_walk`
+  for the removed os.path.walk. Dict-size RuntimeError 297 -> 0. Run tmp/baseline-20261127-t320: 1270 / 1373 + 12 / 167 (flat).
+- The same 297 tests now fail on `0111` in config/components/base/config.py (py2 octal, SyntaxError 313, task 3.26).
+- Top signatures t320: str+bytes concat 395 (journal.py:revert, 3.25), octal SyntaxError 313, bytes-like required 211
+  (sha1ToString among them, 3.24), 'Run' has no attribute 'args' 86, unhashable StringVersionStream 49.
+- py3tests 1236 passed; compile gate clean; pyflakes no new warnings. Review MINOR; orchestrator fixed the sys.path restore.
+
+PATTERN: py3-port - os.path.walk is gone on Python 3; policy and build code that calls it raises AttributeError at runtime only.
+PATTERN: testing - `saved = sys.path` then `sys.path[0:0] = ...` saves nothing; copy the list (list(sys.path)) and restore with sys.path[:] = saved.
+PATTERN: py3-port - The ported tree's own data files (config/components/*.py) can still hold py2 syntax; parse them too, not just the packages.
