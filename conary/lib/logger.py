@@ -768,10 +768,11 @@ class Logger:
         self.oldStderr = os.dup(sys.stderr.fileno())
         self.oldStdout = os.dup(sys.stdout.fileno())
         if self.withStdin:
-            self.oldStdin = os.dup(sys.stdin.fileno())
+            # fd 0 itself: sys.stdin may be a pseudofile with no fileno()
+            self.oldStdin = os.dup(0)
             os.dup2(slaveFd, 0)
         else:
-            self.oldStdin = sys.stdin.fileno()
+            self.oldStdin = 0
         os.dup2(slaveFd, 1)
         os.dup2(slaveFd, 2)
         os.close(slaveFd)

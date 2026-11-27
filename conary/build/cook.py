@@ -1104,13 +1104,13 @@ def _cookPackageObjWrap(*args, **kwargs):
         # For repository cooks, or for recipe cooks that had stdin not a tty,
         # redirect stdin from /dev/null
         redirectStdin = True
-        oldStdin = os.dup(sys.stdin.fileno())
+        # dup fd 0 itself: sys.stdin may be a pseudofile with no fileno()
+        oldStdin = os.dup(0)
         devnull = os.open(os.devnull, os.O_RDONLY)
         os.dup2(devnull, 0)
         os.close(devnull)
     else:
         redirectStdin = False
-        oldStdin = sys.stdin.fileno()
 
     kwargs['redirectStdin'] = redirectStdin
     try:
