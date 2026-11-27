@@ -468,3 +468,15 @@ PATTERN: harness - The cook tests need conary-policy on CONARY_POLICY_PATH; with
 
 PATTERN: py3-port - On Python 3.14+ (PEP 758) `except X, e:` parses as a tuple of types; parse/import tests miss it, pyflakes undefined-name catches it.
 PATTERN: tooling - Commit a sibling repo before a baseline that depends on it, so env.txt records a clean hash.
+
+## 2026-11-27 - task 3.21 DONE
+
+- cook._cookPackageObjWrap and logger.Logger._becomeLogSlave dup fd 0 directly instead of sys.stdin.fileno() (pytest's captured stdin
+  has no fileno). UnsupportedOperation 471 -> 0. Run tmp/baseline-20261127-t321: 1163 pass / 1480 fail + 12 errors / 167 skip.
+- Those tests now fail at /policy/policy/libraries.py:301 dict changed size during iteration (296, task 3.20) and cook._callSetup
+  CookError (107: recipe-level AttributeErrors such as 'Run'/'Make' object has no attribute 'args' in build.py).
+- Top signatures t321: CursorError 491, policy doProcess RuntimeError 297, sha1ToString 159, CookError _callSetup 107, streams.diff 49.
+- py3tests 1192 passed; compile gate clean; pyflakes no new warnings. Review MINOR.
+
+PATTERN: py3-port - Save and restore the literal fds (os.dup(0)), not sys.stdin.fileno(): sys.std* may be a pseudofile under pytest or embedding.
+PATTERN: testing - A fd 0 redirect test under pytest must point fd 0 at a pipe first; capture already makes it /dev/null, so a devnull check is vacuous.
