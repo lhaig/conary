@@ -477,7 +477,7 @@ def commit(repos, cfg, message, callback=None, test=False, force=False):
                     return
 
                 pathId = makePathId()
-                state.addFile(pathId, base, versions.NewVersion(), "0" * 20,
+                state.addFile(pathId, base, versions.NewVersion(), b"0" * 20,
                               isConfig = False, isAutoSource = True)
 
             if not state.fileIsAutoSource(pathId):
@@ -1701,7 +1701,7 @@ def addFiles(fileList, ignoreExisting=False, text=False, binary=False,
                     return
 
         version = versions.NewVersion()
-        fileId = "0" * 20
+        fileId = b"0" * 20
         state.addFile(pathId, filename, version, fileId,
                       isConfig = isConfig, isAutoSource = False)
         # Remove silly ./././ if present.
@@ -1908,7 +1908,7 @@ def newTrove(repos, cfg, name, dir = None, template = None, buildBranch=None,
         try:
             os.chdir(dir)
             pathId = makePathId()
-            sourceState.addFile(pathId, recipeFile, versions.NewVersion(), "0" * 20, isConfig = True, isAutoSource = False)
+            sourceState.addFile(pathId, recipeFile, versions.NewVersion(), b"0" * 20, isConfig = True, isAutoSource = False)
         finally:
             os.chdir(cwd)
 
@@ -2362,7 +2362,7 @@ def localAutoSourceChanges(oldTrove, stateInfo):
         assert(not newState.fileIsConfig(pathId))
 
         # we don't need the real change; we just make one up
-        newState.updateFile(pathId, None, newState.getVersion(), '0' * 20)
+        newState.updateFile(pathId, None, newState.getVersion(), b'0' * 20)
         isDifferent = True
 
     d = newState.diff(oldTrove)[0]
