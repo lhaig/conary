@@ -491,3 +491,15 @@ PATTERN: testing - A fd 0 redirect test under pytest must point fd 0 at a pipe f
 
 PATTERN: testing - stdlib sqlite3 binds a sqllib.Row and a plain dict without help, so those cases do not guard a row-normalization fix; str, int and ':'-dict rows do.
 PATTERN: testing - A mutation check can monkeypatch the module attribute inside one pytest run instead of editing source.
+
+## 2026-11-27 - task 3.23 DONE
+
+- sigprotect.call saves the caught exception and re-raises the original; handlers restored in finally. UnboundLocalError 388 -> 0.
+  Totals unchanged (t323 1270 / 1373 + 12 / 167): the same tests now show their real error, TypeError str + bytes at
+  conary/local/journal.py:revert (388, task 3.25).
+- py3tests 1224 passed; compile gate clean; pyflakes clean. Review PASS.
+
+PATTERN: testing - A fix that stops hiding exceptions moves tests to a new signature with a flat pass count; report where they went.
+PATTERN: py3-port - signal.__dict__ scans break on Python 3 (enum members compare equal to ints); use signal.Signals(num).name.
+PATTERN: testing - Signal tests use SIGUSR1/SIGUSR2 with a recording handler, never SIGTERM/SIGINT under pytest.
+PATTERN: tooling - A baseline started while Docker Desktop restarts dies after one file; check for rc.txt and rerun.
