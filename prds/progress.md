@@ -516,3 +516,16 @@ PATTERN: tooling - A baseline started while Docker Desktop restarts dies after o
 PATTERN: py3-port - os.path.walk is gone on Python 3; policy and build code that calls it raises AttributeError at runtime only.
 PATTERN: testing - `saved = sys.path` then `sys.path[0:0] = ...` saves nothing; copy the list (list(sys.path)) and restore with sys.path[:] = saved.
 PATTERN: py3-port - The ported tree's own data files (config/components/*.py) can still hold py2 syntax; parse them too, not just the packages.
+
+## 2026-11-27 - task 3.24 DONE
+
+- checkin.py placeholder fileIds are b"0" * 20 (4 sites). sha1ToString 159 -> 0. Run tmp/baseline-20261127-t324: 1292 pass /
+  1351 fail + 48 errors / 167 skip (+22 pass). The worker was stopped before the baseline ended; the run finished on its own and
+  the orchestrator triaged it and had the fix reviewed separately (PASS).
+- Side effect: cook tests now reach cook.cookCommand's fork; the child runs the harness atexit cleanups and deletes the shared
+  SQLite dir, so later tests in cooktest/factorytest error in teardown (48) and 4 cooktest passes regressed. Task 3.27.
+- Top signatures t324: journal.revert str+bytes 388 (3.25), octal SyntaxError 313 (3.26), CookError _callSetup 132,
+  util.copyfileobj 71, sqlite connect DatabaseError 53 (3.27), streams.diff 50, http_error.splitSocketError 47.
+
+PATTERN: harness - atexit cleanups registered in the test process also run in forked children that exit through Python; guard them with the creating pid.
+PATTERN: tooling - A baseline container keeps running when the client that started it is killed; wait for it to exit before editing source.
