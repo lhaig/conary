@@ -3,6 +3,7 @@
 # Usage: devenv/run <command> [args...]   (no args: interactive bash)
 #   DEVENV_PLATFORM=linux/amd64  run the x86_64 image (emulated on arm64 hosts)
 #   DEVENV_ROOT=1                run as root instead of the invoking user
+#   CONARY_POLICY_SRC=<dir>      conary-policy checkout to mount at /policy (default ../conary-policy)
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -23,9 +24,13 @@ fi
 
 [ $# -gt 0 ] || set -- bash
 
+# conary-policy checkout (read-only at /policy, CONARY_POLICY_PATH set); see policy_src.sh.
+. "$ROOT/devenv/policy_src.sh"
+
 args=(--rm -i -v "$ROOT":/src -w /src)
 [ -t 0 ] && args+=(-t)
 args+=(${platform_args[@]+"${platform_args[@]}"})
+args+=(${policy_args[@]+"${policy_args[@]}"})
 # Run as the invoking user so files written to the bind mount are not root-owned
 # (and permission tests do not silently skip as root).
 if [ "${DEVENV_ROOT:-}" != 1 ]; then

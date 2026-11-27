@@ -17,6 +17,8 @@ mkdir -p "$OUT"
 HOST_HEAD=$(git rev-parse HEAD 2>/dev/null || echo unknown)
 PLAT=${DEVENV_PLATFORM:-native}
 case "$PLAT" in *[!A-Za-z0-9._/-]*) echo "bad DEVENV_PLATFORM: $PLAT" >&2; exit 2;; esac
+ROOT=$PWD
+. devenv/policy_src.sh
 rm -f "$OUT"/*.xml "$OUT"/*.log "$OUT"/rc.txt "$OUT"/crashed.txt
 exec devenv/run bash -c '
 OUT=/src/'"$OUT"'
@@ -24,6 +26,8 @@ cd /src
 { date -u +%FT%TZ; python3 -VV
   echo "host git HEAD: '"$HOST_HEAD"'"
   echo "container git HEAD: $(git -c safe.directory=/src rev-parse HEAD 2>&1)"
+  echo "conary-policy: '"$policy_head"'"
+  echo "CONARY_POLICY_PATH: ${CONARY_POLICY_PATH:-absent}"
   echo "platform: '"$PLAT"'"
   echo "uname -m: $(uname -m)"
   echo "uid: $(id -u)"; } > $OUT/env.txt 2>&1
