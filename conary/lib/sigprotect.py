@@ -15,7 +15,7 @@
 #
 
 
-import os, signal
+import os, signal, threading
 
 # This is a list of all signals which are reasonable to catch but normally
 # terminate the application; SIGSEGV and SIGBUS are excluded because it's not
@@ -70,14 +70,13 @@ def sigprotect(*signals):
         def call(*args, **kwargs):
             # If not in the main thread, don't bother to set up the signal
             # handlers
-            import threading
-            if not isinstance(threading.currentThread(), threading._MainThread):
+            if threading.current_thread() is not threading.main_thread():
                 return fn(*args, **kwargs)
 
-            exception = None
+            caught = None
             rekill = False
+            oldHandlers = []
             try:
-                oldHandlers = []
                 for sigNum in signals:
                     # set us up to restore the old handler before changing
                     # it in case the signal is raised right here
@@ -86,27 +85,29 @@ def sigprotect(*signals):
                     signal.signal(sigNum, signalHandler)
 
                 rc = fn(*args, **kwargs)
-            except SignalException as exception:
+            except SignalException as e:
                 rekill = True
+                caught = e
                 # not clear what else we can return if we make it that
                 # far!
-                rc = exception
-            except Exception as exception:
+                rc = e
+            except Exception as e:
                 # rc isn't set here because we're going to reraise this
                 # exception after cleaning up the process's signal
-                # handlers
-                pass
-
-            # if a signal is received here it could get raised instead
-            # of the original signal. it's a shame we don't have proper
-            # signal management functions which would help
-            for (sigNum, handler) in oldHandlers:
-                signal.signal(sigNum, handler)
+                # handlers. Python 3 unbinds "e" when the block ends, so
+                # keep the object under another name.
+                caught = e
+            finally:
+                # if a signal is received here it could get raised instead
+                # of the original signal. it's a shame we don't have proper
+                # signal management functions which would help
+                for (sigNum, handler) in oldHandlers:
+                    signal.signal(sigNum, handler)
 
             if rekill:
-                exception.reraise()
-            elif exception:
-                raise
+                caught.reraise()
+            elif caught is not None:
+                raise caught
 
             return rc
 
