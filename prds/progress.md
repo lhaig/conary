@@ -529,3 +529,15 @@ PATTERN: py3-port - The ported tree's own data files (config/components/*.py) ca
 
 PATTERN: harness - atexit cleanups registered in the test process also run in forked children that exit through Python; guard them with the creating pid.
 PATTERN: tooling - A baseline container keeps running when the client that started it is killed; wait for it to exit before editing source.
+
+## 2026-11-28 - task 3.27 DONE
+
+- Forked cook children no longer run the rest of the test module: testhelp.TestCase._callTestMethod _exits them with their status;
+  harness cleanups are pid-guarded. Run tmp/baseline-20261128-t327full: 1296 pass / 1347 fail / 0 errors / 167 skip (t324
+  1292 / 1351 + 48 errors). Duplicate ids 47 -> 0.
+- Top signatures: journal.revert str+bytes 388 (3.25), octal SyntaxError 323 (3.26), CookError _callSetup 134, util.copyfileobj 93,
+  streams.diff 50.
+- py3tests 1249 passed; compile gate clean; pyflakes no new warnings. Review MINOR.
+
+PATTERN: testing - A forked child that leaves a test method by SystemExit is caught by unittest/pytest and runs tearDown and every later test; _exit it from the test-method wrapper, and guard atexit too.
+PATTERN: testing - More than one pytest summary line in a module log, or duplicate ids across files, means a forked child ran its own copy of the session.
