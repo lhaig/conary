@@ -541,3 +541,13 @@ PATTERN: tooling - A baseline container keeps running when the client that start
 
 PATTERN: testing - A forked child that leaves a test method by SystemExit is caught by unittest/pytest and runs tearDown and every later test; _exit it from the test-method wrapper, and guard atexit too.
 PATTERN: testing - More than one pytest summary line in a module log, or duplicate ids across files, means a forked child ran its own copy of the session.
+
+## 2026-11-28 - task 3.26 DONE
+
+- config/components/base/config.py 0111 -> 0o111. Octal SyntaxError 323 -> 0. Run tmp/baseline-20261128-t326: 1300 pass / 1343 fail /
+  167 skip. The same tests now fail at conary/build/policy.py walkDir: 'str' object has no attribute 'decode' (286).
+- Top signatures: journal.revert 388 (3.25), policy.walkDir .decode 286, CookError _callSetup 135, util.copyfileobj 93, streams.diff 50.
+- py3tests 1254 passed; compile gate clean. Review PASS.
+
+PATTERN: testing - The compile gate only covers conary/, conary_test/, commands/, scripts/; data files loaded with loadSourceModule (config/components, macros) need their own parse test.
+PATTERN: testing - Loading component files with loadSourceModule registers bare names (test, locale) in sys.modules; restore sys.modules in tests.
