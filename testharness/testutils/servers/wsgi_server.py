@@ -53,6 +53,7 @@ class StdlibWsgiServer(BaseServer):
         self.port = _reservePort()
         self.errorLog = os.path.join(self.serverDir, 'error.log')
         self.process = None
+        self._pid = os.getpid()
 
     def getProxyTo(self):
         return 'http://127.0.0.1:%d' % self.port
@@ -87,6 +88,7 @@ class StdlibWsgiServer(BaseServer):
         if self.isStarted():
             return
         os.makedirs(self.serverDir, exist_ok=True)
+        self._pid = os.getpid()
         log = open(self.errorLog, 'ab')
         try:
             self.process = subprocess.Popen(
@@ -123,6 +125,8 @@ class StdlibWsgiServer(BaseServer):
         proc, self.process = self.process, None
         if self in _live:
             _live.remove(self)
+        if os.getpid() != self._pid:
+            return      # forked child: the server belongs to the parent
         if proc is None:
             return
         try:

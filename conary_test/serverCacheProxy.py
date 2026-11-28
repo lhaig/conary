@@ -151,6 +151,7 @@ class ServerCacheProxy(BaseProxy):
             env = os.environ.copy()
         self._servers = [ None ] * 5
         p0, p1 = os.pipe(), os.pipe()
+        self._owner = os.getpid()
 
         self._pid = os.fork()
         if self._pid == 0:
@@ -230,6 +231,8 @@ class ServerCacheProxy(BaseProxy):
         return BaseProxy.__getattr__(self, name)
 
     def __del__(self):
+        if os.getpid() != getattr(self, '_owner', None):
+            return      # forked copy: the proxy child is the owner's
         if self._pid != 0:
             print('warning: %r was not stopped before freeing' % self)
             try:

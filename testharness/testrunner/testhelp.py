@@ -57,6 +57,33 @@ class TestCase(unittest.TestCase):
         self.chmodLog = []
         self.mknodLog = []
 
+    def _callTestMethod(self, method):
+        """Run the test method; a process forked inside it never returns.
+
+        cook.cookCommand forks and the child leaves the test method by
+        sys.exit or an exception.  unittest would record that as a failure and
+        run tearDown and every later test in the child, which then deletes
+        the shared harness.  The child _exits with the status the parent's
+        waitpid expects instead."""
+        pid = os.getpid()
+        code = 0
+        try:
+            super()._callTestMethod(method)
+        except BaseException as e:
+            if os.getpid() == pid:
+                raise
+            if isinstance(e, SystemExit):
+                code = e.code if isinstance(e.code, int) else 1
+            else:
+                code = 1
+        if os.getpid() != pid:
+            for f in (sys.stdout, sys.stderr):
+                try:
+                    f.flush()
+                except Exception:   # closed or redirected stream
+                    pass
+            os._exit(code)
+
     def assertRaises(self, excClass, *args, **kw):
         """unittest's assertRaises, except that the callable form returns
         the exception instance (callers inspect args and attributes).  The

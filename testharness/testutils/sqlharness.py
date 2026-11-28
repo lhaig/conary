@@ -92,6 +92,7 @@ class SqliteHarness:
     def __init__(self):
         self.dir = tempfile.mkdtemp(prefix='conary-sqlharness-')
         self.dbs = {}
+        self._pid = os.getpid()
 
     def getDB(self, name='dbstore', keepExisting=False):
         db = self.dbs.get(name)
@@ -105,6 +106,8 @@ class SqliteHarness:
         return db
 
     def cleanup(self):
+        if os.getpid() != self._pid:
+            return      # a forked child must not delete the parent's dir
         for db in self.dbs.values():
             db.stop()
         self.dbs = {}

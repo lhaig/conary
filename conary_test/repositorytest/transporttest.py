@@ -762,6 +762,7 @@ class SimpleXMLRPCServer6(SimpleXMLRPCServer):
 class ServerController:
     def __init__(self):
         self.port = testhelp.findPorts(num = 1)[0]
+        self._owner = os.getpid()
         self.childPid = os.fork()
         if self.childPid > 0:
             sock_utils.tryConnect('127.0.0.1', self.port)
@@ -785,7 +786,8 @@ class ServerController:
         return "http://localhost:%d/" % self.port
 
     def __del__(self):
-        self.kill()
+        if os.getpid() == getattr(self, '_owner', None):
+            self.kill()
 
 
 class RequestHandler404(http.server.SimpleHTTPRequestHandler):

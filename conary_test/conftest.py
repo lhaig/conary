@@ -27,6 +27,8 @@ import sqlite3
 import sys
 import warnings
 
+import pytest
+
 # Modules that cannot be collected yet, each with the reason.
 collect_ignore = []
 
@@ -55,6 +57,24 @@ if os.path.exists(_so):
             _norpmlock_handle = norpmlock.open(_so)
         except (ImportError, RuntimeError) as err:
             warnings.warn("could not load the norpmlock override: %s" % err)
+
+
+_runnerPid = os.getpid()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_protocol(item, nextitem):
+    """Backstop for testhelp.TestCase._callTestMethod: a process forked
+    during a test (cook's child) that gets back into the runner, e.g. from
+    setUp, must not run further tests or write the junit file."""
+    yield
+    if os.getpid() != _runnerPid:
+        for f in (sys.stdout, sys.stderr):
+            try:
+                f.flush()
+            except Exception:   # closed or redirected stream
+                pass
+        os._exit(1)
 
 
 def pytest_collection_modifyitems(config, items):

@@ -194,6 +194,7 @@ class ServerCache(object):
     def __init__(self):
         self._topDir = None
         self.servers = {}
+        self._pid = os.getpid()
         atexit.register(self.cleanup)
 
     @property
@@ -257,6 +258,8 @@ class ServerCache(object):
         self.servers = {}
 
     def cleanup(self):
+        if os.getpid() != self._pid:
+            return      # forked child (cook): not the process that owns them
         self.stopAllServers()
         if self._topDir:
             util.rmtree(self._topDir, ignore_errors=True)
@@ -3146,8 +3149,13 @@ class HTTPServerController(base_server.BaseServer):
         return self.childPid not in (None, 0)
 
 
+_ownerPid = os.getpid()
+
+
 def _cleanUp():
     global _proxy
+    if os.getpid() != _ownerPid:
+        return
     if _proxy:
         _proxy.stop()
         util.rmtree(_proxy.reposDir, ignore_errors=True)
