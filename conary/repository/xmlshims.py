@@ -23,6 +23,12 @@ from conary.lib import compat
 from conary.lib import sha1helper
 
 
+def b64Text(data):
+    """Return base64 of data (str is utf-8/surrogateescape encoded first) as
+    an ASCII str without newlines. XML-RPC then sends <string>, as Py2 did."""
+    return base64.b64encode(sha1helper.toBytes(data)).decode('ascii')
+
+
 class NetworkConvertors(object):
 
     def freezeVersion(self, v):

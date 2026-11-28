@@ -58,6 +58,15 @@ SERVER_VERSIONS = list(range(36, 73 + 1))
 
 # Decorators for method access
 
+def _decodeFileIds(arg):
+    """Decode the base64 fileIds argument of getPackageBranchPathIds into a
+    set of 20-byte ids. Empty or None gives an empty set."""
+    raw = base64.b64decode(arg) if arg else b""
+    fileIdLen = 20
+    assert len(raw) % fileIdLen == 0
+    return set(raw[i:i + fileIdLen] for i in range(0, len(raw), fileIdLen))
+
+
 def _methodAccess(f, accessType):
     f._accessType = accessType
     return f
@@ -2045,20 +2054,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
         # back in a file's history.
         # Added as part of protocol version 42
         # decode the fileIds to check before doing heavy work
-        if fileIds:
-            fileIds = base64.b64decode(fileIds)
-        else:
-            fileIds = ""
-        def splitFileIds(fileIds):
-            fileIdLen = 20
-            assert(len(fileIds) % fileIdLen == 0)
-            fileIdCount = len(fileIds) // fileIdLen
-            for i in range(fileIdCount):
-                start = fileIdLen * i
-                end = start + fileIdLen
-                yield fileIds[start : end]
-        # fileIds need to be unique for performance reasons
-        fileIds = set(splitFileIds(fileIds))
+        fileIds = _decodeFileIds(fileIds)
         self.log(2, sourceName, branch, dirnames, fileIds)
         cu = self.db.cursor()
 
@@ -2756,7 +2752,7 @@ class NetworkRepositoryServer(xmlshims.NetworkConvertors):
 
         freezeTroveInfo(l, currentMark, currentTrove, currentTroveInfo)
 
-        return [ (x[0], x[1], base64.b64encode(x[2])) for x in l ]
+        return [ (x[0], x[1], xmlshims.b64Text(x[2])) for x in l ]
 
     @accessReadWrite
     def setTroveInfo(self, authToken, clientVersion, infoList):

@@ -96,6 +96,11 @@ def unmarshalException(exceptionName, exceptionArgs, exceptionKwArgs):
         return errors.UnknownException(exceptionName, exceptionArgs)
 
 
+def _encodeFileIds(fileIds):
+    """Wire form of a list of 20-byte fileIds: base64 text of the joined ids."""
+    return xmlshims.b64Text(b''.join(fileIds))
+
+
 class ServerProxyMethod(util.ServerProxyMethod):
 
     def __call__(self, *args, **kwargs):
@@ -525,7 +530,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
             raise errors.InvalidServerVersion("Cannot sign troves on Conary "
                                        "repositories older than 1.1.20")
 
-        encSig = base64.b64encode(digsig.freeze())
+        encSig = xmlshims.b64Text(digsig.freeze())
         self.c[version].addDigitalSignature(name, self.fromVersion(version),
                                             self.fromFlavor(flavor),
                                             encSig)
@@ -578,7 +583,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
             l = byServer.setdefault(version.getHost(), [])
             l.append(
                 ((name, self.fromVersion(version), self.fromFlavor(flavor)),
-                 base64.b64encode(item.freeze())))
+                 xmlshims.b64Text(item.freeze())))
         for server in list(byServer.keys()):
             s = self.c[version]
             if s.getProtocolVersion() < 47:
@@ -592,7 +597,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
         self.c[label].addNewAsciiPGPKey(user, keyData)
 
     def addNewPGPKey(self, label, user, keyData):
-        encKeyData = base64.b64encode(keyData)
+        encKeyData = xmlshims.b64Text(keyData)
         self.c[label].addNewPGPKey(user, encKeyData)
 
     def getAsciiOpenPGPKey(self, label, keyId):
@@ -2404,7 +2409,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
         if fileIds is not None and serverProtocol >= 42:
             # Make sure we send a (possibly empty) dirnames
             assert(dirnames is not None)
-            args.append(base64.b64encode("".join(fileIds)))
+            args.append(_encodeFileIds(fileIds))
         ids = self.c[branch].getPackageBranchPathIds(*args)
         return dict((self.toPath(x[0]), (self.toPathId(x[1][0]),
                                          self.toVersion(x[1][1]),
@@ -2566,7 +2571,7 @@ class NetworkRepositoryClient(xmlshims.NetworkConvertors,
                     skipSet = ti._newMetadataItems
                 else:
                     skipSet = None
-                infoList = [ (t, base64.b64encode(ti_.freeze(skipSet=skipSet)))
+                infoList = [ (t, xmlshims.b64Text(ti_.freeze(skipSet=skipSet)))
                              for t, ti_ in infoList ]
             total += server.setTroveInfo(infoList)
         return total
