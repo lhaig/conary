@@ -221,3 +221,39 @@ def test_manpages_do_over_a_tree_with_non_utf8_pages(normalize, tmp_path):
     assert ok == 'café /x\n'.encode('utf-8')
     assert os.path.islink(str(man1 / 'alias.1.gz'))
     assert os.readlink(str(man1 / 'alias.1.gz')) == 'foo.1.gz'
+
+
+# ---- badpathnames.py: NonUTF8Filenames on str paths ------------------------
+
+@pytest.mark.parametrize('path,reports', [
+    ('/usr/share/foo', 0),
+    ('/usr/share/caf\xe9', 0),
+    (os.fsdecode(b'/bad\xff'), 1),
+    ('/lone\ud800', 1),
+])
+def test_nonutf8filenames_reports_only_invalid_paths(path, reports):
+    mod = loadPolicyModule('badpathnames')
+    seen = []
+    p = makePolicy(mod.NonUTF8Filenames, makeMacros(),
+                   reportErrors=lambda *a, **kw: seen.append((a, kw)))
+    p.doFile(path)
+    assert len(seen) == reports
+    if reports:
+        args, kw = seen[0]
+        assert args[0].startswith('NonUTF8Filenames: ')
+        msg = args[0] % tuple(args[1:])
+        # a printable form: strictly encodable, shows the bytes
+        msg.encode('utf-8')
+        assert msg.isascii()
+        assert ('bad\\xff' in msg) or ('lone\\ud800' in msg)
+
+
+def test_nonutf8filenames_logs_one_error(caplog):
+    mod = loadPolicyModule('badpathnames')
+    p = makePolicy(mod.NonUTF8Filenames, makeMacros(),
+                   reportErrors=lambda *a, **kw: None)
+    with caplog.at_level('ERROR'):
+        p.doFile(os.fsdecode(b'/bad\xff'))
+    errs = [r for r in caplog.records if r.levelname == 'ERROR']
+    assert len(errs) == 1
+    errs[0].getMessage().encode('utf-8')
