@@ -598,3 +598,14 @@ PATTERN: testing - Test recipes that build "invalid" bytes with '\xe9' in a str 
 PATTERN: bytes/str - Base64 for XML-RPC strings: base64.b64encode(bytes).decode('ascii') (no newlines, <string> on the wire); sha1helper.toBase64 adds newlines.
 PATTERN: testing - A test that monkeypatches os.stat/os.lstat by assignment must restore them in a finally/addCleanup, and the wrapper must accept **kw (shutil passes dir_fd).
 PATTERN: testing - Errors and duplicate ids reappearing in one module after a fix means a test now gets further and leaves global state broken; check that module first.
+
+## 2026-11-28 - task 3.31 DONE
+
+- ThawFlavor(None) is the empty flavor (NULL row by schema design, as on Python 2). ThawFlavor 238 -> 0. Run
+  tmp/baseline-20261128-t331: 1509 pass / 1132 fail / 169 skip (t330 1409).
+- Top signatures: InternalServerError 282 (netserver.py:2068 cu.binary on str dirnames), CookError _callSetup 138
+  ('Run'/'Make' object has no attribute 'args'), files.freeze 131 ('list' object has no attribute 'freeze'),
+  util.copyfileobj 100, streams.diff 50, base_drv.close ProgrammingError 21 (sqlite thread).
+- py3tests 1309 passed; compile gate clean. Review MINOR.
+
+PATTERN: py3-port - Before "fixing" a None that reaches a Py3-tightened function, check whether the None is by design (schema NULL) and what Py2 did with it; restore the Py2 behaviour at the reader.
