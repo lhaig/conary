@@ -573,3 +573,14 @@ PATTERN: testing - Error-path code (revert, rollback) hides the original failure
 
 PATTERN: bytes/str - An encode-only fix at os.write is wrong when the text it writes is itself mis-built (b'...' repr from formatting bytes); fix where the text is built or defer with a verdict.
 PATTERN: testing - Extract a two-line helper for a forked child's pipe write and the parent's read, and test both over a real pipe.
+
+## 2026-11-28 - task 3.29 DONE
+
+- conary-policy NonUTF8Filenames: strict encode of str paths, ascii-safe error text. walkDir .decode 307 -> 0. Run
+  tmp/baseline-20261128-t329: 1400 pass / 1243 fail / 167 skip (t328 1365).
+- Top signatures: netclient.getPackageBranchPathIds str join of bytes 272, deps.ThawFlavor 238, CookError _callSetup 138,
+  util.copyfileobj 99, streams.diff 50, files.freeze 31.
+- py3tests 1284 passed; compile gate clean. Review MINOR.
+
+PATTERN: bytes/str - Python 2 `path.decode('utf-8')` as a validity check becomes a strict `path.encode('utf-8')` on fsdecoded str; log an ascii-safe form, never the raw surrogate path.
+PATTERN: testing - Test recipes that build "invalid" bytes with '\xe9' in a str literal produce valid UTF-8 on Python 3; they need os.fsdecode(b'...').
