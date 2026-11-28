@@ -1205,6 +1205,10 @@ def ThawFlavor(frz):
     @raises ValueError: could be raised if frozen object is malformed
     """
     f = Flavor()
+    if frz is None:
+        # The local database stores the empty flavor (flavorId 0) as NULL;
+        # Python 2 skipped the encode for None and thawed an empty flavor.
+        return f
     if isinstance(frz, bytes):
         frz = frz.decode("ascii", "replace")
     try:
