@@ -584,3 +584,17 @@ PATTERN: testing - Extract a two-line helper for a forked child's pipe write and
 
 PATTERN: bytes/str - Python 2 `path.decode('utf-8')` as a validity check becomes a strict `path.encode('utf-8')` on fsdecoded str; log an ascii-safe form, never the raw surrogate path.
 PATTERN: testing - Test recipes that build "invalid" bytes with '\xe9' in a str literal produce valid UTF-8 on Python 3; they need os.fsdecode(b'...').
+
+## 2026-11-28 - task 3.30 DONE
+
+- Binary ids go over XML-RPC as ascii base64 text (xmlshims.b64Text), decoded by netserver._decodeFileIds. Join TypeError 272 -> 0.
+  Run tmp/baseline-20261128-t330: 1409 pass / 1235 fail + 27 errors / 166 skip (t329 1400). The same tests now hit
+  InternalServerError from netserver.py:2068 cu.binary(str dirname) (271).
+- 27 teardown errors came from shadowtest leaving os.lstat wrapped after a failure, with a wrapper that rejected dir_fd;
+  fixed in conary_test (shadowtest 6 pass / 0 errors again).
+- Top signatures: InternalServerError 271, deps.ThawFlavor 238 (3.31), CookError _callSetup 138, util.copyfileobj 93, streams.diff 50.
+- py3tests 1298 passed (+2); compile gate clean. Review MINOR.
+
+PATTERN: bytes/str - Base64 for XML-RPC strings: base64.b64encode(bytes).decode('ascii') (no newlines, <string> on the wire); sha1helper.toBase64 adds newlines.
+PATTERN: testing - A test that monkeypatches os.stat/os.lstat by assignment must restore them in a finally/addCleanup, and the wrapper must accept **kw (shutil passes dir_fd).
+PATTERN: testing - Errors and duplicate ids reappearing in one module after a fix means a test now gets further and leaves global state broken; check that module first.
