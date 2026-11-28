@@ -562,3 +562,14 @@ PATTERN: testing - Loading component files with loadSourceModule registers bare 
 
 PATTERN: bytes/str - Fix path fields at the stream type (TextStream), not with fsdecode at each call site; pin the on-disk bytes with a test built independently of freeze().
 PATTERN: testing - Error-path code (revert, rollback) hides the original failure; after fixing it, expect the same tests to move to the next write on the main path.
+
+## 2026-11-28 - task 3.28 DONE
+
+- os.write gets bytes at recordManifest and six sibling sites; two sites deferred with a verdict (logger marker/Lexer, genExcepthook).
+  recordManifest 344 -> 0. Run tmp/baseline-20261128-t328: 1365 pass / 1278 fail / 167 skip (t325 1307).
+- Top signatures: policy.walkDir .decode 307 (3.29), deps.ThawFlavor AttributeError 236, CookError _callSetup 137,
+  util.copyfileobj 99, streams.diff 50, files.freeze 31.
+- py3tests 1279 passed; compile gate clean. Review MINOR.
+
+PATTERN: bytes/str - An encode-only fix at os.write is wrong when the text it writes is itself mis-built (b'...' repr from formatting bytes); fix where the text is built or defer with a verdict.
+PATTERN: testing - Extract a two-line helper for a forked child's pipe write and the parent's read, and test both over a real pipe.
