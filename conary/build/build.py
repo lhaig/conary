@@ -47,7 +47,7 @@ from conary import trove
 from conary.deps import deps
 from conary.errors import TroveNotFound
 from conary.build import action, errors
-from conary.lib import fixedglob, digestlib, log, util
+from conary.lib import fixedglob, digestlib, log, sha1helper, util
 from conary.build.use import Use
 from conary.build.source import WindowsHelper
 from conary.build.manifest import Manifest, ExplicitManifest
@@ -2492,14 +2492,15 @@ class Replace(BuildAction):
             try:
                 foundMatch = False
                 index = 1
-                for line in open(path):
+                for line in open(path, encoding='utf-8',
+                                 errors='surrogateescape', newline=''):
                     if self._lineMatches(index, line):
                         for (regexp, sub) in regexps:
                             line, count = regexp.subn(sub, line)
                             if count:
                                 foundMatch = True
 
-                    os.write(fd, line)
+                    os.write(fd, sha1helper.toBytes(line))
                     index += 1
 
                 if foundMatch:

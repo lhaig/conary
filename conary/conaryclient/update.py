@@ -31,7 +31,7 @@ from conary.callbacks import UpdateCallback
 from conary.conaryclient import cmdline, resolve
 from conary.deps import deps
 from conary.errors import ClientError, ConaryError, InternalConaryError, MissingTrovesError, DecodingError
-from conary.lib import log, util, api
+from conary.lib import log, sha1helper, util, api
 from conary.lib import cfgtypes
 from conary.local import capsules
 from conary.local import database
@@ -3018,7 +3018,7 @@ conary erase '%s=%s[%s]'
         fd, tmpfile = tempfile.mkstemp(dir=os.path.dirname(manifestPath),
                                        prefix='.manifest.')
         try:
-            os.write(fd, ''.join(manifest))
+            os.write(fd, sha1helper.toBytes(''.join(manifest)))
             os.close(fd)
             os.rename(tmpfile, manifestPath)
         except Exception:

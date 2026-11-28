@@ -67,7 +67,7 @@ class TelnetServerProtocolHandler(telnetlib.Telnet):
                 pass
         elif cmd == IP:
             # interrupt process
-            os.write(self.local, chr(ord('C') & 0x1F))
+            os.write(self.local, b'\x03')
         elif cmd == SB:
             pass
         elif cmd == SE:

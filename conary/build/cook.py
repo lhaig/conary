@@ -140,6 +140,14 @@ def _createComponent(repos, bldPkg, newVersion, ident, capsuleInfo,
 
     return (p, fileMap)
 
+def _sendChangeSetPath(outpipe, csFile):
+    """Child side: send the changeset path to the parent as bytes."""
+    os.write(outpipe, sha1helper.toBytes(csFile))
+
+def _recvChangeSetPath(inpipe):
+    """Parent side: read the changeset path the child sent, as str."""
+    return sha1helper.toStr(os.read(inpipe, 1000))
+
 class _IdGen:
     def __call__(self, path, version, flavor, forceNew = False):
         if path in self.map and not(forceNew):
@@ -2309,7 +2317,7 @@ def cookCommand(cfg, args, prep, macros, emerge = False,
             else:
                 print('Changeset written to:', csFile)
                 # send the changeset file over the pipe
-                os.write(outpipe, csFile)
+                _sendChangeSetPath(outpipe, csFile)
             if profile == 'lsprof':
                 prof.disable()
                 prof.dump_stats('conary-cook.lsprof')
@@ -2341,7 +2349,7 @@ def cookCommand(cfg, args, prep, macros, emerge = False,
                     os.kill(-pid, signal.SIGINT)
         # see if the child process sent us a changeset filename over
         # the pipe
-        csFile = os.read(inpipe, 1000)
+        csFile = _recvChangeSetPath(inpipe)
         if emerge:
             # apply the changeset file written by the child
             if not csFile:

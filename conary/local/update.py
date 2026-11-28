@@ -2573,6 +2573,30 @@ class TagCommand:
 
         self.callback = callback
 
+    def _writeHandlerInput(self, fd, datasource, hi, tagInfo):
+        """Feed the tag handler's stdin protocol to fd as bytes."""
+        if datasource == 'stdin':
+            for filename in sorted(hi.tagToFile[tagInfo]):
+                try:
+                    os.write(fd, sha1helper.toBytes(filename + "\n"))
+                except OSError as e:
+                    if e.errno != errno.EPIPE:
+                        raise
+                    self.callback.error(str(e))
+                    break
+        elif datasource == 'multitag':
+            for fileName in sorted(hi.fileToTag):
+                try:
+                    os.write(fd, sha1helper.toBytes("%s\n%s\n" % (
+                        " ".join(sorted([x.tag for x in
+                                         hi.fileToTag[fileName]])),
+                        fileName)))
+                except OSError as e:
+                    if e.errno != errno.EPIPE:
+                        raise
+                    self.callback.error(str(e))
+                    break
+
     def addCommand(self, tagInfo, updateType, updateClass, fileList):
         h = self.commands[updateType][updateClass].setdefault(
             tagInfo.file, HandlerInfo())
@@ -2684,28 +2708,8 @@ class TagCommand:
                     if inputPid == 0:
                         try:
                             os.close(inputPipe[0])
-                            if datasource == 'stdin':
-                                for filename in sorted(hi.tagToFile[tagInfo]):
-                                    try:
-                                        os.write(inputPipe[1], filename + "\n")
-                                    except OSError as e:
-                                        if e.errno != errno.EPIPE:
-                                            raise
-                                        self.callback.error(str(e))
-                                        break
-                            elif datasource == 'multitag':
-                                for fileName in sorted(hi.fileToTag):
-                                    try:
-                                        os.write(inputPipe[1],
-                                            "%s\n%s\n" %(" ".join(
-                                            sorted([x.tag for x in
-                                                    hi.fileToTag[fileName]])),
-                                            fileName))
-                                    except OSError as e:
-                                        if e.errno != errno.EPIPE:
-                                            raise
-                                        self.callback.error(str(e))
-                                        break
+                            self._writeHandlerInput(inputPipe[1], datasource,
+                                                    hi, tagInfo)
                             os._exit(0)
                         except Exception as err:
                             try:
@@ -2827,7 +2831,7 @@ def runTroveScript(job, script, tagScript, tmpDir, root, callback,
     scriptFd, scriptName = tempfile.mkstemp(suffix = '.trvscript',
                                             dir = root + tmpDir)
     os.chmod(scriptName, 0o700)
-    os.write(scriptFd, script)
+    os.write(scriptFd, sha1helper.toBytes(script))
     os.close(scriptFd)
 
     if tagScript is not None:
@@ -2890,7 +2894,7 @@ def runTroveScript(job, script, tagScript, tmpDir, root, callback,
             try:
                 os.execve(scriptName, [ scriptName ], environ)
             except Exception as e:
-                os.write(2, str(e) + '\n')
+                os.write(2, sha1helper.toBytes(str(e) + '\n'))
 
             os._exit(1)
 
