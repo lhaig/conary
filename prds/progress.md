@@ -551,3 +551,14 @@ PATTERN: testing - More than one pytest summary line in a module log, or duplica
 
 PATTERN: testing - The compile gate only covers conary/, conary_test/, commands/, scripts/; data files loaded with loadSourceModule (config/components, macros) need their own parse test.
 PATTERN: testing - Loading component files with loadSourceModule registers bare names (test, locale) in sys.modules; restore sys.modules in tests.
+
+## 2026-11-28 - task 3.25 DONE
+
+- Journal entry paths are TextStream; rollback status/count/system-model writes are bytes. journal revert 388 -> 0. Run
+  tmp/baseline-20261128-t325: 1307 pass / 1336 fail / 167 skip.
+- Top signatures: conaryclient/update.py recordManifest str write 344, policy.walkDir .decode 286, CookError _callSetup 135,
+  util.copyfileobj 93, streams.diff 50, localrep.openFile 19, files.restore 15.
+- py3tests 1262 passed; compile gate clean. Review PASS.
+
+PATTERN: bytes/str - Fix path fields at the stream type (TextStream), not with fsdecode at each call site; pin the on-disk bytes with a test built independently of freeze().
+PATTERN: testing - Error-path code (revert, rollback) hides the original failure; after fixing it, expect the same tests to move to the next write on the main path.
