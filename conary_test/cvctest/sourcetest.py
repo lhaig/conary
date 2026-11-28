@@ -2550,12 +2550,13 @@ class SbWrapper:
         self.gid = gid
 
 class StatWrapper:
-    def stat(self, *args):
-        sb = self.realstat(*args)
+    # keyword arguments pass through: shutil.rmtree calls lstat(dir_fd=)
+    def stat(self, *args, **kw):
+        sb = self.realstat(*args, **kw)
         return SbWrapper(sb, self.uid, self.gid)
 
-    def lstat(self, *args):
-        sb = self.reallstat(*args)
+    def lstat(self, *args, **kw):
+        sb = self.reallstat(*args, **kw)
         return SbWrapper(sb, self.uid, self.gid)
 
     def __init__(self, realstat, reallstat, uid, gid):

@@ -202,6 +202,9 @@ class ShadowTest(rephelp.RepositoryHelper):
             origstat = os.stat
             origlstat = os.lstat
             otheruser = StatWrapper(origstat, origlstat, 1, 1)
+            # restore even when the test fails while the wrappers are active
+            self.addCleanup(setattr, os, 'lstat', origlstat)
+            self.addCleanup(setattr, os, 'stat', origstat)
 
         # 1.0-1.1
         if switchUsers:
