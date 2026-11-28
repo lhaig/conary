@@ -56,8 +56,8 @@ class InodeInfo(StreamSet):
 class JournalEntry(StreamSet):
 
     streamDict = {
-          _JOURNAL_ENTRY_OLD_NAME  : (DYNAMIC, StringStream, "old" ),
-          _JOURNAL_ENTRY_NEW_NAME  : (DYNAMIC, StringStream, "new" ),
+          _JOURNAL_ENTRY_OLD_NAME  : (DYNAMIC, TextStream, "old" ),
+          _JOURNAL_ENTRY_NEW_NAME  : (DYNAMIC, TextStream, "new" ),
           _JOURNAL_ENTRY_NEW_INODE : (SMALL,   InodeInfo,    "inode" )
         }
     __slots__ = [ "old", "new", "inode" ]

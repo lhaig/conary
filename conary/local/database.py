@@ -99,7 +99,7 @@ class Rollback:
         fd, tmpname = tempfile.mkstemp('count', '.ct', self.dir)
         os.rename(tmpname, countName)
 
-        os.write(fd, "%d\n" % self.count)
+        os.write(fd, b"%d\n" % self.count)
         os.close(fd)
 
     def _getChangeSets(self, item, repos = True, local = True):
@@ -223,7 +223,7 @@ class RollbackStack:
         newStatus = self.statusPath + ".new"
 
         fd = os.open(newStatus, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        os.write(fd, "%s %d\n" % (self.first, self.last))
+        os.write(fd, b"%d %d\n" % (self.first, self.last))
         os.close(fd)
 
         if opJournal:
@@ -248,7 +248,7 @@ class RollbackStack:
             saveSysModel = rbDir + '/system-model'
             opJournal.create(saveSysModel)
             ofd = os.open(saveSysModel, os.O_RDWR|os.O_CREAT)
-            os.write(ofd, ''.join(self.modelFile.read()[0]))
+            os.write(ofd, sha1helper.toBytes(''.join(self.modelFile.read()[0])))
             os.close(ofd)
             if self.modelFile.model.modified():
                 opJournal.create(self.modelFile.snapFullName)
